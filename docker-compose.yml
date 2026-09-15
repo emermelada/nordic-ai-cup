@@ -1,0 +1,27 @@
+# All three services; each machine only starts the ones it serves:
+#   docker compose up -d --build medical-appointment
+# GPU host (3060) adds the override:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build drone-flyby
+x-common: &common
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api')"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+
+services:
+  medical-appointment:
+    <<: *common
+    build: ./medical-appointment
+    ports: ["8001:8000"]
+
+  drone-flyby:
+    <<: *common
+    build: ./drone-flyby
+    ports: ["8002:8000"]
+
+  survival-simulator:
+    <<: *common
+    build: ./survival-simulator
+    ports: ["8003:8000"]

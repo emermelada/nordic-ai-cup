@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+# torch
+# faster-whisper
+# transformers
+# pyannote.audio
+# librosa
+# soundfile

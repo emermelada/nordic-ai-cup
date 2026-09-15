@@ -1,0 +1,13 @@
+# Only on the machine with the NVIDIA GPU (needs nvidia-container-toolkit).
+services:
+  drone-flyby:
+    build:
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu126
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+# torch
+# ultralytics
+# opencv-python-headless   # headless: the GUI build needs libGL, absent in slim images
