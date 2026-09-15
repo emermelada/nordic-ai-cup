@@ -1,123 +1,189 @@
 # Nordic AI Cup 2026 — team repo
 
-Competition: 17 Sep 10:00 → 20 Sep 16:00 CET. **Registration closes 16 Sep 23:59 CEST**
+Competition: **17 Sep 10:00 → 20 Sep 16:00 CET**. Registration closes **16 Sep 23:59 CEST**
 (https://share.hsforms.com/1wKxsSoSeRSq8NlyPWYGeKAbulxc, all four names on it).
 
+Three challenges, three **independent** services. Each one is its own FastAPI app in its own
+Docker container with its own public URL. They never talk to each other.
+
+| Folder | Owner | Host port | Serves from |
+|---|---|---|---|
+| `medical-appointment/` | A | 8001 | M4 Mac |
+| `drone-flyby/` | B | 8002 | RTX 3060 desktop (GPU) |
+| `survival-simulator/` | C | 8003 | 3060 desktop or cheap VM |
+
+---
+
+## How it works
+
 ```
-medical-appointment/   A   host port 8001   serves from: M4 Mac
-drone-flyby/           B   host port 8002   serves from: RTX 3060 desktop (GPU override)
-survival-simulator/    C   host port 8003   serves from: 3060 desktop or cheap VM
-docker-compose.yml         all three services, CPU
-docker-compose.gpu.yml     GPU override for drone-flyby (cu126 torch)
-AI_TOOLS_LOG.md            disclosure log — update as you go
-scripts/                   smoke test, GPU check, YOLO/Whisper benchmarks
+ grader ──HTTPS──▶ public URL ──▶ your machine :800X ──▶ container :8000 ──▶ uvicorn ──▶ api.py
+ (Ambolt)          (cloudflared)   (docker-compose        (Dockerfile)                   │
+                                    port mapping)                                         ▼
+                                                                     dtos.py validates request
+                                                                     predict() runs your model
+                                                                     dtos.py shapes the response
 ```
 
-Each service is a standalone FastAPI app: `api.py` (endpoints), `dtos.py` (schema),
-`requirements.txt`, `Dockerfile` (`python:3.14-slim`). Containers listen on 8000 internally.
-The `/predict` endpoints are **placeholders**: on day 1 copy the official DTOs and route from the
-use-case template, the grader scores zero on a schema mismatch.
+1. **The grader** sends an HTTP request (usually `POST /predict`) with the input data as JSON.
+2. **cloudflared** gives your laptop/desktop a public HTTPS address, since home connections
+   have no public IP. It forwards traffic to a local port.
+3. **docker-compose** maps that host port (8001/8002/8003) to port 8000 inside the container.
+4. **The Dockerfile** builds the container: Python 3.14, installs `requirements.txt`, copies the
+   service folder in, starts `uvicorn api:app` on port 8000.
+5. **`api.py`** receives the request. FastAPI checks it against the request model in
+   **`dtos.py`**, calls your `predict()` code, and checks the return value against the response
+   model before sending it back.
 
-## Python
+If the JSON field names or types don't match what the grader expects, the submission scores
+zero, often without an error. That's why `dtos.py` must be copied from the official template.
 
-Team standard is **Python 3.14** (host venv and container base image). Verified 15 Sep: torch 2.14,
-torchaudio, ctranslate2/faster-whisper, pyannote.audio, ultralytics, opencv (abi3), gymnasium,
-stable-baselines3, numpy/pandas/sklearn all install on 3.14. CUDA torch for 3.14 exists on the
-`cu126` and `cu130` indexes only (not cu128).
+---
 
-If an Emily-generated Dockerfile pins an older Python, change its `FROM` to `python:3.14-slim`
-or keep it — the container is what gets graded, but be consistent within a service.
+## What to touch and what to leave alone
+
+### Inside your service folder
+
+| File | Touch? | What to do |
+|---|---|---|
+| `api.py` | **Yes — this is your work** | Put your model code in `predict()`. Load the model **once** at the top of the file (module level), never inside `predict()`, or every request reloads it. Change the route path only if the official template uses a different one. Leave `/` and `/api` as they are (health checks). |
+| `dtos.py` | **Once, on day 1** | Replace the placeholder classes with the official request/response models from the challenge template. After that, don't edit it. |
+| `requirements.txt` | **Yes, when you add a library** | The ML libraries for your challenge are already listed, commented out. Uncomment what you use. Keep `fastapi`, `uvicorn`, `pydantic`. |
+| model code (new files) | **Yes** | Add `model.py`, `utils.py`, whatever you need, in the same folder, and import it from `api.py`. |
+| weights (`*.pt`, `*.onnx`, …) | **Put them in the folder, never commit them** | Git ignores them. Copy them to the serving machine with `scp`; the Docker build copies them into the image. |
+| `Dockerfile` | **Almost never** | Medical Appointment: uncomment the `ffmpeg` line once you decode audio. Otherwise leave it. |
+| `.dockerignore` | **No** | |
+
+### Repo root
+
+| File | Touch? | Notes |
+|---|---|---|
+| `docker-compose.yml` | **No** | Defines the three services, ports and auto-restart. Already done. |
+| `docker-compose.gpu.yml` | **No** | Only used on the 3060 machine for Drone Flyby. Ignore it anywhere else. |
+| `AI_TOOLS_LOG.md` | **Yes, everyone, as you go** | One line per tool/model/API/dataset used. We may have to disclose this. |
+| `requirements-dev.txt` | **Rarely** | Your local notebook/experiment environment. Not used by the containers. |
+| `scripts/` | **Run them, don't edit** | See below. |
+| `README.md` | Fill the benchmark table | |
+| `.gitignore` | **No** | |
+
+### Things you don't need to do anything with
+
+- **`.venv/`** — your local Python environment, never committed.
+- **Healthchecks and restart policy** — already in compose; a crashed container restarts itself.
+- **GPU setup** — only B / whoever runs the 3060 machine. Everyone else can ignore
+  `docker-compose.gpu.yml` and `scripts/check-gpu.sh`.
+- **The other two services** — you can build and run only yours.
+- **Ports inside the container** — always 8000; the grader never sees it.
+
+---
+
+## Day 1: turning the placeholder into a real endpoint
+
+1. Read the challenge template (official repo, or `emily open <use-case>`).
+2. Copy its request/response models into your `dtos.py`. Check the route path (`/predict` or
+   something else) and update `api.py` if it differs.
+3. Make `predict()` return a **valid** response, even a constant or random one.
+4. `docker compose up -d --build <service>` and `scripts/smoke-test.sh`.
+5. Tunnel it, queue a validation attempt, see a score. Commit.
+
+**Emily or this skeleton?** Either. Emily generates the same kind of FastAPI project. If you
+use Emily's generated folder, copy its `dtos.py` and endpoint into your service here, or replace
+your service folder with it and make sure the container still listens on port 8000. If Emily
+fights you for more than 30 minutes, use this skeleton.
+
+---
+
+## Setup (once per machine)
+
+Team standard is **Python 3.14**. Everything we need installs on it (torch 2.14, faster-whisper,
+pyannote.audio, ultralytics, gymnasium, stable-baselines3). CUDA torch for 3.14 exists only on the
+`cu126` and `cu130` indexes.
 
 ```bash
+git clone git@github.com:emermelada/nordic-ai-cup.git && cd nordic-ai-cup
 python3.14 -m venv .venv && source .venv/bin/activate   # fish: source .venv/bin/activate.fish
 pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
 ```
 Mac (MPS): drop the `--extra-index-url`. NVIDIA: use `https://download.pytorch.org/whl/cu126`.
 `requirements-dev.txt` has every role's packages; install only your section if you prefer.
 
-## Run locally
+Also needed: Docker, `cloudflared`, Emily v3.1.0 (released 11 Sep 2026 — reinstall if older),
+Hugging Face token (`hf auth login`, accept pyannote model terms), Kaggle account (phone-verified).
+
+---
+
+## Everyday commands
 
 ```bash
-docker compose up -d --build                       # all three
-docker compose up -d --build drone-flyby           # one
-scripts/smoke-test.sh                              # /api + /predict on 8001-8003
-CONCURRENT=1 scripts/smoke-test.sh                 # same, all at once (contention)
-docker compose logs -f drone-flyby
+docker compose up -d --build drone-flyby           # build + run one service
+docker compose logs -f drone-flyby                 # watch its logs
+docker compose down                                # stop everything
+scripts/smoke-test.sh                              # hit /api and /predict on 8001-8003
+CONCURRENT=1 scripts/smoke-test.sh                 # all at once (two services on one machine)
+PAYLOAD='{"...": ...}' scripts/smoke-test.sh       # test with a real request body
 ```
 
-## Public URL (tunnel)
-
-Home machines have no public IP. Cloudflare quick tunnel, no account needed:
+**Public URL:**
 ```bash
 cloudflared tunnel --url http://localhost:8002     # prints https://<random>.trycloudflare.com
 scripts/smoke-test.sh https://<random>.trycloudflare.com
 ```
-Quick-tunnel URLs change on every restart. Once we know the submission flow, either keep the
-process alive (tmux/systemd) or set up a named tunnel on a domain so the URL is stable.
+The URL changes every time cloudflared restarts. Keep it running (tmux) while an attempt is
+queued, and re-check the URL before submitting.
 
-## GPU host (RTX 3060)
-
-```bash
-scripts/check-gpu.sh      # driver, container toolkit, GPU inside container, torch.cuda, sleep masked
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build drone-flyby
-docker compose exec drone-flyby python -c "import torch; print(torch.cuda.is_available())"
-```
-The GPU override is only for this machine; on a host without the NVIDIA toolkit it fails to start.
-
-## Redeploy
-
+**Redeploy on the serving machine:**
 ```bash
 git pull
-docker compose up -d --build <service>             # add -f docker-compose.gpu.yml on the GPU host
+docker compose up -d --build <service>
+# 3060 machine: docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build drone-flyby
 ```
-Weights are git-ignored (`*.pt`, `*.pth`, `*.onnx`, `*.safetensors`): `scp` them into the service
-folder on the serving machine; they are copied into the image on build.
 
-## Emily
+**GPU machine, once:** `scripts/check-gpu.sh` checks driver, container toolkit, GPU inside a
+container, `torch.cuda`, and that sleep is disabled.
 
-Latest is **v3.1.0 (released 11 Sep 2026)** — reinstall if you have an older copy.
-```bash
-gh release download Release-v3.1.0 -R amboltio/emily-cli -p linux.zip   # or macos.zip / emily.pkg
-unzip linux.zip && ./emily        # interactive: accept terms (ambolt.io/terms-of-use), install path ~/.emily
-emily doctor
-cd ~/Proyectos/DM-i-AI-2025 && emily open race-car
-```
-30-minute rule: if Emily fights you, drop it and use the service skeleton here.
+---
 
-## Readiness test (everyone, < 10 min)
+## Readiness test (everyone, before the 17th, < 10 min)
 
-1. `emily open` a 2025 use case (or `docker compose up -d --build <service>` here)
+1. `docker compose up -d --build <your service>` (or `emily open` a 2025 use case)
 2. `curl localhost:<port>/api` responds
 3. `cloudflared tunnel --url http://localhost:<port>`
 4. Open `https://…trycloudflare.com/api` on your phone → JSON back
 
-## Benchmarks to run this week
+## Benchmarks
 
 ```bash
-python scripts/bench_yolo.py [video.mp4]           # ThinkPad, M4, 3060
-python scripts/bench_whisper.py [audio] [size]     # M4 vs CPU-only
+python scripts/bench_yolo.py [video.mp4]           # synthetic frames if no video
+python scripts/bench_whisper.py [audio] [size]     # downloads a JFK sample if no audio
 ```
 
-| Machine | YOLOv8n FPS | Whisper small, x realtime |
+| Machine | YOLOv8n FPS | Whisper small, × realtime |
 |---|---|---|
 | ThinkPad T480s (CPU) | | |
 | MacBook Pro M4 | | |
 | RTX 3060 desktop | | |
 
+---
+
+## Working rules
+
+- Commit your best working version **before** changing it.
+- Stuck 2+ hours on the same thing → say so.
+- Log AI tools in `AI_TOOLS_LOG.md` as you go.
+- Day 4: nothing new after mid-morning.
+
 ## How 2025 submissions worked (expect similar, confirm on Discord)
 
-- Submit a host URL + team API key on a submission form.
-- **Unlimited validation attempts** (validation set, shown on the scoreboard), but **one final
-  evaluation attempt per use case** on a different dataset — don't overfit to validation.
-- The grader calls the API when you queue an attempt → the service must be up *then*, not
-  necessarily 24/7. Confirm for 2026.
-- Top teams had to hand over training code and models afterwards.
-- Compute was provided (UCloud) in 2025 — ask whether 2026 has any.
+- Submit host URL + team API key on a form.
+- **Unlimited validation attempts**, **one final evaluation per use case** on a different dataset.
+- The grader calls your API when you queue an attempt, so the service must be up then.
+- Top teams handed over training code and models afterwards.
+- Compute was provided (UCloud) in 2025.
 
 ## Questions for Discord
 
 1. Continuous grading or on-demand attempts? One final evaluation per challenge again?
 2. Inference time limits per challenge (Drone Flyby is real-time).
 3. Emily licensing for participants.
-4. Can the three endpoints be on different hosts/URLs? Are tunnel URLs (trycloudflare) accepted?
-5. Any provided compute this year (UCloud or similar)?
+4. Can the three endpoints be on different hosts? Are trycloudflare URLs accepted?
+5. Any provided compute this year?
