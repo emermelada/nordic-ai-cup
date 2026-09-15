@@ -30,9 +30,10 @@ or keep it — the container is what gets graded, but be consistent within a ser
 
 ```bash
 python3.14 -m venv .venv && source .venv/bin/activate   # fish: source .venv/bin/activate.fish
-pip install --extra-index-url https://download.pytorch.org/whl/cpu torch numpy pandas matplotlib scikit-learn requests
+pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
 ```
-Mac: plain `pip install torch` (MPS). NVIDIA: `--index-url https://download.pytorch.org/whl/cu126`.
+Mac (MPS): drop the `--extra-index-url`. NVIDIA: use `https://download.pytorch.org/whl/cu126`.
+`requirements-dev.txt` has every role's packages; install only your section if you prefer.
 
 ## Run locally
 

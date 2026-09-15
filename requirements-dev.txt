@@ -1,0 +1,36 @@
+# Local development environment (Python 3.14), all roles.
+# Services have their own requirements.txt; this is for notebooks, experiments and benchmarks.
+#
+#   python3.14 -m venv .venv
+#   Linux/Windows, CPU:  .venv/bin/pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements-dev.txt
+#   NVIDIA GPU:          .venv/bin/pip install --extra-index-url https://download.pytorch.org/whl/cu126 -r requirements-dev.txt
+#   Mac (MPS):           .venv/bin/pip install -r requirements-dev.txt
+
+# core
+torch
+torchaudio
+numpy
+pandas
+matplotlib
+scikit-learn
+requests
+fastapi
+uvicorn[standard]
+jupyter
+ipykernel
+huggingface_hub
+
+# A - Medical Appointment (also needs system ffmpeg)
+faster-whisper
+transformers
+pyannote.audio
+librosa
+soundfile
+
+# B - Drone Flyby
+ultralytics
+opencv-python
+
+# C - Survival Simulator
+gymnasium
+stable-baselines3
