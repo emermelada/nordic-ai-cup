@@ -20,6 +20,18 @@ services:
     <<: *common
     build: ./drone-flyby
     ports: ["8002:8000"]
+    environment:
+      DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v4.pt}
+      # Recording is a per-run decision: several GB of PNG written during a
+      # scored attempt costs answered frames. DRONE_RECORD=1 turns it on.
+      DRONE_RECORD_DIR: ${DRONE_RECORD:+/recordings}
+      # full (default, best on validation), quad0, full0, dwell, top, survey
+      DRONE_CAMERA: ${DRONE_CAMERA:-full}
+      # tracker experiments, e.g. DRONE_SET=MAX_MISSES=3,UNSEEN_DECAY=0.9
+      DRONE_SET: ${DRONE_SET:-}
+    volumes:
+      - ${HOME}/models:/models:ro
+      - ./drone-flyby/data/recordings:/recordings
 
   # The agent endpoint the organisers' simulator calls. It listens on 9052
   # (see agent_server.py), not 8000 like the other two services, and exposes

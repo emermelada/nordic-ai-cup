@@ -9,3 +9,9 @@ data/
 runs/
 .env
 .ipynb_checkpoints/
+# drone-flyby: official sample frames (copy from the official repo) and renders
+drone-flyby/src/
+drone-flyby/annotated/
+
+# Handover: the served weights and the validation cut-outs travel with the repo
+!drone-flyby/models/*.pt
