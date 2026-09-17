@@ -82,6 +82,3 @@ cython_debug/
 .vscode
 .devcontainer
 .jupyter
-
-# Locally staged ASR weights (see RUNNING.md)
-models/
