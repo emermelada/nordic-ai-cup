@@ -292,7 +292,7 @@ def main(argv=None) -> int:
     parser.add_argument('--subset', choices=['all', 'dev', 'holdout'], default='all')
     parser.add_argument('--alignment', choices=['legacy', 'numeric'],
                         help='Quote alignment; defaults to serving mode or recorded replay mode.')
-    parser.add_argument('--prompt', choices=['legacy', 'focused', 'compact'],
+    parser.add_argument('--prompt', choices=['legacy', 'focused', 'compact', 'minimal'],
                         help='Prompt for fresh generation; default is the serving prompt.')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--start-offset', type=float, default=0.0,

@@ -308,7 +308,8 @@ class Pipeline:
                     response = refine_evidence(response, words, envelope)
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
-                    outcome = 'completed'
+                    # Both platform sets are exactly half yes; the rate is a label-free sanity check.
+                    outcome = f'completed, yes={sum(response.answers)}/{len(response.answers)}'
                     return response
                 elif kind == 'error':
                     logger.warning('Worker request error: %s', message.get('error'))

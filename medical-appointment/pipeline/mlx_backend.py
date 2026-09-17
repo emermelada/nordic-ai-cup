@@ -57,7 +57,7 @@ def decode_audio(audio_bytes: bytes):
 
 class MLXBackend:
     def __init__(self, prompt=DEFAULT_PROMPT):
-        if prompt not in ('legacy', 'focused', 'compact'):
+        if prompt not in ('legacy', 'focused', 'compact', 'minimal'):
             raise ValueError(f'Unknown answer prompt: {prompt}')
         self.prompt = prompt
         self._whisper_path = None
@@ -110,10 +110,12 @@ class MLXBackend:
 
     def _generate(self, words: list[dict], questions: list[str], max_tokens: int) -> str:
         from pipeline.core import build_messages
-        from pipeline.evidence import build_compact_messages, build_focused_messages
+        from pipeline.evidence import (
+            build_compact_messages, build_focused_messages, build_minimal_messages,
+        )
 
         builder = {'legacy': build_messages, 'focused': build_focused_messages,
-                   'compact': build_compact_messages}[self.prompt]
+                   'compact': build_compact_messages, 'minimal': build_minimal_messages}[self.prompt]
         return self.generate_messages(builder(words, questions), max_tokens)
 
     def generate_messages(self, messages: list[dict], max_tokens: int = 900) -> str:

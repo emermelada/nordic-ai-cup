@@ -33,6 +33,20 @@ def build_compact_messages(words, questions):
     return messages
 
 
+# Qwen3.5 sometimes enumerated every unit id on "no" answers until the token limit.
+MINIMAL_SYSTEM = COMPACT_SYSTEM.replace(
+    'Respond with minified JSON',
+    '- For every "no", give only the question number and the answer: no unit ids and no quote.\n'
+    'Respond with minified JSON',
+)
+
+
+def build_minimal_messages(words, questions):
+    messages = build_messages(words, questions)
+    messages[0] = {'role': 'system', 'content': MINIMAL_SYSTEM}
+    return messages
+
+
 TOKEN = re.compile(r'\d+(?:\.\d+)?|[a-z]+')
 
 
