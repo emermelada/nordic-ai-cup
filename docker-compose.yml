@@ -22,7 +22,9 @@ services:
     ports: ["8002:8000"]
     environment:
       DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v4.pt}
-      DRONE_RECORD_DIR: /recordings
+      # Recording is a per-run decision: several GB of PNG written during a
+      # scored attempt costs answered frames. DRONE_RECORD=1 turns it on.
+      DRONE_RECORD_DIR: ${DRONE_RECORD:+/recordings}
       # full (default, best on validation), quad0, full0, dwell, top, survey
       DRONE_CAMERA: ${DRONE_CAMERA:-full}
       # tracker experiments, e.g. DRONE_SET=MAX_MISSES=3,UNSEEN_DECAY=0.9

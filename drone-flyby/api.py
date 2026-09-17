@@ -24,6 +24,7 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from dtos import DroneFlybyPredictRequestDto, DroneFlybyPredictResponseDto
+import flyby
 from flyby import load_model, predict
 from utils import validate_response
 
@@ -55,8 +56,11 @@ def record(request: DroneFlybyPredictRequestDto, response: DroneFlybyPredictResp
 
 @app.on_event('startup')
 def warm_up():
-    # Load and warm the model before the first frame arrives.
-    load_model()
+    # Load and warm the model before the first frame arrives. Refuse to start
+    # without it: a service that answers 200 with no detections passes every
+    # health check and scores zero for a whole attempt.
+    if load_model() is None:
+        raise RuntimeError(f'No model at {flyby.MODEL_PATH} - check DRONE_MODEL and the mount')
 
 
 @app.post('/predict', response_model=DroneFlybyPredictResponseDto)
@@ -78,9 +82,14 @@ async def predict_endpoint(raw: Request):
 def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto:
     response = predict(request)
 
-    # Fail here, loudly, rather than having the evaluator silently discard the
-    # frame. Every rule this checks is a rule the evaluator also enforces.
-    validate_response(response)
+    # Check the evaluator's rules, but never fail the request over them: an
+    # exception here returns 500 and loses the frame entirely, which is worse
+    # than whatever the check found.
+    try:
+        validate_response(response)
+    except ValueError:
+        logger.exception('Invalid response for frame %s, dropping its annotations', request.frame)
+        response.annotations = []
 
     if RECORD_DIR:
         # In the background: the frame clock does not wait for the disk.
@@ -103,6 +112,10 @@ def hello():
     return {
         'service': 'drone-flyby-usecase',
         'uptime': '{}'.format(datetime.timedelta(seconds=time.time() - start_time)),
+        'model': str(flyby.MODEL_PATH),
+        'model_loaded': flyby._model is not None,
+        'camera': flyby.CAMERA,
+        'recording': bool(RECORD_DIR),
     }
 
 
