@@ -17,7 +17,7 @@ Three parts, one request at a time:
 
 Configuration, all optional, through environment variables:
 
-    DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v1.pt)
+    DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v2.pt)
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
     DRONE_THREADS CPU threads for inference  (default: 6)
@@ -50,7 +50,7 @@ from utils import clip_bbox_to_frame, decode_view, describe_camera_rejection
 
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v1.pt'))
+MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v2.pt'))
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
 # Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
