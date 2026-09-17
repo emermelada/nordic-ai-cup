@@ -146,7 +146,10 @@ def refine_evidence(response, words, envelope=None):
             continue
         end = _reply_end(words, start, end)
         if envelope:
-            start = _speech_onset(envelope, start, end)
+            onset_end = next((min(end, word['end']) for word in words
+                              if word['start'] < end
+                              and (word['end'] > start or word['start'] == start)), start)
+            start = _speech_onset(envelope, start, onset_end)
         result.evidence_start[i], result.evidence_end[i] = start, end
     return result
 

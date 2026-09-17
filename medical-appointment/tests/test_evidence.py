@@ -148,6 +148,25 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(refine_evidence(spans, words, [-90.0] * 400).evidence_start, [1.0, 1.0])
         self.assertEqual(refine_evidence(spans, words, [-20.0] * 400).evidence_start, [1.0, 1.0])
 
+    def test_onset_does_not_skip_a_quiet_first_word(self):
+        words = make_words('No fever today.')
+        envelope = [-50.0] * 130 + [-20.0] * 200
+        for start in (words[0]['start'], words[0]['start'] + 0.1):
+            with self.subTest(start=start):
+                spans = response([True], [start], [words[-1]['end']])
+                self.assertEqual(refine_evidence(spans, words, envelope), spans)
+        words[0]['end'] = words[0]['start']
+        spans = response([True], [words[0]['start']], [words[-1]['end']])
+        self.assertEqual(refine_evidence(spans, words, envelope), spans)
+
+    def test_onset_uses_first_selected_word_not_preceding_word(self):
+        words = make_words('Listen. Your heart sounds normal.', start=0.5, step=0.5)
+        envelope = [-90.0] * 130 + [-20.0] * 200
+        spans = response([True], [words[1]['start']], [words[-1]['end']])
+        actual = refine_evidence(spans, words, envelope)
+        self.assertEqual(actual.evidence_start, [1.3])
+        self.assertEqual(refine_evidence(actual, words, envelope), actual)
+
     def test_energy_envelope_is_ten_millisecond_dbfs(self):
         envelope = energy_envelope([0.5] * 160 + [0.0] * 160 + [0.5] * 100)
         self.assertEqual(len(envelope), 2)

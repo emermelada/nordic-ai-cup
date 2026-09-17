@@ -52,8 +52,9 @@ apply to every yes:
 
 - a quote that ends in a question is extended to a reply of at most six words,
   but not another question or across a pause longer than two seconds;
-- the start moves to the first 10 ms frame above -45 dBFS, because Whisper often
-  starts a word inside the preceding pause while the annotations start at speech.
+- the start moves to the first 10 ms frame above -45 dBFS within the first selected
+  word, because Whisper often starts a word inside the preceding pause while the
+  annotations start at speech. A quiet first word is never trimmed away.
 
 The model and prompt are `QWEN_MODEL` and `DEFAULT_PROMPT` in
 `pipeline/mlx_backend.py` (`legacy`, `focused` and `compact` are available).
@@ -114,8 +115,13 @@ scores **0.769543 raw**, **0.626161 mean tIoU**, **384/390 correct**. Inputs, so
 hashes, code snapshots and per-question outputs are archived in
 `runs/grounding-fixes-20260917/`. Reply guards reject a following question or a
 pause longer than two seconds; regression tests pass, and all 390 final outputs
-remain identical to the control. This is a correctness fix, not a measured score
-gain. No fresh inference, serving restart or platform submission was performed.
+remain identical to the control. Limiting onset refinement to the first selected
+word also preserves all 390 outputs while preventing loss of a quiet first word.
+These are correctness fixes, not measured score gains. Exact-repeat citation
+tie-breaking scored **0.764762** and was removed from serving code; the candidate
+and its tests remain archived under `exact-repeat-citations/`. This result does not
+exclude using occurrence-aware candidates with a better selector. No fresh
+inference, serving restart or platform submission was performed.
 
 ### Deploy behind the tunnel
 
