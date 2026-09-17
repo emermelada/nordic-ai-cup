@@ -125,7 +125,7 @@ needs, checks the GPU, clones the official repo, downloads the background
 photos from Kaggle, builds the dataset and trains.
 
 ```bash
-export KAGGLE_USERNAME=... KAGGLE_KEY=...        # or copy ~/.kaggle/kaggle.json
+export KAGGLE_API_TOKEN=KGAT_...                 # kaggle.com > Settings > API
 bash training/train_remote.sh                    # yolo11m, 40 epochs
 MODEL=yolo11l.pt EPOCHS=50 BATCH=24 bash training/train_remote.sh
 ```

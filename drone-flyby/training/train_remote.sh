@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Train a Drone Flyby model on a rented GPU box (Vast.ai, Runpod, ...).
 #
-#   export KAGGLE_USERNAME=... KAGGLE_KEY=...        # or copy ~/.kaggle/kaggle.json
+#   export KAGGLE_API_TOKEN=KGAT_...                 # kaggle.com > Settings > API
+#   export KAGGLE_USERNAME=... KAGGLE_KEY=...        # older token style, also fine
 #   bash training/train_remote.sh                    # yolo11m, 40 epochs
 #   MODEL=yolo11l.pt EPOCHS=50 bash training/train_remote.sh
 #   WITH_INRIA=0 bash training/train_remote.sh       # skip the 22 GB city photos
@@ -37,7 +38,7 @@ if [ "$(id -u)" = 0 ] && command -v apt-get >/dev/null; then
     apt-get update -qq
     apt-get install -y -qq git unzip libgl1 libglib2.0-0 >/dev/null
 fi
-pip install -q "ultralytics==8.4.152" kaggle
+pip install -q "ultralytics==8.4.152" "kaggle>=1.7"
 
 echo "== GPU"
 python - <<'PY'
@@ -58,6 +59,16 @@ if [ ! -d "$WORK/official" ]; then
 fi
 FLYBY="$WORK/official/drone-flyby"
 cp -r "$REPO/training" "$FLYBY/"
+
+if [ -n "${KAGGLE_API_TOKEN:-}" ]; then
+    # Newer Kaggle token style: the client reads it from this file.
+    mkdir -p ~/.kaggle && printf %s "$KAGGLE_API_TOKEN" > ~/.kaggle/access_token
+    chmod 600 ~/.kaggle/access_token
+fi
+if [ ! -s ~/.kaggle/access_token ] && [ ! -s ~/.kaggle/kaggle.json ] && [ -z "${KAGGLE_KEY:-}" ]; then
+    echo "No Kaggle credentials: set KAGGLE_API_TOKEN (or KAGGLE_USERNAME/KAGGLE_KEY)." >&2
+    exit 1
+fi
 
 echo "== background photos"
 mkdir -p "$WORK/backgrounds"
