@@ -50,7 +50,14 @@ VIEW_SIZE = (960, 540)
 VIEWS_PER_LEVEL = {0: 1, 1: 2, 2: 3}
 PASTES_PER_SCENE = (8, 30)
 UNTOUCHED_SCENE_SHARE = 0.15   # scenes left exactly as supplied
-SCALE_RANGE = (0.85, 1.15)     # altitude is fixed, so sizes barely change
+SCALE_RANGE = (0.85, 1.15)     # cut-outs taken from the validation flight
+# Helsinki cut-outs: objects in the validation flight measure 0.55-0.85x their
+# Helsinki box diagonal (training/PLATEAU_IDEAS.md), so train smaller too.
+HELSINKI_SCALE_RANGE = (0.55, 1.15)
+# Hue rotation in degrees: whole backgrounds, and pasted objects (whose colour
+# is mostly their own, so less).
+BACKGROUND_HUE = 20
+PATCH_HUE = 8
 MIN_VISIBLE = 0.5              # keep a box cut by the view edge if this much shows
 MIN_BOX_VIEW_PIXELS = 2
 L2_ON_OBJECT_SHARE = 0.7       # zoomed views mostly look at something
@@ -101,11 +108,18 @@ def load_patches(folder: Path, required: bool = True):
     return patches
 
 
-def pick_patch(name: str, rng: random.Random) -> np.ndarray:
+def pick_patch(name: str, rng: random.Random):
+    """A patch of this class and the scale range that suits its source."""
     extra = _extra_patches.get(name)
     if extra and rng.random() < EXTRA_PATCH_SHARE:
-        return rng.choice(extra)
-    return rng.choice(_patches[name])
+        return rng.choice(extra), SCALE_RANGE
+    return rng.choice(_patches[name]), HELSINKI_SCALE_RANGE
+
+
+def rotate_hue(bgr: np.ndarray, degrees: float) -> np.ndarray:
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    hsv[:, :, 0] = ((hsv[:, :, 0].astype(np.int16) + int(round(degrees / 2))) % 180).astype(np.uint8)
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
 
 def find_backgrounds(folders) -> List[Path]:
@@ -152,11 +166,12 @@ def load_background(rng: random.Random) -> Optional[np.ndarray]:
             image = image[::-1, ::-1]
         # Nudge the colours a little so photos from one city do not all look alike.
         image = image.astype(np.float32) * rng.uniform(0.85, 1.15) + rng.uniform(-15, 15)
-        return np.ascontiguousarray(np.clip(image, 0, 255).astype(np.uint8))
+        image = np.ascontiguousarray(np.clip(image, 0, 255).astype(np.uint8))
+        return rotate_hue(image, rng.uniform(-BACKGROUND_HUE, BACKGROUND_HUE))
     return None
 
 
-def transform_patch(patch: np.ndarray, rng: random.Random) -> np.ndarray:
+def transform_patch(patch: np.ndarray, rng: random.Random, scale_range=SCALE_RANGE) -> np.ndarray:
     """Rotate, scale, flip and recolour one BGRA patch; crop to its mask."""
     if rng.random() < 0.5:
         patch = patch[:, ::-1]
@@ -164,7 +179,7 @@ def transform_patch(patch: np.ndarray, rng: random.Random) -> np.ndarray:
     # An ellipse mask carries ground in its corners; only right angles keep
     # its box honest.
     angle = rng.choice([0, 90, 180, 270]) if filled else rng.uniform(0, 360)
-    scale = rng.uniform(*SCALE_RANGE)
+    scale = rng.uniform(*scale_range)
 
     height, width = patch.shape[:2]
     matrix = cv2.getRotationMatrix2D((width / 2, height / 2), angle, scale)
@@ -194,6 +209,8 @@ def transform_patch(patch: np.ndarray, rng: random.Random) -> np.ndarray:
         grey = bgr.mean(axis=2, keepdims=True)
         bgr = grey + (bgr - grey) * rng.uniform(0.4, 1.2)
     patch[:, :, :3] = np.clip(bgr, 0, 255).astype(np.uint8)
+    if PATCH_HUE:
+        patch[:, :, :3] = rotate_hue(np.ascontiguousarray(patch[:, :, :3]), rng.uniform(-PATCH_HUE, PATCH_HUE))
     if rng.random() < BLUR_SHARE:
         patch[:, :, :3] = cv2.GaussianBlur(patch[:, :, :3], (0, 0), rng.uniform(0.4, 1.2))
     return patch
@@ -286,8 +303,8 @@ def build_scene(rng: random.Random):
     occupied = [box[1:] for box in labels]
     for _ in range(rng.randint(*PASTES_PER_SCENE)):
         name = rng.choices(OBJECT_CLASSES, weights=_class_weights)[0]
-        source = pick_patch(name, rng)
-        patch = transform_patch(source, rng)
+        source, scale_range = pick_patch(name, rng)
+        patch = transform_patch(source, rng, scale_range)
         if patch is None:
             continue
         height, width = patch.shape[:2]
