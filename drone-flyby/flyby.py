@@ -65,6 +65,7 @@ THREADS = int(os.environ.get('DRONE_THREADS', '6'))
 # above NEW_TRACK_CONFIDENCE start a track that is remembered and reported on
 # later frames; otherwise false alarms pile up (v1 reached 137 per frame).
 DETECTION_CONFIDENCE = float(os.environ.get('DRONE_DET_CONF', '0.01'))
+# Validation with v3: 0.10 -> 0.126, 0.25 -> 0.132, 0.40 -> 0.122.
 NEW_TRACK_CONFIDENCE = float(os.environ.get('DRONE_TRACK_CONF', '0.25'))
 # One-frame guesses rank below remembered objects of the same confidence.
 TRANSIENT_WEIGHT = 0.5
@@ -87,8 +88,10 @@ MAX_MISSES = 6
 UNSEEN_DECAY = 0.97
 # Also report up to this many runner-up classes, when their vote is at least
 # this share of the best one, at a confidence scaled by that share.
-RUNNER_UPS = 2
-RUNNER_UP_SHARE = 0.15
+# Validation with v3 + full camera: 0 runner-ups 0.125, 2 (share 0.15) 0.130,
+# 4 (share 0.03) 0.132.
+RUNNER_UPS = 4
+RUNNER_UP_SHARE = 0.03
 # Class scores below this are not counted as votes.
 MIN_VOTE_SCORE = 0.02
 # A box partly outside the view is a guess at the object's size: report it
