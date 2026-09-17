@@ -74,10 +74,12 @@ EXTRA_PATCH_SHARE = 0.4
 GRADE_SHARE = 0.6
 BLUR_SHARE = 0.3
 SHADOW_SHARE = 0.5
+NOISE_SHARE = 0.25
 
 # Filled in per worker by _init_worker.
 _patches = {}
 _extra_patches = {}
+_class_weights = None
 _frames = []
 _backgrounds = []
 
@@ -111,8 +113,11 @@ def find_backgrounds(folders) -> List[Path]:
     return sorted(found)
 
 
-def _init_worker(patch_folder: Path, backgrounds, extra_folders=()):
-    global _patches, _frames, _backgrounds, _extra_patches
+def _init_worker(patch_folder: Path, backgrounds, extra_folders=(), class_weights=None, helsinki_share=None):
+    global _patches, _frames, _backgrounds, _extra_patches, _class_weights, HELSINKI_SHARE
+    if helsinki_share is not None:
+        HELSINKI_SHARE = helsinki_share
+    _class_weights = [class_weights.get(name, 1.0) for name in OBJECT_CLASSES] if class_weights else None
     _patches = load_patches(patch_folder)
     _extra_patches = {}
     for folder in extra_folders:
@@ -248,7 +253,7 @@ def build_scene(rng: random.Random):
 
     occupied = [box[1:] for box in labels]
     for _ in range(rng.randint(*PASTES_PER_SCENE)):
-        name = rng.choice(OBJECT_CLASSES)
+        name = rng.choices(OBJECT_CLASSES, weights=_class_weights)[0]
         source = pick_patch(name, rng)
         patch = transform_patch(source, rng)
         if patch is None:
@@ -290,6 +295,9 @@ def render_view(image, labels, level: int, cx: int, cy: int):
     view = image[ry1:ry2, rx1:rx2]
     if view.shape[1] != VIEW_SIZE[0]:
         view = cv2.resize(view, VIEW_SIZE, interpolation=cv2.INTER_AREA)
+    if NOISE_SHARE and random.random() < NOISE_SHARE:
+        # Sensor-like grain, so the model does not rely on perfectly clean pixels.
+        view = np.clip(view + np.random.normal(0, random.uniform(1.5, 5), view.shape), 0, 255).astype(np.uint8)
     region_width, region_height = rx2 - rx1, ry2 - ry1
     scale = VIEW_SIZE[0] / region_width
 
@@ -312,6 +320,9 @@ def render_view(image, labels, level: int, cx: int, cy: int):
 def make_scene(job):
     index, split, seed, out, extension = job
     rng = random.Random(seed)
+    # render_view's noise uses the module generators: keep scenes reproducible.
+    random.seed(seed)
+    np.random.seed(seed % (2 ** 32))
     image, labels = build_scene(rng)
     written = 0
     for level, count in VIEWS_PER_LEVEL.items():
@@ -366,6 +377,10 @@ def main() -> int:
                         help='Folders searched for large aerial photos to paste onto.')
     parser.add_argument('--extra-patches', type=Path, nargs='*', default=[],
                         help='More patch folders (e.g. data/patches_val), used for part of the pastes.')
+    parser.add_argument('--helsinki-share', type=float, default=HELSINKI_SHARE,
+                        help='Share of scenes on Helsinki frames when --backgrounds is given.')
+    parser.add_argument('--class-weights', default='',
+                        help='name=weight,... pasted more (or less) often, e.g. small_launcher=2,ta-ta=2')
     parser.add_argument('--workers', type=int, default=None)
     parser.add_argument('--preview', action='store_true', help='Also draw labels onto a few views.')
     args = parser.parse_args()
@@ -382,12 +397,20 @@ def main() -> int:
         if not backgrounds:
             raise SystemExit('No background photos found in ' + ', '.join(map(str, args.backgrounds)))
 
+    weights = {}
+    for item in filter(None, args.class_weights.split(',')):
+        name, value = item.split('=')
+        if name not in OBJECT_CLASSES:
+            raise SystemExit(f'unknown class {name}')
+        weights[name] = float(value)
+
     val_count = max(1, int(args.scenes * args.val_share))
     jobs = [
         (i, 'val' if i < val_count else 'train', args.seed * 1_000_003 + i, args.out, args.format)
         for i in range(args.scenes)
     ]
-    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds, [p for p in args.extra_patches if p.exists()])) as pool:
+    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds, [p for p in args.extra_patches if p.exists()], weights,
+                                                                   args.helsinki_share)) as pool:
         total = 0
         for done, written in enumerate(pool.imap_unordered(make_scene, jobs), 1):
             total += written

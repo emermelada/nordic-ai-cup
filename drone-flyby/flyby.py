@@ -17,13 +17,14 @@ Three parts, one request at a time:
 
 Configuration, all optional, through environment variables:
 
-    DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v2.pt)
+    DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v3.pt)
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
     DRONE_THREADS CPU threads for inference  (default: 6)
     DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
     DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
-    DRONE_CAMERA      sweep pattern: full, top or mixed       (default: top)
+    DRONE_CAMERA      sweep pattern: full, top, mixed, or survey
+                      (Level-2 data collection)               (default: top)
     DRONE_INSPECT     zoom to Level 2 on small unsure objects (default: 0)
 """
 
@@ -52,7 +53,7 @@ from utils import clip_bbox_to_frame, decode_view, describe_camera_rejection
 
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v2.pt'))
+MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v3.pt'))
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
 # Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
@@ -117,7 +118,14 @@ SWEEPS = {
     'mixed': FULL_SWEEP + TOP_SWEEP * 3,           # repeats: full now and then
 }
 CAMERA = os.environ.get('DRONE_CAMERA', 'top')
-SWEEP = SWEEPS[CAMERA]
+SWEEP = SWEEPS.get(CAMERA, FULL_SWEEP)
+
+# 'survey': a data-collection pattern, not a scoring one. Level-2 views
+# (native resolution) snake along two rows covering the top half, where every
+# object enters; steps are at most 550 px, inside the 551 px L2 limit.
+SURVEY_ROW_TOP = [(x, 270) for x in (480, 1030, 1580, 2130, 2680, 3230, 3360)]
+SURVEY_ROW_LOW = [(x, 810) for x in (3360, 2810, 2260, 1710, 1160, 610, 480)]
+SURVEY = SURVEY_ROW_TOP + SURVEY_ROW_LOW
 
 # Level-2 inspection: a small object whose class is still unsure gets one
 # close look, then the sweep resumes.
@@ -443,6 +451,35 @@ def inspection_target(state: Sequence, base, frame: int) -> Optional[Tuple[int, 
     return best[1]
 
 
+def survey_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
+    if base[0] == 2 and (base[1], base[2]) == SURVEY[state.sweep_index % len(SURVEY)]:
+        state.sweep_index = (state.sweep_index + 1) % len(SURVEY)
+    elif base[0] == 2:
+        # Off the pattern: rejoin at the nearest point that can be reached.
+        state.sweep_index = min(
+            range(len(SURVEY)),
+            key=lambda i: (SURVEY[i][0] - base[1]) ** 2 + (SURVEY[i][1] - base[2]) ** 2,
+        )
+    x, y = SURVEY[state.sweep_index % len(SURVEY)]
+    if base[0] == 0:
+        # Zoom in one step, towards the first survey point.
+        target = (1, int(min(max(x, 960), 2880)), int(min(max(y, 540), 1620)))
+    else:
+        target = (2, x, y)
+        if not legal(base, *target):
+            # Too far for one move: step towards it in a straight line.
+            limit = 1100 if base[0] == 1 else 550
+            dx, dy = x - base[1], y - base[2]
+            ratio = min(1.0, limit / max(1.0, math.hypot(dx, dy)))
+            target = (2, int(base[1] + dx * ratio), int(base[2] + dy * ratio))
+            target = (2, int(min(max(target[1], 480), 3360)), int(min(max(target[2], 270), 1890)))
+    if legal(base, *target):
+        state.pending = target
+        return RequestedViewDto(resolution_level=target[0], center_x=target[1], center_y=target[2])
+    state.pending = None
+    return None
+
+
 def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> Optional[RequestedViewDto]:
     view = request.view
     here = (view.resolution_level, view.center_x, view.center_y)
@@ -451,6 +488,9 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
     base = here
     if state.pending is not None and request.camera_command_feedback is None:
         base = state.pending
+
+    if CAMERA == 'survey':
+        return survey_next_view(base, state)
 
     target = None
     state.answers_since_inspection += 1

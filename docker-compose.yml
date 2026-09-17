@@ -21,8 +21,10 @@ services:
     build: ./drone-flyby
     ports: ["8002:8000"]
     environment:
-      DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v2.pt}
+      DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v3.pt}
       DRONE_RECORD_DIR: /recordings
+      # top (scoring, default) or survey (Level-2 data collection runs)
+      DRONE_CAMERA: ${DRONE_CAMERA:-top}
     volumes:
       - ${HOME}/models:/models:ro
       - ./drone-flyby/data/recordings:/recordings

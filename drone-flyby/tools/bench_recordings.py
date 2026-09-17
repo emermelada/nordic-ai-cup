@@ -40,16 +40,17 @@ def cached_detections(model_path: Path):
 
     key = hashlib.sha1(model_path.read_bytes()).hexdigest()[:12] + f'_{flyby.IMGSZ}_{flyby.DETECTION_CONFIDENCE}'
     path = CACHE / f'{key}.pkl'
-    if path.exists():
-        return pickle.loads(path.read_bytes())
-    flyby.load_model()
-    out = {}
-    for png in sorted(RECORDINGS.glob('*/*.png')):
-        image = cv2.imread(str(png))
-        with flyby._model_lock:
-            out[str(png.relative_to(RECORDINGS))] = flyby.raw_detections(image)
-    CACHE.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(pickle.dumps(out))
+    out = pickle.loads(path.read_bytes()) if path.exists() else {}
+    # New recordings since the cache was written are filled in.
+    missing = [png for png in sorted(RECORDINGS.glob('*/*.png')) if str(png.relative_to(RECORDINGS)) not in out]
+    if missing:
+        flyby.load_model()
+        for png in missing:
+            image = cv2.imread(str(png))
+            with flyby._model_lock:
+                out[str(png.relative_to(RECORDINGS))] = flyby.raw_detections(image)
+        CACHE.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(pickle.dumps(out))
     return out
 
 
@@ -74,6 +75,9 @@ def main() -> int:
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting to override.')
     parser.add_argument('--sequences', nargs='*', default=None)
     parser.add_argument('--per-object', action='store_true')
+    parser.add_argument('--per-class', action='store_true')
+    parser.add_argument('--from-frame', type=int, default=0,
+                        help='Only score frames from here on (e.g. 200: frames no model trained on).')
     args = parser.parse_args()
 
     os.environ['DRONE_MODEL'] = str(args.model)
@@ -104,6 +108,7 @@ def main() -> int:
     flyby.detect = fake_detect
     totals = collections.Counter()
     per_object = collections.defaultdict(collections.Counter)
+    per_class = collections.defaultdict(collections.Counter)
     reported = []
     for sequence in sequences:
         flyby._sequences.clear()
@@ -116,6 +121,8 @@ def main() -> int:
             answers = [(a.object_id, a.confidence,
                         np.array(a.bbox) * [3840, 2160, 3840, 2160]) for a in response.annotations]
             reported.append(len(answers))
+            if meta['frame'] < args.from_frame:
+                continue
             for oid, cls, box in known_boxes(objects, meta['frame']):
                 totals['present'] += 1
                 right = [c for n, c, b in answers if n == cls and flyby.iou(b, box) >= 0.5]
@@ -123,15 +130,21 @@ def main() -> int:
                 outcome = 'hit' if right else 'wrong_class' if best >= 0.5 else 'bad_box' if best >= 0.2 else 'missing'
                 totals[outcome] += 1
                 per_object[oid][outcome] += 1
+                per_class[cls][outcome] += 1
                 if right:
                     # Rank of the right answer among everything reported this frame.
                     totals['rank_sum'] += sum(c > max(right) for _, c, _ in answers)
 
-    n = totals['present']
+    n = max(1, totals['present'])
     print(f"known-object frames {n}: " + '  '.join(
         f'{k} {totals[k] / n:.1%}' for k in ('hit', 'wrong_class', 'bad_box', 'missing')))
     print(f'reported per frame: mean {np.mean(reported):.1f}  max {max(reported)}'
           f'   mean rank of hits {totals["rank_sum"] / max(1, totals["hit"]):.1f}')
+    if args.per_class:
+        for cls, counts in sorted(per_class.items()):
+            total = sum(counts.values())
+            print(f"  {cls:16s} n={total:4d}  hit {counts['hit'] / total:5.1%}  "
+                  f"wrong class {counts['wrong_class'] / total:5.1%}  missing {counts['missing'] / total:5.1%}")
     if args.per_object:
         for obj in objects:
             print(f"  #{obj['id']:2d} {obj['class']:12s} {dict(per_object[obj['id']])}")

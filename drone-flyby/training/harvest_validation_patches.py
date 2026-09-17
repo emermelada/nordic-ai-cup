@@ -9,8 +9,8 @@ ones where the model missed it; those views are the valuable ones. Each view is
 cut out with a GrabCut mask like extract_patches.py does, then scaled to
 source-pixel size so make_dataset.py can paste it like any other patch.
 
-Recorded views are Level 1 (half resolution), so these patches are softer than
-the Helsinki ones; that is fine for Level 0/1 views, which is where they help.
+Level-2 views (survey runs) give native-resolution patches; Level-1 views give
+half-resolution ones, softer than the Helsinki patches but fine for Level 0/1.
 """
 
 import argparse
@@ -34,7 +34,7 @@ EDGE = 4                    # view pixels the object must stay inside the view b
 MARGIN = 0.35               # context around the box, as a share of its size
 FILLED = 0.72               # a mask this full is GrabCut's ellipse fallback
 MIN_IOU = 0.6               # mask box vs matched box
-SEARCH = 12                 # view pixels to search around the carried box
+SEARCH = 24                 # source pixels to search around the carried box
 MIN_MATCH = 0.55            # template match score needed to trust a view
 
 a, b, c, d, e, f = MOTION
@@ -58,6 +58,97 @@ def move(box, steps: int) -> np.ndarray:
     return points.reshape(-1)
 
 
+class Locator:
+    """Finds known validation objects in recorded views.
+
+    A box is carried from the object's nearest sighting with the ground-motion
+    model, then pinned down by matching the object's appearance (a template
+    from a view where it was detected) in a small window around it.
+    """
+
+    def __init__(self, objects, recordings: Path, levels=(1, 2)):
+        self.objects = objects
+        self.views = []
+        for meta_path in sorted(recordings.glob('*/*.json')):
+            meta = json.loads(meta_path.read_text())
+            if meta['view']['resolution_level'] in levels:
+                self.views.append((meta_path.with_suffix('.png'), meta['frame'], meta['view']['source_region_xyxy']))
+        self._images = {}
+        self._templates = {}
+
+    def image(self, png):
+        if png not in self._images:
+            if len(self._images) > 300:
+                self._images.clear()
+            self._images[png] = cv2.imread(str(png))
+        return self._images[png]
+
+    @staticmethod
+    def to_view(box, region):
+        rx1, ry1, rx2, _ = region
+        scale = (rx2 - rx1) / 960
+        return (np.asarray(box, float) - [rx1, ry1, rx1, ry1]) / scale
+
+    def templates(self, obj):
+        if obj['id'] not in self._templates:
+            found = []
+            for observation in obj['observations']:
+                for png, frame, region in self.views:
+                    if frame != observation['frame']:
+                        continue
+                    x1, y1, x2, y2 = self.to_view(observation['box'], region)
+                    if x1 >= 0 and y1 >= 0 and x2 <= 960 and y2 <= 540:
+                        patch = self.image(png)[int(y1):int(np.ceil(y2)), int(x1):int(np.ceil(x2))]
+                        if patch.size:
+                            found.append((frame, patch.copy(), (region[2] - region[0]) / 960))
+                        break
+            self._templates[obj['id']] = found
+        return self._templates[obj['id']]
+
+    def carried(self, obj, frame, reach=MAX_FRAME_DISTANCE):
+        """The motion-model box at ``frame`` (source pixels), or None if too far."""
+        near = min(obj['observations'], key=lambda o: abs(o['frame'] - frame))
+        if abs(near['frame'] - frame) > reach:
+            return None
+        return move(near['box'], frame - near['frame'])
+
+    def locate(self, obj, png, frame, region, edge=EDGE):
+        """The object's box in this view (view pixels), or None."""
+        box = self.carried(obj, frame)
+        templates = self.templates(obj)
+        if box is None or not templates:
+            return None
+        x1, y1, x2, y2 = self.to_view(box, region)
+        if x1 < edge or y1 < edge or x2 > 960 - edge or y2 > 540 - edge:
+            return None
+        _, template, template_scale = min(templates, key=lambda t: abs(t[0] - frame))
+        view_scale = (region[2] - region[0]) / 960
+        if template_scale != view_scale:
+            # Templates from a Level-1 view are half the size of the same
+            # object in a Level-2 view, and the other way round.
+            factor = template_scale / view_scale
+            template = cv2.resize(template, None, fx=factor, fy=factor,
+                                  interpolation=cv2.INTER_CUBIC if factor > 1 else cv2.INTER_AREA)
+        th, tw = template.shape[:2]
+        if th < 6 or tw < 6:
+            return None
+        search = SEARCH / view_scale
+        sx1, sy1 = int(max(0, x1 - search)), int(max(0, y1 - search))
+        sx2, sy2 = int(min(960, x1 + tw + search)), int(min(540, y1 + th + search))
+        window = self.image(png)[sy1:sy2, sx1:sx2]
+        if window.shape[0] < th or window.shape[1] < tw:
+            return None
+        scores = cv2.matchTemplate(window, template, cv2.TM_CCOEFF_NORMED)
+        _, score, _, (mx, my) = cv2.minMaxLoc(scores)
+        if score < MIN_MATCH:
+            return None
+        x1, y1 = sx1 + mx, sy1 + my
+        x2, y2 = x1 + tw, y1 + th
+        if x1 < edge or y1 < edge or x2 > 960 - edge or y2 > 540 - edge:
+            return None
+        return x1, y1, x2, y2
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--objects', type=Path, default=HERE / 'validation_objects.json')
@@ -66,67 +157,16 @@ def main() -> int:
     args = parser.parse_args()
 
     objects = json.loads(args.objects.read_text())['objects']
-    views = []
-    for meta_path in sorted(args.recordings.glob('*/*.json')):
-        meta = json.loads(meta_path.read_text())
-        if meta['view']['resolution_level'] == 1:
-            views.append((meta_path.with_suffix('.png'), meta['frame'], meta['view']['source_region_xyxy']))
-
+    locator = Locator(objects, args.recordings)
     counts, tiles = {}, []
-    images = {}
-
-    def load(png):
-        if png not in images:
-            images[png] = cv2.imread(str(png))
-        return images[png]
-
-    def to_view(box, region):
-        rx1, ry1, rx2, _ = region
-        scale = (rx2 - rx1) / 960
-        return (np.asarray(box, float) - [rx1, ry1, rx1, ry1]) / scale
 
     for obj in objects:
-        # Templates: the object as seen in the views where it was detected.
-        templates = []
-        for observation in obj['observations']:
-            for png, frame, region in views:
-                if frame != observation['frame']:
-                    continue
-                x1, y1, x2, y2 = to_view(observation['box'], region)
-                if x1 >= 0 and y1 >= 0 and x2 <= 960 and y2 <= 540:
-                    patch = load(png)[int(y1):int(np.ceil(y2)), int(x1):int(np.ceil(x2))]
-                    if patch.size:
-                        templates.append((frame, patch))
-                    break
-        if not templates:
-            continue
-
-        for png, frame, region in views:
-            near = min(obj['observations'], key=lambda o: abs(o['frame'] - frame))
-            if abs(near['frame'] - frame) > MAX_FRAME_DISTANCE:
+        for png, frame, region in locator.views:
+            found = locator.locate(obj, png, frame, region)
+            if found is None:
                 continue
-            x1, y1, x2, y2 = to_view(move(near['box'], frame - near['frame']), region)
-            if x1 < EDGE or y1 < EDGE or x2 > 960 - EDGE or y2 > 540 - EDGE:
-                continue
-            image = load(png)
-
-            # Pin the carried box down by matching the nearest template around it.
-            template = min(templates, key=lambda t: abs(t[0] - frame))[1]
-            th, tw = template.shape[:2]
-            sx1, sy1 = int(max(0, x1 - SEARCH)), int(max(0, y1 - SEARCH))
-            sx2, sy2 = int(min(960, x1 + tw + SEARCH)), int(min(540, y1 + th + SEARCH))
-            window = image[sy1:sy2, sx1:sx2]
-            if window.shape[0] < th or window.shape[1] < tw:
-                continue
-            scores = cv2.matchTemplate(window, template, cv2.TM_CCOEFF_NORMED)
-            _, score, _, (mx, my) = cv2.minMaxLoc(scores)
-            if score < MIN_MATCH:
-                continue
-            x1, y1 = sx1 + mx, sy1 + my
-            x2, y2 = x1 + tw, y1 + th
-            if x1 < EDGE or y1 < EDGE or x2 > 960 - EDGE or y2 > 540 - EDGE:
-                continue
-
+            x1, y1, x2, y2 = found
+            image = locator.image(png)
             pad_x, pad_y = int((x2 - x1) * MARGIN) + 3, int((y2 - y1) * MARGIN) + 3
             cx1, cy1 = max(0, x1 - pad_x), max(0, y1 - pad_y)
             cx2, cy2 = min(960, x2 + pad_x), min(540, y2 + pad_y)
