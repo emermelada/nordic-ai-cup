@@ -75,6 +75,11 @@ GRADE_SHARE = 0.6
 BLUR_SHARE = 0.3
 SHADOW_SHARE = 0.5
 NOISE_SHARE = 0.25
+# Share of well-masked patches that are also Poisson-blended (the badly masked
+# ones always are), so a model never learns one pasting style.
+BLEND_SHARE = 0.25
+BLEND_MIN_TEXTURE = 8.0    # grey-level std range of the ground under a blended patch
+BLEND_MAX_TEXTURE = 22.0
 
 # Filled in per worker by _init_worker.
 _patches = {}
@@ -219,6 +224,33 @@ def cast_shadow(scene: np.ndarray, patch: np.ndarray, x: int, y: int, rng: rando
     scene[sy1:sy2, sx1:sx2] = (region * (1 - darkness * mask)).astype(np.uint8)
 
 
+def paste_blended(scene: np.ndarray, patch: np.ndarray, x: int, y: int) -> bool:
+    """Poisson-blend a patch whose mask is a disc or rectangle of its old ground.
+
+    Helicopters, towers and launchers are thin and camouflaged, so their cut-outs
+    keep a disc of Helsinki grass. Pasted as is, that disc is what a model learns.
+    Mixed cloning keeps the strongest gradients of either image: the object's
+    edges survive, the old ground takes the new ground's colour and texture.
+    """
+    height, width = patch.shape[:2]
+    mask = (patch[:, :, 3] > 0).astype(np.uint8) * 255
+    mask[0, :] = mask[-1, :] = 0
+    mask[:, 0] = mask[:, -1] = 0
+    if (x < 1 or y < 1 or x + width >= scene.shape[1] - 1 or y + height >= scene.shape[0] - 1
+            or height < 5 or width < 5 or not mask.any()):
+        return False
+    try:
+        # Flatten the old ground's fine texture; strong edges (rotors, lattice) stay.
+        source = cv2.edgePreservingFilter(np.ascontiguousarray(patch[:, :, :3]),
+                                          flags=cv2.RECURS_FILTER, sigma_s=20, sigma_r=0.25)
+        blended = cv2.seamlessClone(source, scene, mask,
+                                    (x + width // 2, y + height // 2), cv2.MIXED_CLONE)
+    except cv2.error:
+        return False
+    scene[:] = blended
+    return True
+
+
 def paste(scene: np.ndarray, patch: np.ndarray, x: int, y: int) -> None:
     height, width = patch.shape[:2]
     alpha = patch[:, :, 3].astype(np.float32) / 255.0
@@ -259,16 +291,26 @@ def build_scene(rng: random.Random):
         if patch is None:
             continue
         height, width = patch.shape[:2]
+        filled = (patch[:, :, 3] > 0).mean() >= FILLED_MASK
         for _attempt in range(20):
             x = rng.randint(0, IMAGE_WIDTH - width)
             y = rng.randint(0, IMAGE_HEIGHT - height)
             box = (x, y, x + width, y + height)
+            if filled and _attempt < 15:
+                # Blending loses a thin object in busy texture (forest) and
+                # leaves the old ground visible on flat ground (water): look
+                # for moderately textured ground first.
+                region = image[y:y + height:2, x:x + width:2]
+                texture = region.mean(axis=2).std() if region.size else 0.0
+                if not BLEND_MIN_TEXTURE <= texture <= BLEND_MAX_TEXTURE:
+                    continue
             if not overlaps(box, occupied):
                 # Only cut-outs with a real silhouette get a shadow: a
                 # rectangle's shadow would be a giveaway.
                 if rng.random() < SHADOW_SHARE and (patch[:, :, 3] > 0).mean() < FILLED_MASK:
                     cast_shadow(image, patch, x, y, rng)
-                paste(image, patch, x, y)
+                if not ((filled or rng.random() < BLEND_SHARE) and paste_blended(image, patch, x, y)):
+                    paste(image, patch, x, y)
                 occupied.append(box)
                 labels.append((name, *box))
                 break

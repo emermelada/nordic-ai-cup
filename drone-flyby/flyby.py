@@ -24,7 +24,8 @@ Configuration, all optional, through environment variables:
     DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
     DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
     DRONE_CAMERA      sweep pattern: full, top, mixed, or survey
-                      (Level-2 data collection)               (default: top)
+                      quad0, full0, dwell or survey (data)    (default: full)
+    DRONE_SET         NAME=value,... overrides any setting below, for experiments
     DRONE_INSPECT     zoom to Level 2 on small unsure objects (default: 0)
 """
 
@@ -116,9 +117,20 @@ SWEEPS = {
     'full': FULL_SWEEP,
     'top': FULL_SWEEP + TOP_SWEEP * 1000,          # one full look, then the top
     'mixed': FULL_SWEEP + TOP_SWEEP * 3,           # repeats: full now and then
+    # Each point twice in a row: what the code did before moves were planned
+    # from the pending view (the camera moved every second answer).
+    'dwell': [point for point in FULL_SWEEP for _ in range(2)],
+    # The whole frame every other answer, a Level-1 quarter in between. Level 0
+    # is exempt from the distance limit, so the quarters need no middle stops.
+    'quad0': [p for corner in (TL, TR, BR, BL) for p in ((0, 1920, 1080), (1, *corner))],
+    # The full sweep with a whole-frame look after every second step.
+    'full0': [TL, TM, (0, 1920, 1080), TR, BR, (0, 1920, 1080), BM, BL, (0, 1920, 1080)],
 }
-CAMERA = os.environ.get('DRONE_CAMERA', 'top')
-SWEEP = SWEEPS.get(CAMERA, FULL_SWEEP)
+# Chosen on validation runs with v3 (same flight, same model):
+# full 0.130, quad0 0.126, full0 0.119, dwell 0.117, top 0.108.
+CAMERA = os.environ.get('DRONE_CAMERA', 'full')
+# Every point as (level, x, y); plain (x, y) points are Level 1.
+SWEEP = [p if len(p) == 3 else (1, *p) for p in SWEEPS.get(CAMERA, FULL_SWEEP)]
 
 # 'survey': a data-collection pattern, not a scoring one. Level-2 views
 # (native resolution) snake along two rows covering the top half, where every
@@ -135,6 +147,14 @@ INSPECT_SURE_SHARE = 0.75      # vote share above which a class counts as settle
 INSPECT_MAX_Y = 1500           # only while there is time left to use the answer
 INSPECT_EVERY = 4              # answered frames between inspections, at least
 INSPECT_LEAD = 3               # frames between deciding and the view arriving
+
+
+for _item in filter(None, os.environ.get('DRONE_SET', '').split(',')):
+    _name, _value = _item.split('=', 1)
+    if _name not in globals() or not isinstance(globals()[_name], (int, float)):
+        raise SystemExit(f'DRONE_SET: unknown numeric setting {_name}')
+    globals()[_name] = type(globals()[_name])(float(_value))
+    logger.warning('Setting %s = %s', _name, globals()[_name])
 
 
 # --------------------------------------------------------------------------- #
@@ -505,16 +525,22 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
         target = (1, x, y)
     else:
         position = SWEEP[state.sweep_index % len(SWEEP)]
-        if base == (1, *position):
+        if base == position:
             state.sweep_index = (state.sweep_index + 1) % len(SWEEP)
-        elif base[0] == 1:
-            # Off the pattern (start-up, a refusal): rejoin at the nearest point.
+        elif base in SWEEP and base[0] == 1:
+            # Off the pattern (a refusal, a restart): carry on from here.
+            state.sweep_index = (SWEEP.index(base) + 1) % len(SWEEP)
+        target = SWEEP[state.sweep_index % len(SWEEP)]
+        if base[0] == 1 and target[0] == 1 and not legal(base, *target):
+            # Too far for one move: rejoin the pattern at the nearest Level-1 point.
             nearest = min(
-                range(len(FULL_SWEEP)),
-                key=lambda i: (FULL_SWEEP[i][0] - base[1]) ** 2 + (FULL_SWEEP[i][1] - base[2]) ** 2,
+                (i for i, p in enumerate(SWEEP) if p[0] == 1 and legal(base, *p)),
+                key=lambda i: (SWEEP[i][1] - base[1]) ** 2 + (SWEEP[i][2] - base[2]) ** 2,
+                default=None,
             )
-            state.sweep_index = SWEEP.index(FULL_SWEEP[nearest]) + 1
-        target = (1, *SWEEP[state.sweep_index % len(SWEEP)])
+            if nearest is not None:
+                state.sweep_index = nearest
+                target = SWEEP[nearest]
 
     if target is not None and legal(base, *target):
         state.pending = target

@@ -23,8 +23,10 @@ services:
     environment:
       DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v3.pt}
       DRONE_RECORD_DIR: /recordings
-      # top (scoring, default) or survey (Level-2 data collection runs)
-      DRONE_CAMERA: ${DRONE_CAMERA:-top}
+      # full (default, best on validation), quad0, full0, dwell, top, survey
+      DRONE_CAMERA: ${DRONE_CAMERA:-full}
+      # tracker experiments, e.g. DRONE_SET=MAX_MISSES=3,UNSEEN_DECAY=0.9
+      DRONE_SET: ${DRONE_SET:-}
     volumes:
       - ${HOME}/models:/models:ro
       - ./drone-flyby/data/recordings:/recordings
