@@ -143,6 +143,42 @@ Copy the weights off the box (`scp -P <port> root@<host>:/workspace/<name>.pt .`
 drop them in `drone-flyby/models/`, and point the service at them with
 `DRONE_MODEL`.
 
+## Measured on the recordings, 2026-09-18
+
+`torch` has Python 3.14 wheels now, so `tools/bench_recordings.py` runs on the
+Windows laptop too and a experiment costs ~30 s instead of a validation run.
+Numbers below are known-object hit rate; the per-class *mean* is quoted where it
+matters, because mAP averages over classes and the frame-weighted total is
+three-quarters tank, small_plane, helicopter and jammer.
+
+* **The detector almost never picks the wrong class.** When v4 puts a box on a
+  known object it names it correctly 100 % of the time for 8 of 11 classes
+  (only small_plane/medium_plane and tank confuse at all). The whole gap is
+  failure to fire, not confusion - so runner-ups, class weights at serving time
+  and anything else that re-ranks classes is attacking a problem we do not have.
+* **Ground motion, fitted online**: hit 32.6 % -> 37.7 %, bad boxes 16.3 % ->
+  12.3 %. `MOTION` was fitted on Helsinki and is ~3 px/frame short here; it
+  compounds, and past ~16 frames a carried box no longer overlaps at IoU 0.5.
+  `DRONE_SET=MOTION_MIN_SAMPLES=999999` pins it back for an A/B.
+* **Input size trades big objects for small ones.** Same v4 weights at
+  imgsz 1280 instead of 960: tank 10 % -> 27 %, mine_roller 3 % -> 28 %, but
+  hangar 81 % -> 49 %. No retraining involved.
+* **Two models on alternate frames beat either alone**, because every detection
+  lands in the same object memory (`DRONE_MODEL_ALT`). Per-class mean: v4 42.6 %,
+  v5 37.9 %, v4+v5 alternating **46.2 %**, both-every-frame 46.4 % (twice the
+  cost for +0.2). Three-way alternation is *worse* (40.0 %): each model gets too
+  few frames to keep its tracks alive.
+* `MAX_MISSES` saturates at 6 (6/12/20 identical) once the motion is fixed.
+* Lowering `DRONE_DET_CONF` to 0.001 buys +1.2 points of recall offline, but it
+  is the same shape as the `DRONE_FLOOR_ALL` result that lost 0.009 on
+  validation - more faint boxes, and the bench cannot see what they cost in
+  precision. Do not ship it without a run.
+
+Still dead for the v4+v5 pair: spacecraft 5 %, small_launcher 6 % (13 source px,
+7 px in a Level-1 view - below YOLO's finest stride, so resolution is the limit
+rather than data), tank 25 %, small_plane 35 %. That list is what the v6 recipe
+at the top of `training/train_remote.sh` is built around.
+
 ## What to do next, in order
 
 1. **A bigger model.** The detector is the bottleneck: with a perfect detector
