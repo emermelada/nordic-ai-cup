@@ -13,7 +13,7 @@ python3.11 -m venv .venv311
 These model snapshots must already be complete in the local Hugging Face cache:
 
 - `mlx-community/whisper-large-v3-turbo-8bit` (serving ASR, staged locally; see below)
-- `mlx-community/gpt-oss-20b-MXFP4-Q8` (serving answers)
+- `mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit-REAP-19B` (serving answers)
 - `mlx-community/Qwen3.5-9B-4bit`, `mlx-community/Qwen3-8B-4bit`, `whisper-large-v3-turbo` (earlier builds)
 
 mlx-whisper loads `weights.safetensors`, but the 8-bit repo ships `model.safetensors`,
@@ -36,9 +36,9 @@ fail startup rather than downloading them. No hosted APIs are used for inference
 
 ## Current solution
 
-Whisper-large-v3-turbo (8-bit) supplies word timestamps; gpt-oss-20b answers all
-questions in one deterministic call at low reasoning effort. Its reasoning channel is
-stripped before parsing, and 1200 output tokens cover the 769 it needed at most. The `compact` prompt
+Whisper-large-v3-turbo supplies word timestamps; a 13 GB MoE answering model
+(Qwen3.6-35B-A3B pruned to 19B) answers all questions in one deterministic call with
+thinking disabled. A reasoning channel, if a model emits one, is stripped before parsing. The `compact` prompt
 keeps the original answering rules but asks for one-line JSON with unit ids and a
 quote per yes, about a third of the original output tokens. Decimal-aware alignment
 maps the quote back to words without confusing `2.5` with `25`. Two span rules then
@@ -62,7 +62,8 @@ Running processes keep their loaded code until restarted.
 | Qwen3-8B, compact + span rules | 0.770 | 0.699 |
 | **Qwen3.5-9B, compact + span rules** | 0.751 | **0.743** |
 | Qwen3.5-9B, minimal prompt | 0.751 | 0.731 |
-| gpt-oss-20b, compact + span rules + 8-bit ASR | 0.760 | not yet validated |
+| gpt-oss-20b, compact + span rules + 8-bit ASR | 0.760 | 0.727 |
+| Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | not yet validated |
 
 Qwen3.8-27B (16 GB) scored 0.755 offline but cannot serve here: with Whisper loaded it
 evicts its own weights, ASR slows from 9 s to 16 s, and requests miss the deadline. The
