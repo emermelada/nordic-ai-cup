@@ -26,6 +26,9 @@ Configuration, all optional, through environment variables:
     DRONE_CAMERA      sweep pattern: full, top, mixed, or survey
                       quad0, full0, dwell or survey (data)    (default: full)
     DRONE_SET         NAME=value,... overrides any setting below, for experiments
+                      DRONE_SET=MOTION_MIN_SAMPLES=999999 pins the ground motion
+                      to the Helsinki fit again, which is the A/B for the
+                      online fit; SPARE_BAND=0 turns off the spare answers
     DRONE_INSPECT     zoom to Level 2 on small unsure objects (default: 0)
 """
 
@@ -73,11 +76,27 @@ MAX_TRACKS = 120
 NMS_IOU = 0.5
 MAX_DETECTIONS = 100
 
-# Per-frame ground motion in source pixels, fitted on the Helsinki frames
-# (residual under 1 px). The drone flies straight, so every point drifts down
-# and slightly away from the centre as the ground gets closer:
+# Per-frame ground motion in source pixels, fitted on the Helsinki frames.
+# The drone flies straight, so every point drifts down and slightly away from
+# the centre as the ground gets closer:
 #   dx = a + b*x + c*y,  dy = d + e*x + f*y
+# This is only the starting guess. It was fitted on one flight, and a flight at
+# a different altitude or speed moves the ground by a different number of
+# pixels: measured against the recorded validation flight this is ~3 px/frame
+# short vertically (66.2 vs 69.4 at the frame centre). That is under 5 %, but it
+# compounds every frame, and a carried box that is 15 px out no longer overlaps
+# a 37 px object at IoU 0.5 - so a track that is not re-detected for ~10 frames
+# stops scoring. Since most answers come from memory rather than the current
+# view, the motion is re-fitted from our own re-detections during the run.
 MOTION = (-13.62, 0.00708, 0.00007, 51.25, 0.00029, 0.01334)
+
+# Online motion fitting.
+MOTION_MIN_SAMPLES = 8          # before that, the Helsinki prior stands alone
+MOTION_SAMPLE_MEMORY = 240      # most recent samples kept
+MOTION_MAX_GAP = 12             # frames between two sightings used as a sample
+MOTION_TRIM = 0.75              # share of samples kept: vehicles move on their own
+MOTION_PRIOR_STRENGTH = 12.0    # samples needed to outweigh the prior
+MOTION_MAX_CORRECTION = 15.0    # px/frame at the frame centre; beyond this, distrust
 
 # How much a detection at each level is trusted, for class votes and boxes.
 LEVEL_WEIGHT = {0: 0.4, 1: 0.8, 2: 1.0}
@@ -94,6 +113,17 @@ RUNNER_UPS = 4
 RUNNER_UP_SHARE = 0.03
 # Class scores below this are not counted as votes.
 MIN_VOTE_SCORE = 0.02
+
+# A response may carry 500 annotations and we were sending about 8. Average
+# precision sorts every answer by confidence and walks down the list, so a guess
+# ranked below a better one cannot lower the precision already banked - it can
+# only add recall if it happens to be right. Classes we never name score exactly
+# 0, so every remaining slot goes to another class for a box we already have,
+# in a confidence band strictly under the 0.001 floor of a real answer.
+ANSWER_LIMIT = 500
+SPARE_BAND = 0.0009
+SPARE_UNVOTED = 0.01    # a class the detector gave this box no score at all
+
 # A box partly outside the view is a guess at the object's size: report it
 # lower, and let any whole sighting replace it.
 TRUNCATED_WEIGHT = 0.5
@@ -255,14 +285,55 @@ def detect(image: np.ndarray, source_region) -> list:
 # Memory
 # --------------------------------------------------------------------------- #
 
-def advance(box: np.ndarray, steps: int) -> np.ndarray:
+def advance(box: np.ndarray, steps: int, motion=MOTION) -> np.ndarray:
     """Move a source-pixel box forward by ``steps`` frames of ground motion."""
-    a, b, c, d, e, f = MOTION
+    a, b, c, d, e, f = motion
     x1, y1, x2, y2 = box
     for _ in range(max(0, steps)):
         x1, y1 = x1 + a + b * x1 + c * y1, y1 + d + e * x1 + f * y1
         x2, y2 = x2 + a + b * x2 + c * y2, y2 + d + e * x2 + f * y2
     return np.array([x1, y1, x2, y2])
+
+
+def drift_at_centre(motion) -> float:
+    """How far the frame centre moves in one frame, under ``motion``."""
+    a, b, c, d, e, f = motion
+    x, y = IMAGE_WIDTH / 2, IMAGE_HEIGHT / 2
+    return float(np.hypot(a + b * x + c * y, d + e * x + f * y))
+
+
+def fit_motion(samples, prior):
+    """Ground motion fitted on our own re-detections, or ``prior`` if unsure.
+
+    Each sample is (x, y, dx, dy): where an object was, and how many pixels a
+    frame it has moved since we last saw it there. Most objects are ground, so
+    the fit is the ground's motion - but vehicles and aircraft move on their
+    own, so the worst quarter of the residuals is dropped before the final fit,
+    and the result is shrunk toward the prior while samples are few.
+    """
+    if len(samples) < MOTION_MIN_SAMPLES:
+        return prior
+    data = np.asarray(samples[-MOTION_SAMPLE_MEMORY:], float)
+    design = np.column_stack([np.ones(len(data)), data[:, 0], data[:, 1]])
+
+    fitted = []
+    for target in (data[:, 2], data[:, 3]):
+        coefficients = np.linalg.lstsq(design, target, rcond=None)[0]
+        keep = np.abs(design @ coefficients - target) <= np.quantile(
+            np.abs(design @ coefficients - target), MOTION_TRIM
+        )
+        if keep.sum() >= MOTION_MIN_SAMPLES:
+            coefficients = np.linalg.lstsq(design[keep], target[keep], rcond=None)[0]
+        fitted.append(coefficients)
+
+    estimate = (*fitted[0], *fitted[1])
+    weight = len(data) / (len(data) + MOTION_PRIOR_STRENGTH)
+    blended = tuple(weight * new + (1 - weight) * old for new, old in zip(estimate, prior))
+    # A fit that disagrees wildly with the prior is more likely to be a handful
+    # of moving objects than a real flight: no fit beats a bad one.
+    if abs(drift_at_centre(blended) - drift_at_centre(prior)) > MOTION_MAX_CORRECTION:
+        return prior
+    return blended
 
 
 def cover(a: np.ndarray, b: np.ndarray) -> float:
@@ -302,6 +373,9 @@ class Track:
     misses: int = 0
     inspected: bool = False
     truncated: bool = False
+    # The last box as actually *observed*, not carried: one half of a motion sample.
+    seen_box: Optional[np.ndarray] = None
+    seen_frame: int = -1
 
     def label(self) -> Tuple[str, float]:
         name = max(self.votes, key=self.votes.get)
@@ -316,6 +390,9 @@ class Sequence:
     # The last view we asked for: (level, x, y).
     pending: Optional[Tuple[int, int, int]] = None
     answers_since_inspection: int = 0
+    # This flight's ground motion, re-fitted as re-detections come in.
+    motion: Tuple[float, ...] = MOTION
+    motion_samples: List[Tuple[float, float, float, float]] = field(default_factory=list)
 
 
 _sequences: Dict[str, Sequence] = {}
@@ -327,7 +404,7 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
     # Bring every track to this frame; forget the ones that left the ground.
     alive = []
     for track in state.tracks:
-        track.box = advance(track.box, frame - track.frame)
+        track.box = advance(track.box, frame - track.frame, state.motion)
         track.frame = frame
         x1, y1, x2, y2 = track.box
         if x2 > 0 and y2 > 0 and x1 < IMAGE_WIDTH and y1 < IMAGE_HEIGHT:
@@ -362,6 +439,8 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
                 transient.append((name, confidence * TRANSIENT_WEIGHT * (TRUNCATED_WEIGHT if truncated else 1), box))
                 continue
             best = Track(box=box, frame=frame, best_level=level, truncated=truncated)
+            if not truncated:
+                best.seen_box, best.seen_frame = box.copy(), frame
             state.tracks.append(best)
         elif id(best) in matched:
             # A second detection of an object already handled this frame is a
@@ -381,6 +460,19 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
         else:
             best.box = 0.7 * best.box + 0.3 * box
         matched.add(id(best))
+        # Seeing the same object twice measures how far the ground really moved
+        # between those frames. Only whole sightings: a box the view edge cut
+        # short has a centre that says more about the edge than the object.
+        if not truncated:
+            gap = frame - best.seen_frame
+            if best.seen_box is not None and 0 < gap <= MOTION_MAX_GAP:
+                was = best.seen_box
+                state.motion_samples.append((
+                    (was[0] + was[2]) / 2, (was[1] + was[3]) / 2,
+                    ((box[0] + box[2]) - (was[0] + was[2])) / 2 / gap,
+                    ((box[1] + box[3]) - (was[1] + was[3])) / 2 / gap,
+                ))
+            best.seen_box, best.seen_frame = box.copy(), frame
         add_votes(best, name, confidence, probabilities, weight * (TRUNCATED_WEIGHT if truncated else 1))
         best.best_confidence = max(best.best_confidence, confidence * (0.6 + 0.4 * weight))
         best.last_seen = frame
@@ -400,11 +492,18 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
     if len(state.tracks) > MAX_TRACKS:
         state.tracks.sort(key=lambda t: -t.best_confidence)
         del state.tracks[MAX_TRACKS:]
+
+    if len(state.motion_samples) > MOTION_SAMPLE_MEMORY * 2:
+        del state.motion_samples[:-MOTION_SAMPLE_MEMORY]
+    state.motion = fit_motion(state.motion_samples, MOTION)
     return transient
 
 
 def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlybyPredictionDto]:
     annotations = []
+    # Classes a track did not name, kept apart so they can be ranked strictly
+    # below every real answer. See the note by ANSWER_LIMIT.
+    spares = []
     for name, confidence, box in transient:
         bbox = clip_bbox_to_frame((
             box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT, box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
@@ -428,18 +527,40 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         if track.truncated:
             base *= TRUNCATED_WEIGHT
         top_vote = ranked[0][1]
+        named = set()
         for rank, (name, vote) in enumerate(ranked[:1 + RUNNER_UPS]):
             share = vote / top_vote
             if rank and share < RUNNER_UP_SHARE:
                 break
             confidence = base if rank == 0 else base * 0.9 * share
+            named.add(name)
             annotations.append(DroneFlybyPredictionDto(
                 object_id=name,
                 bbox=[round(c, 6) for c in bbox],
                 confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
             ))
+        # Everything else this box could be, in the spare band. A class we never
+        # name scores exactly 0 on this box; a class we name last costs nothing.
+        if SPARE_BAND:
+            for name in (n for n, _ in ranked if n not in named):
+                share = track.votes[name] / top_vote
+                spares.append((SPARE_BAND * max(share, 1e-3), name, bbox))
+                named.add(name)
+            for name in OBJECT_CLASSES:
+                if name not in named:
+                    spares.append((SPARE_BAND * SPARE_UNVOTED, name, bbox))
+
     annotations.sort(key=lambda a: -a.confidence)
-    return annotations[:500]
+    room = ANSWER_LIMIT - len(annotations)
+    if room > 0 and spares:
+        spares.sort(key=lambda s: -s[0])
+        for confidence, name, bbox in spares[:room]:
+            annotations.append(DroneFlybyPredictionDto(
+                object_id=name,
+                bbox=[round(c, 6) for c in bbox],
+                confidence=round(float(confidence), 6),
+            ))
+    return annotations[:ANSWER_LIMIT]
 
 
 # --------------------------------------------------------------------------- #
@@ -456,7 +577,7 @@ def inspection_target(state: Sequence, base, frame: int) -> Optional[Tuple[int, 
     for track in state.tracks:
         if track.inspected or track.best_level >= 2:
             continue
-        box = advance(track.box, INSPECT_LEAD)
+        box = advance(track.box, INSPECT_LEAD, state.motion)
         width, height = box[2] - box[0], box[3] - box[1]
         if max(width, height) > INSPECT_MAX_SIDE or box[1] > INSPECT_MAX_Y or box[3] < 0:
             continue
