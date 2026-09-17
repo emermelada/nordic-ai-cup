@@ -24,6 +24,13 @@ COPY agent_server.py best_controller.py policy_heuristic.py ./
 COPY best_controller/ ./best_controller/
 COPY src/ ./src/
 
+# Provenance gate: the shipped controller must be byte-identical to the reviewed file. This is what
+# turns "the duplicate silently drifted" (2026-09-18: sweeps tuned experiments/best_controller.py
+# while the image shipped the root copy) into a build failure. Re-record after an intentional change:
+#   python tools/check_controller.py --update
+COPY best_controller.sha256 ./
+RUN sha256sum -c best_controller.sha256
+
 EXPOSE 9052
 # --no-access-log shaves a little latency; /debug/stats still reports policy + log lines.
 CMD ["uvicorn", "agent_server:app", "--host", "0.0.0.0", "--port", "9052", "--no-access-log"]

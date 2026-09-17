@@ -1,0 +1,7 @@
+[
+ {"tag": "F0 production (target12/popcap6/cd120)", "params": {}},
+ {"tag": "F1 small fleet target4 popcap3 cd400", "params": {"repro_global_target": 4, "repro_popcap": 3, "spawn_cooldown": 400}},
+ {"tag": "F2 tiny fleet target2 popcap2 cd600", "params": {"repro_global_target": 2, "repro_popcap": 2, "spawn_cooldown": 600}},
+ {"tag": "F3 bank hard abs300 target4 cd400", "params": {"repro_energy_abs": 300, "repro_global_target": 4, "repro_popcap": 3, "spawn_cooldown": 400}},
+ {"tag": "F4 bank med abs200 target6 cd300", "params": {"repro_energy_abs": 200, "repro_global_target": 6, "repro_popcap": 4, "spawn_cooldown": 300}}
+]

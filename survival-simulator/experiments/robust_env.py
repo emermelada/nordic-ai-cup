@@ -23,7 +23,10 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(HERE))
+REPO = os.path.dirname(HERE)
+# SINGLE SOURCE OF TRUTH: <repo>/best_controller.py is the ONLY controller (the file the Dockerfile
+# ships). experiments/ holds no copy; the guard below + tools/check_controller.py enforce this.
+sys.path.insert(0, REPO)
 sys.path.insert(0, HERE)
 
 from env_wrapper import run_eval_episode
@@ -31,10 +34,12 @@ import best_controller as bc
 from best_controller import DEFAULT_PARAMS
 
 if not hasattr(bc, "reset_memory"):
-    raise SystemExit("FATAL: imported the wrong best_controller (%s). Expected %s"
-                     % (getattr(bc, "__file__", "?"), os.path.join(HERE, "best_controller.py")))
+    raise SystemExit("FATAL: imported a controller lacking reset_memory (%s). Expected %s"
+                     % (getattr(bc, "__file__", "?"), os.path.join(REPO, "best_controller.py")))
+if os.path.realpath(getattr(bc, "__file__", "")) != os.path.realpath(os.path.join(REPO, "best_controller.py")):
+    raise SystemExit("FATAL: canonical controller is shadowed by %s (a stale duplicate?)" % bc.__file__)
 
-PARAMS_PATH = os.path.join(HERE, "best_controller", "params.json")
+PARAMS_PATH = os.path.join(REPO, "best_controller", "params.json")
 
 
 def baseline():

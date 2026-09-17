@@ -9,8 +9,9 @@ import gymnasium as gym
 from gymnasium import spaces
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # repo root for `src.*`
-# ^ APPEND, not insert(0): the repo root also holds a best_controller.py (deployment copy) and
-#   prepending it here silently shadowed experiments/best_controller.py for every later import.
+# ^ APPEND keeps the repo root LAST on the path. Since the 2026-09-18 single-source fix the repo
+#   root holds the ONLY best_controller.py, so nothing can be shadowed any more; the append order
+#   is retained because the measurement scripts must never pick up a second controller implicitly.
 from src.core import SimulationCore
 from src.utils.DTOs import ActionRequest
 

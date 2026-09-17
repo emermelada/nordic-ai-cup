@@ -1,0 +1,6 @@
+[
+ {"tag": "EG0 production (frac gate, target12)", "params": {}},
+ {"tag": "EG1 target20 popcap12", "params": {"repro_global_target": 20, "repro_popcap": 12}},
+ {"tag": "EG2 target30 popcap20", "params": {"repro_global_target": 30, "repro_popcap": 20}},
+ {"tag": "EG3 abs120+target20+cd60", "params": {"repro_energy_abs": 120, "repro_global_target": 20, "repro_popcap": 12, "spawn_cooldown": 60}}
+]

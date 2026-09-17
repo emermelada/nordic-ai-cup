@@ -24,9 +24,11 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# ORDER MATTERS: the repo root ALSO has a best_controller.py (the deployment copy for the Docker
-# image). Insert the root FIRST so this directory's copy wins the import.
-sys.path.insert(0, os.path.dirname(HERE))
+REPO = os.path.dirname(HERE)
+# SINGLE SOURCE OF TRUTH: there is exactly ONE controller -- <repo>/best_controller.py, the same
+# file the Dockerfile ships and the VPS serves. experiments/ deliberately holds NO copy; this
+# directory is only for measurement code. `tools/check_controller.py` enforces that invariant.
+sys.path.insert(0, REPO)
 sys.path.insert(0, HERE)
 
 from env_wrapper import run_eval_episode
@@ -34,10 +36,12 @@ import best_controller as bc
 from best_controller import DEFAULT_PARAMS
 
 if not hasattr(bc, "reset_memory"):
-    raise SystemExit("FATAL: imported the wrong best_controller (%s). Expected %s"
-                     % (getattr(bc, "__file__", "?"), os.path.join(HERE, "best_controller.py")))
+    raise SystemExit("FATAL: imported a controller lacking reset_memory (%s). Expected %s"
+                     % (getattr(bc, "__file__", "?"), os.path.join(REPO, "best_controller.py")))
+if os.path.realpath(getattr(bc, "__file__", "")) != os.path.realpath(os.path.join(REPO, "best_controller.py")):
+    raise SystemExit("FATAL: canonical controller is shadowed by %s (a stale duplicate?)" % bc.__file__)
 
-PARAMS_PATH = os.path.join(HERE, "best_controller", "params.json")
+PARAMS_PATH = os.path.join(REPO, "best_controller", "params.json")
 RESULTS_PATH = os.path.join(HERE, "bench_std_results.jsonl")
 TRAIN_SEEDS = list(range(100, 900, 100))       # 100..800   - tuning only
 EVAL_SEEDS = list(range(1000, 1800, 100))      # 1000..1700 - HELD OUT, never tuned on

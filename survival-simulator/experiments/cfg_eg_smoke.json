@@ -1,0 +1,4 @@
+[
+ {"tag": "SMOKE EG0 production", "params": {}},
+ {"tag": "SMOKE EG1 target20", "params": {"repro_global_target": 20, "repro_popcap": 12}}
+]

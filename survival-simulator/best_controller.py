@@ -61,6 +61,17 @@ DEFAULT_PARAMS = {
     # --- foraging efficiency (energy income; movement burn dominates the energy budget) ---
     "forage_nearest": 0.0,     # 1 = when fruit is visible, steer straight at the nearest safe fruit
     "forage_speed": 1.0,       # move-distance fraction used by the nearest-fruit override
+    # --- generational relay (age-aware: survive past max_age by banking heirs) ---
+    "relay_age": 0.0,          # sim seconds; spawn an heir once older than this (0 = off)
+    "relay_energy_frac": 0.35, # energy gate used by the relay spawn (fraction of max_energy)
+    "relay_cooldown": 700,     # ticks between relay spawns
+    "repro_energy_abs": 0.0,   # ABSOLUTE energy gate (sim requires >100); 0 = use fractional rf
+    # --- age-based roles, fully decentralised (each agent only knows its OWN age) ---
+    "role_by_age": 0.0,        # 1 = young agents forage hard, old agents conserve
+    "young_age": 25.0,         # sim seconds below which an agent is a "young forager"
+    "old_age": 60.0,           # sim seconds above which an agent is "old" (conserve + bank heir)
+    "young_speed_frac": 1.0,   # movement scale for young agents
+    "old_speed_frac": 0.5,     # movement scale for old agents (they are a dying investment)
 }
 
 # module-level memory: per-agent-id last action / flee state / spawn clock.
@@ -82,6 +93,21 @@ def _maybe_new_episode(aid, age):
         _AGE.clear()
         _EPOCH = 0
     _AGE[aid] = age
+
+
+def reset_memory():
+    """Hard reset of ALL module-level policy state. Call at the START of every episode.
+
+    Without this, evaluation is ORDER-DEPENDENT: `_MEM`/`_GC`/`_AGE`/`_EPOCH` are module globals,
+    so an episode inherits the previous episode's per-agent memory and population estimate. The
+    age-drop heuristic in `_maybe_new_episode` misses cases, which made the SAME seed produce
+    different survival (e.g. 9362 vs 7581 vs 11873 ticks) depending on which seeds ran before it —
+    silently biasing every multi-config sweep by config position."""
+    global _EPOCH
+    _MEM.clear()
+    _GC.clear()
+    _AGE.clear()
+    _EPOCH = 0
 
 
 def _global_alive(ttl=60):
@@ -292,6 +318,17 @@ def potential_controller(state, P):
     if use_energy and ef < P["reserve_frac"]:
         dist = min(dist, speed * 0.25)
 
+    # ---- age-based role scaling (audit C2): every agent is called separately and knows only its
+    # own age, so roles need no coordination at all. The young are the future -> forage hard; the
+    # old are a dying investment (max_age 60-120 s) -> stop burning energy on movement and put it
+    # into banking an heir instead.
+    if P.get("role_by_age", 0.0) > 0.0:
+        _age = state.get("age", 0.0)
+        if _age > P.get("old_age", 60.0):
+            dist *= P.get("old_speed_frac", 0.5)
+        elif _age < P.get("young_age", 25.0):
+            dist *= P.get("young_speed_frac", 1.0)
+
     # ---- reproduction (investment-gated; cooperative pop cap via shared estimate) ----
     spawn = 0.0
     use_repro = P.get("use_repro", True)
@@ -310,14 +347,41 @@ def potential_controller(state, P):
     else:
         pop_ok = gpop < target
         crowd_ok = len(agents) <= P.get("repro_popcap", 2)
-    if (use_repro and ef > rf
+
+    # --- generational relay (audit B1/B2, C2): never let the chain break ---
+    # agent.py: max_age = 60 + U(0,60) sim-seconds and environment.py applies energy -= 0.01*age
+    # per tick past it, so EVERY agent dies of age in 60-120 s no matter how well fed. Survival
+    # past ~120 s therefore requires an unbroken line of heirs. An already-old agent is a dying
+    # investment and must bank a successor NOW, even at/above the population target: population
+    # size is NOT a score multiplier (score += dt fires once per tick regardless of agent count);
+    # the metric is the time until the LAST agent dies.
+    relay_age = P.get("relay_age", 0.0)  # sim seconds; 0 = disabled
+    relay = relay_age > 0.0 and state.get("age", 0.0) > relay_age
+    if relay:
+        pop_ok = True  # population COUNT is not a score multiplier (score += dt once per tick)
+        # ...but keep the LOCAL dispersion gate: a crowd is what gets multi-killed, and each extra
+        # body is both a 100-energy cost and an edible -energy/100 liability. A relay needs ONE
+        # competent heir, not a swarm.
+        rf = min(rf, P.get("relay_energy_frac", 0.35))
+        cd = P.get("relay_cooldown", 700)     # slower cadence for relay spawns than the normal gate
+    else:
+        cd = P.get("spawn_cooldown", 400)
+    # --- reproduction gate, in the RIGHT unit ---
+    # environment.py hard-requires energy > 100 to spawn. Our gate was a FRACTION of max_energy
+    # (0.35 * 500 = 175), which is both the wrong unit (max_energy varies per agent) and
+    # unreachable exactly when food decays and the relay matters most. Measured: ZERO births in
+    # the final 2,000 ticks of a losing run, with mean energy 37-120 and fruit_vis 0-1.
+    # Minimum viable reproduction: spend down to just above the sim's own requirement.
+    abs_gate = P.get("repro_energy_abs", 0.0)
+    gate_ok = (energy > abs_gate) if abs_gate > 0.0 else (ef > rf)
+    if (use_repro and gate_ok
             and m["spawn_clock"] <= 0
             and pop_ok
             and crowd_ok):
         safe = all(p["distance"] >= P.get("repro_safe_radius", 330.0) for p in preds)
         if safe:
             spawn = 1.0
-            m["spawn_clock"] = P.get("spawn_cooldown", 400)
+            m["spawn_clock"] = cd
 
     return [float(dist), float(steer), 0.0, float(spawn)]
 
