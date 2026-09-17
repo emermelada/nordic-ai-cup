@@ -7,10 +7,10 @@ from pathlib import Path
 
 # The 8-bit ASR is half the size of the fp16 one and scored the same; mlx-whisper wants
 # the weights named weights.safetensors, so it is staged locally (see RUNNING.md).
-WHISPER_MODEL = 'models/whisper-large-v3-turbo-8bit'
+WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
-LLM_MODEL = 'mlx-community/gpt-oss-20b-MXFP4-Q8'
+LLM_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
 DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
