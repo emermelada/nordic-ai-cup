@@ -5,7 +5,11 @@ import os
 import time
 from pathlib import Path
 
-WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
+# The 8-bit ASR is half the size of the fp16 one and scored the same; mlx-whisper wants
+# the weights named weights.safetensors, so it is staged locally (see RUNNING.md).
+WHISPER_MODEL = 'models/whisper-large-v3-turbo-8bit'
+# A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
+RELEASE_ASR_AFTER_TRANSCRIBE = True
 QWEN_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
 DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
@@ -21,6 +25,9 @@ ASR_SETTINGS = {
 def resolve_snapshot(model_id: str) -> str:
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
+    local = Path(__file__).resolve().parent.parent / model_id
+    if local.is_dir():
+        return str(local)
     from huggingface_hub import snapshot_download
 
     try:
@@ -55,6 +62,16 @@ def decode_audio(audio_bytes: bytes):
     return samples
 
 
+def release_asr():
+    """Drop cached Whisper weights so the answering model keeps the memory."""
+    import mlx.core as mx
+    from mlx_whisper.transcribe import ModelHolder
+
+    ModelHolder.model = None
+    ModelHolder.model_path = None
+    mx.clear_cache()
+
+
 class MLXBackend:
     def __init__(self, prompt=DEFAULT_PROMPT):
         if prompt not in ('legacy', 'focused', 'compact', 'minimal'):
@@ -80,7 +97,11 @@ class MLXBackend:
 
         started = time.monotonic()
         samples = decode_audio(audio_bytes)
-        result = self._transcribe(samples)
+        try:
+            result = self._transcribe(samples)
+        finally:
+            if RELEASE_ASR_AFTER_TRANSCRIBE:
+                release_asr()
         segments = [
             {
                 'start': float(segment['start']),

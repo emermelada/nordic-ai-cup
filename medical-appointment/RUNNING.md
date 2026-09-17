@@ -12,9 +12,24 @@ python3.11 -m venv .venv311
 
 These model snapshots must already be complete in the local Hugging Face cache:
 
-- `mlx-community/whisper-large-v3-turbo`
+- `mlx-community/whisper-large-v3-turbo-8bit` (serving ASR, staged locally; see below)
 - `mlx-community/Qwen3.5-9B-4bit` (serving)
-- `mlx-community/Qwen3-8B-4bit` (earlier builds and offline comparisons)
+- `mlx-community/whisper-large-v3-turbo`, `mlx-community/Qwen3-8B-4bit` (earlier builds)
+
+mlx-whisper loads `weights.safetensors`, but the 8-bit repo ships `model.safetensors`,
+so stage it once into the gitignored `models/` directory:
+
+```bash
+SNAP=$(ls -d ~/.cache/huggingface/hub/models--mlx-community--whisper-large-v3-turbo-8bit/snapshots/*/)
+mkdir -p models/whisper-large-v3-turbo-8bit
+cp "$SNAP/config.json" models/whisper-large-v3-turbo-8bit/
+cp "$SNAP/model.safetensors" models/whisper-large-v3-turbo-8bit/weights.safetensors
+```
+
+The 8-bit ASR scored 0.7558 against 0.7505 for fp16 on the training set at half the
+memory. ASR weights are released after each transcription: reloading from the page
+cache costs nothing measurable (3.0 s versus 3.1 s warm) and keeps the memory free for
+the answering model. The 4-bit ASR was rejected at 0.7274.
 
 Startup resolves cached snapshots with `local_files_only=True`; missing weights
 fail startup rather than downloading them. No hosted APIs are used for inference.

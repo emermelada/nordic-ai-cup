@@ -77,12 +77,20 @@ class BackendTests(unittest.TestCase):
         result['segments'][0]['words'][0]['probability'] = 0.8
         transcribe = Mock(return_value=result)
         samples = [0.0] * 32000
+        holder = SimpleNamespace(model='loaded', model_path='/cached/whisper')
+        modules = {
+            'mlx_whisper': SimpleNamespace(transcribe=transcribe),
+            'mlx_whisper.transcribe': SimpleNamespace(ModelHolder=holder),
+            'mlx_lm': None,
+        }
         with patch.object(mlx_backend, 'decode_audio', return_value=samples), \
                 patch.object(mlx_backend, 'resolve_snapshot', return_value='/cached/whisper') as resolve, \
-                patch.dict(sys.modules, {'mlx_whisper': SimpleNamespace(transcribe=transcribe), 'mlx_lm': None}):
+                patch.dict(sys.modules, modules):
             backend = mlx_backend.MLXBackend()
             output = backend.transcribe(b'mp3')
         resolve.assert_called_once_with(mlx_backend.WHISPER_MODEL)
+        # The answering model needs the memory; ASR weights are reloaded from page cache.
+        self.assertIsNone(holder.model)
         self.assertEqual(output['duration'], 2.0)
         self.assertEqual(output['segments'][0]['words'][0]['p'], 0.8)
         self.assertIsNone(backend._llm)
