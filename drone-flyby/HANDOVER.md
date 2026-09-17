@@ -118,6 +118,31 @@ was learned:
   objects measure 0.55–0.85x their Helsinki box diagonal) and hue rotation
   (backgrounds ±20°, patches ±8°, `hsv_h=0.03`).
 
+## Training on a rented GPU (Vast.ai, Runpod, ...)
+
+`training/train_remote.sh` does the whole run on a fresh box: installs what it
+needs, checks the GPU, clones the official repo, downloads the background
+photos from Kaggle, builds the dataset and trains.
+
+```bash
+export KAGGLE_USERNAME=... KAGGLE_KEY=...        # or copy ~/.kaggle/kaggle.json
+bash training/train_remote.sh                    # yolo11m, 40 epochs
+MODEL=yolo11l.pt EPOCHS=50 BATCH=24 bash training/train_remote.sh
+```
+
+Estimates from our Kaggle timings (T4, yolo11n, 40 epochs ~2.5 h): on an
+RTX 5090 expect roughly **1 h for yolo11m** and **1.5-3 h for yolo11l**, plus
+~20 min to build the dataset and the 22 GB Inria download (`WITH_INRIA=0`
+skips it, at the cost of background variety — the single biggest gain so far).
+
+Watch out for: Blackwell cards need torch >= 2.7 on CUDA 12.8 (the script
+checks); `cache='ram'` needs ~1.6 GB per 1000 images; and destroy the instance
+afterwards, stopping it still bills storage.
+
+Copy the weights off the box (`scp -P <port> root@<host>:/workspace/<name>.pt .`),
+drop them in `drone-flyby/models/`, and point the service at them with
+`DRONE_MODEL`.
+
 ## What to do next, in order
 
 1. **A bigger model.** The detector is the bottleneck: with a perfect detector
