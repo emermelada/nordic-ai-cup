@@ -1,0 +1,254 @@
+[
+ {
+  "name": "heuristic",
+  "metric": "fixed",
+  "scores": [
+   3016.7,
+   3002.6,
+   3000.6,
+   3020.1,
+   3003.4
+  ],
+  "mean": 3008.7,
+  "median": 3003.4,
+  "std": 8.0,
+  "min": 3000.6,
+  "max": 3020.1,
+  "fruits_eaten": [
+   565,
+   427,
+   18,
+   512,
+   151
+  ],
+  "predated": [
+   64,
+   61,
+   6,
+   73,
+   23
+  ],
+  "final_agents": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "steps": [
+   30000,
+   30000,
+   30000,
+   30000,
+   30000
+  ],
+  "alive": [
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "latency_s_per_episode": [
+   111.5,
+   84.4,
+   94.4,
+   104.2,
+   85.7
+  ],
+  "median_survival_ticks": null,
+  "survival_ticks": null
+ },
+ {
+  "name": "best_controller",
+  "metric": "fixed",
+  "scores": [
+   3012.1,
+   3016.4,
+   3012.6,
+   3010.7,
+   3013.8
+  ],
+  "mean": 3013.1,
+  "median": 3012.6,
+  "std": 1.9,
+  "min": 3010.7,
+  "max": 3016.4,
+  "fruits_eaten": [
+   433,
+   500,
+   603,
+   671,
+   522
+  ],
+  "predated": [
+   43,
+   34,
+   35,
+   50,
+   41
+  ],
+  "final_agents": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "steps": [
+   30000,
+   30000,
+   30000,
+   30000,
+   30000
+  ],
+  "alive": [
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "latency_s_per_episode": [
+   136.1,
+   82.8,
+   108.8,
+   106.4,
+   88.3
+  ],
+  "median_survival_ticks": null,
+  "survival_ticks": null
+ },
+ {
+  "name": "heuristic",
+  "metric": "survivorship",
+  "scores": [
+   431.4,
+   396.4,
+   86.1,
+   241.0,
+   270.1
+  ],
+  "mean": 285.0,
+  "median": 270.1,
+  "std": 122.9,
+  "min": 86.1,
+  "max": 431.4,
+  "fruits_eaten": [
+   566,
+   425,
+   19,
+   266,
+   126
+  ],
+  "predated": [
+   91,
+   66,
+   6,
+   50,
+   18
+  ],
+  "final_agents": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "steps": [
+   4155,
+   3890,
+   855,
+   2304,
+   2646
+  ],
+  "alive": [
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "latency_s_per_episode": [
+   14.7,
+   12.3,
+   1.5,
+   9.8,
+   3.7
+  ],
+  "median_survival_ticks": 2646.0,
+  "survival_ticks": [
+   4155,
+   3890,
+   855,
+   2304,
+   2646
+  ]
+ },
+ {
+  "name": "best_controller",
+  "metric": "survivorship",
+  "scores": [
+   420.8,
+   548.8,
+   659.0,
+   556.5,
+   242.6
+  ],
+  "mean": 485.5,
+  "median": 548.8,
+  "std": 143.1,
+  "min": 242.6,
+  "max": 659.0,
+  "fruits_eaten": [
+   310,
+   670,
+   985,
+   675,
+   145
+  ],
+  "predated": [
+   23,
+   36,
+   59,
+   50,
+   17
+  ],
+  "final_agents": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "steps": [
+   4098,
+   5202,
+   6362,
+   5385,
+   2385
+  ],
+  "alive": [
+   false,
+   false,
+   false,
+   false,
+   false
+  ],
+  "latency_s_per_episode": [
+   9.6,
+   13.4,
+   17.4,
+   15.9,
+   5.7
+  ],
+  "median_survival_ticks": 5202.0,
+  "survival_ticks": [
+   4098,
+   5202,
+   6362,
+   5385,
+   2385
+  ]
+ }
+]

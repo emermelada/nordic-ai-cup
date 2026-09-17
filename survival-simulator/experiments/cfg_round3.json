@@ -1,0 +1,7 @@
+[
+ {"tag": "L legacy", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0}},
+ {"tag": "S1 legacy+flee0.6", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0, "flee_speed_frac": 0.6}},
+ {"tag": "S2 legacy+nearest", "params": {"repro_urgency": 0.0, "forage_nearest": 1.0}},
+ {"tag": "S3 legacy+nearest+flee0.6", "params": {"repro_urgency": 0.0, "forage_nearest": 1.0, "flee_speed_frac": 0.6}},
+ {"tag": "S4 S3+more-repro", "params": {"forage_nearest": 1.0, "flee_speed_frac": 0.6, "repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}}
+]

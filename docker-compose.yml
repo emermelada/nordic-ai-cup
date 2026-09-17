@@ -21,7 +21,15 @@ services:
     build: ./drone-flyby
     ports: ["8002:8000"]
 
+  # The agent endpoint the organisers' simulator calls. It listens on 9052
+  # (see agent_server.py), not 8000 like the other two services, and exposes
+  # POST /predict + GET / rather than /api - so it overrides the shared healthcheck.
   survival-simulator:
     <<: *common
     build: ./survival-simulator
-    ports: ["8003:8000"]
+    ports: ["9052:9052"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9052/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

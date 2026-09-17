@@ -1,0 +1,9 @@
+[
+ {"tag": "L legacy(deployed)", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0}},
+ {"tag": "M more-repro+urgency", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}},
+ {"tag": "N M + forage_nearest", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0}},
+ {"tag": "O M + walk0.6", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "walk_frac": 0.6, "explore_frac": 0.4}},
+ {"tag": "P N + walk0.6", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4}},
+ {"tag": "Q repro-unlimited", "params": {"repro_frac": 0.30, "spawn_cooldown": 100, "repro_global_target": 12, "repro_popcap": 8, "repro_unlimited": 1.0}},
+ {"tag": "R M target16", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 16, "repro_popcap": 6}}
+]

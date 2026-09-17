@@ -1,0 +1,7 @@
+[
+ {"tag": "B0 deployed target12", "params": {}},
+ {"tag": "T6 small-pop target6", "params": {"repro_global_target": 6, "repro_popcap": 4}},
+ {"tag": "T8 small-pop target8", "params": {"repro_global_target": 8, "repro_popcap": 5}},
+ {"tag": "T10 small-pop target10", "params": {"repro_global_target": 10, "repro_popcap": 5}},
+ {"tag": "T16 large-pop target16", "params": {"repro_global_target": 16, "repro_popcap": 8}}
+]

@@ -1,0 +1,16 @@
+COLLECT horizon=8000 seeds=[100, 200, 300, 400, 500, 600, 700, 800] variants=5 subsample=2
+  expert             seed=100   ticks=  4856 score=   515.6 spawns=87   pred=92   samples=30392
+  expert             seed=200   ticks=  5185 score=   518.4 spawns=103  pred=108  samples=26172
+  expert             seed=300   ticks=  8000 score=   797.2 spawns=132  pred=132  samples=41762
+  expert             seed=400   ticks=  6573 score=   682.8 spawns=109  pred=114  samples=34364
+  expert             seed=500   ticks=  7233 score=   702.6 spawns=136  pred=141  samples=31467
+  expert             seed=600   ticks=  5590 score=   557.2 spawns=115  pred=120  samples=34820
+  expert             seed=700   ticks=  7637 score=   802.9 spawns=136  pred=141  samples=46137
+  expert             seed=800   ticks=  5826 score=   599.3 spawns=91   pred=96   samples=26820
+  no_flee            seed=100   ticks=  4134 score=   426.8 spawns=64   pred=69   samples=24942
+  no_flee            seed=200   ticks=  5434 score=   501.7 spawns=110  pred=115  samples=31384
+  no_flee            seed=300   ticks=  4226 score=   322.2 spawns=80   pred=85   samples=19984
+  no_flee            seed=400   ticks=  7780 score=   718.6 spawns=179  pred=184  samples=43538
+  no_flee            seed=500   ticks=  4947 score=   472.9 spawns=100  pred=105  samples=28576
+  no_flee            seed=600   ticks=  5987 score=   553.5 spawns=169  pred=174  samples=34799
+  no_flee            seed=700   ticks=  5918 score=   603.0 spawns=107  pred=112  samples=33301

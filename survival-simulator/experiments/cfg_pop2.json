@@ -1,0 +1,6 @@
+[
+ {"tag": "B0 deployed target12", "params": {}},
+ {"tag": "T8 target8", "params": {"repro_global_target": 8, "repro_popcap": 5}},
+ {"tag": "T8b target8 popcap4", "params": {"repro_global_target": 8, "repro_popcap": 4}},
+ {"tag": "T16 target16", "params": {"repro_global_target": 16, "repro_popcap": 8}}
+]

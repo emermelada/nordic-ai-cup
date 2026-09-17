@@ -1,0 +1,8 @@
+[
+ {"tag": "B0 deployed-NEW", "params": {}},
+ {"tag": "P1 forage_speed 0.6", "params": {"forage_speed": 0.6}},
+ {"tag": "P2 forage_speed 0.8", "params": {"forage_speed": 0.8}},
+ {"tag": "P3 forage_speed 1.4", "params": {"forage_speed": 1.4}},
+ {"tag": "P4 walk_frac 0.3", "params": {"walk_frac": 0.3}},
+ {"tag": "P5 energy reserve up", "params": {"low_energy_frac": 0.5, "reserve_frac": 0.25}}
+]

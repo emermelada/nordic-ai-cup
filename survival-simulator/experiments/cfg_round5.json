@@ -1,0 +1,9 @@
+[
+ {"tag": "P ref", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4}},
+ {"tag": "P walk0.45", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.45, "explore_frac": 0.35}},
+ {"tag": "P walk0.75", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.75, "explore_frac": 0.5}},
+ {"tag": "P forage_speed0.7", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4, "forage_speed": 0.7}},
+ {"tag": "P lowE0.5", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4, "low_energy_frac": 0.5}},
+ {"tag": "P repro_min0.22", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4, "repro_frac_min": 0.22}},
+ {"tag": "P reserve0.25", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4, "reserve_frac": 0.25}}
+]

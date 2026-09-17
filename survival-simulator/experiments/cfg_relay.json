@@ -1,0 +1,7 @@
+[
+ {"tag": "R0 T8 relay-off", "params": {"repro_global_target": 8, "repro_popcap": 5}},
+ {"tag": "R1 T8 relay30", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 30.0}},
+ {"tag": "R2 T8 relay45", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 45.0}},
+ {"tag": "R3 T8 relay60", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 60.0}},
+ {"tag": "R4 T16 relay45", "params": {"repro_global_target": 16, "repro_popcap": 8, "relay_age": 45.0}}
+]

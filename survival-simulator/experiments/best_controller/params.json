@@ -1,0 +1,22 @@
+{
+ "fruit_weight": 2.753188843969487,
+ "predator_weight": 4.461866790829108,
+ "wall_weight": 0.7403176069667085,
+ "disperse_weight": 1.687396370816479,
+ "wander_weight": 0.008172764752720128,
+ "danger_dist": 203.35852540668725,
+ "flee_dist": 149.06536503593583,
+ "escape_dist": 252.2561763633574,
+ "fruit_risk_penalty": 0.6767078450094437,
+ "walk_frac": 0.45,
+ "explore_frac": 0.35,
+ "repro_frac": 0.35,
+ "repro_frac_min": 0.22,
+ "repro_urgency": 1.0,
+ "repro_global_target": 12,
+ "repro_popcap": 6,
+ "spawn_cooldown": 120,
+ "repro_safe_radius": 253.47550193496397,
+ "forage_nearest": 1.0,
+ "forage_speed": 1.0
+}

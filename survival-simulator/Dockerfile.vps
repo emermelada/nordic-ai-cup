@@ -1,0 +1,29 @@
+# Low-latency serving image for the Survival Simulator agent endpoint.
+#
+# The big Mac image pulls pygame/shapely/scipy (needed only by the offline simulator, NOT by the
+# serving path). The serving path needs only: fastapi + uvicorn + pydantic + numpy. This image is
+# tiny and fast, so it can run on a small VPS close to the grader.
+#
+# Build (context = survival-simulator/, i.e. this folder):
+#   docker build -f Dockerfile.vps -t nac-survival-vps .
+# Run:
+#   docker run -d --name nac-survival-vps -p 9052:9052 --restart unless-stopped nac-survival-vps
+#
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+COPY requirements-vps.txt .
+RUN pip install -r requirements-vps.txt
+
+# Only what the serving path imports:
+COPY agent_server.py best_controller.py policy_heuristic.py ./
+COPY best_controller/ ./best_controller/
+COPY src/ ./src/
+
+EXPOSE 9052
+# --no-access-log shaves a little latency; /debug/stats still reports policy + log lines.
+CMD ["uvicorn", "agent_server:app", "--host", "0.0.0.0", "--port", "9052", "--no-access-log"]

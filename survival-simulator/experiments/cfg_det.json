@@ -1,0 +1,4 @@
+[
+ {"tag": "L legacy", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0}},
+ {"tag": "M more-repro", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}}
+]
