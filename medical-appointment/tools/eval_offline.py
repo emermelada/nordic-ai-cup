@@ -20,7 +20,7 @@ from pipeline.core import (
     words_from_transcript,
 )
 from pipeline.evidence import energy_envelope, refine_evidence
-from pipeline.mlx_backend import DEFAULT_PROMPT, QWEN_MODEL, MLXBackend, decode_audio
+from pipeline.mlx_backend import DEFAULT_PROMPT, LLM_MODEL, MLXBackend, decode_audio
 from tools.transcribe_all import (
     CACHE_PRODUCER, atomic_write_json, atomic_write_text, positive_limit,
     validate_transcript,
@@ -215,7 +215,7 @@ def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: floa
             raw_outputs[item['id']] = {
                 'raw': raw, 'seconds': fresh_seconds if backend else replay_seconds,
                 'prompt': prompt_name, 'alignment': quote_alignment,
-                'model': QWEN_MODEL if backend else item['entry'].get('model'),
+                'model': LLM_MODEL if backend else item['entry'].get('model'),
                 'generation_source': 'fresh' if backend else 'historical_replay',
                 'duration': duration, 'duration_source': item['duration_source'],
                 'units': [{'words': unit} for unit in item['units']],

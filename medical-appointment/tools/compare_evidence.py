@@ -12,7 +12,7 @@ if __package__ in (None, ''):
 from pipeline.core import _answer, _question_id, _results, build_messages
 from pipeline.evidence import build_focused_messages
 from tools.probes.evidence_variants import build_grounded_messages, build_refinement_messages
-from pipeline.mlx_backend import QWEN_MODEL, MLXBackend
+from pipeline.mlx_backend import LLM_MODEL, MLXBackend
 from tools.eval_offline import _finite_seconds, evaluate, prepare_inputs, split_conversations
 from tools.transcribe_all import atomic_write_json
 from utils import group_questions_by_conversation
@@ -77,7 +77,7 @@ def main():
                              if first_seconds is not None and second_seconds is not None else None)
             generation = {**generation, 'raw': json.dumps({'results': entries}), 'seconds': total_seconds}
         item['entry'] = {**item['entry'], **generation, 'prompt': args.prompt,
-                         'alignment': 'legacy', 'model': QWEN_MODEL}
+                         'alignment': 'legacy', 'model': LLM_MODEL}
         seconds = _finite_seconds(generation.get('seconds'))
         timing = f'{seconds:.2f}s' if seconds is not None else 'unknown time'
         print(f'{index}/{len(prepared)} {item["id"]}: {timing} generation', flush=True)

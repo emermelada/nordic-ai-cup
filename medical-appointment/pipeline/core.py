@@ -256,6 +256,9 @@ def fuzzy_span(words, quote, max_extra=3, deadline=None):
 def _results(raw):
     if not isinstance(raw, str) or not raw.strip():
         return []
+    # Models with a reasoning channel (gpt-oss) emit it before the answer.
+    if '<|message|>' in raw:
+        raw = raw.rsplit('<|message|>', 1)[1]
     try:
         parsed = json.loads(raw)
     except (ValueError, TypeError, RecursionError):

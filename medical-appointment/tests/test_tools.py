@@ -118,11 +118,12 @@ class BackendTests(unittest.TestCase):
             messages.assert_called_once_with(WORDS, ['question'])
             load.assert_called_once_with('/cached/qwen', tokenizer_config={'local_files_only': True})
             tokenizer.apply_chat_template.assert_called_once_with(
-                ['messages'], add_generation_prompt=True, tokenize=False, enable_thinking=False
+                ['messages'], add_generation_prompt=True, tokenize=False,
+                enable_thinking=False, reasoning_effort='low',
             )
             sampler.assert_called_once_with(temp=0.0)
             generate.assert_called_once_with(
-                'model', tokenizer, prompt='prompt', max_tokens=900,
+                'model', tokenizer, prompt='prompt', max_tokens=1200,
                 sampler='sampler', verbose=False,
             )
             tokenizer.apply_chat_template.side_effect = TypeError('thinking flag unsupported')
@@ -137,7 +138,7 @@ class BackendTests(unittest.TestCase):
                 patch.object(backend, 'generate_messages', return_value=RAW) as generate:
             self.assertEqual(backend.complete(WORDS, ['question']), RAW)
         messages.assert_called_once_with(WORDS, ['question'])
-        generate.assert_called_once_with(['compact'], 900)
+        generate.assert_called_once_with(['compact'], 1200)
         with self.assertRaises(ValueError):
             mlx_backend.MLXBackend(prompt='missing')
 

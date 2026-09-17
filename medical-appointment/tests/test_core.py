@@ -215,6 +215,13 @@ class AnswerTests(unittest.TestCase):
         self.assertEqual(result.answers, [False, True])
         self.assertEqual(result.evidence_start, [None, None])
 
+    def test_reasoning_channel_output_is_parsed(self):
+        raw = ('<|channel|>analysis<|message|>Weighing the wording.<|end|>'
+               '<|start|>assistant<|channel|>final<|message|>{"results":[{"q":1,"answer":"no"},'
+               '{"q":2,"answer":"yes"}]}')
+        result = answer_response(raw, self.words, ["a", "b"], 20, response([True, False]))
+        self.assertEqual(result.answers, [False, True])
+
     def test_invalid_whole_outputs_use_retrieval(self):
         fallback = response([False, True], [None, 2], [None, 3])
         for raw in ("", "not json", "null", "[]", '{"results":{}}', '{"results":[null,42]}'):

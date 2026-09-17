@@ -10,7 +10,7 @@ from pathlib import Path
 WHISPER_MODEL = 'models/whisper-large-v3-turbo-8bit'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
-QWEN_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
+LLM_MODEL = 'mlx-community/gpt-oss-20b-MXFP4-Q8'
 DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
@@ -141,7 +141,7 @@ class MLXBackend:
 
     def generate_messages(self, messages: list[dict], max_tokens: int = 900) -> str:
         if self._llm is None:
-            snapshot = resolve_snapshot(QWEN_MODEL)
+            snapshot = resolve_snapshot(LLM_MODEL)
             from mlx_lm import load
             from mlx_lm.sample_utils import make_sampler
 
@@ -155,7 +155,10 @@ class MLXBackend:
             messages,
             add_generation_prompt=True,
             tokenize=False,
+            # Templates ignore the flag they do not define: Qwen reads enable_thinking,
+            # gpt-oss reads reasoning_effort. Both keep reasoning short enough to fit.
             enable_thinking=False,
+            reasoning_effort='low',
         )
         started = time.monotonic()
         result = generate(
@@ -166,7 +169,8 @@ class MLXBackend:
         return result
 
     def complete(self, words: list[dict], questions: list[str]) -> str:
-        return self._generate(words, questions, max_tokens=900)
+        # gpt-oss reasons before answering: 769 output tokens at most over the training set.
+        return self._generate(words, questions, max_tokens=1200)
 
     def warmup(self) -> None:
         import numpy as np
