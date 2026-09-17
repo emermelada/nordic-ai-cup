@@ -42,13 +42,16 @@ def cached_detections(model_path: Path):
     path = CACHE / f'{key}.pkl'
     out = pickle.loads(path.read_bytes()) if path.exists() else {}
     # New recordings since the cache was written are filled in.
-    missing = [png for png in sorted(RECORDINGS.glob('*/*.png')) if str(png.relative_to(RECORDINGS)) not in out]
+    # as_posix: the lookup key is built with '/', which is not what str() gives
+    # on Windows, and a mismatch silently reads as "no detections at all".
+    missing = [png for png in sorted(RECORDINGS.glob('*/*.png'))
+               if png.relative_to(RECORDINGS).as_posix() not in out]
     if missing:
         flyby.load_model()
         for png in missing:
             image = cv2.imread(str(png))
             with flyby._model_lock:
-                out[str(png.relative_to(RECORDINGS))] = flyby.raw_detections(image)
+                out[png.relative_to(RECORDINGS).as_posix()] = flyby.raw_detections(image)
         CACHE.mkdir(parents=True, exist_ok=True)
         path.write_bytes(pickle.dumps(out))
     return out
@@ -150,7 +153,7 @@ def main() -> int:
     current = {}
     flyby.decode_view = lambda view: None
 
-    def fake_detect(image, region):
+    def fake_detect(image, region, frame=0):
         xyxy, probabilities = detections[current['key']]
         rx1, ry1, rx2, ry2 = region
         scale = np.array([(rx2 - rx1) / 960, (ry2 - ry1) / 540] * 2)

@@ -18,6 +18,9 @@ Three parts, one request at a time:
 Configuration, all optional, through environment variables:
 
     DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v4.pt)
+    DRONE_MODEL_ALT  second weights taking alternate frames; the two models'
+                     detections meet in the object memory, so a run gets the
+                     union of what both can find (see detect())
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
     DRONE_THREADS CPU threads for inference  (default: 6)
@@ -57,6 +60,8 @@ from utils import clip_bbox_to_frame, decode_view, describe_camera_rejection
 logger = logging.getLogger(__name__)
 
 MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v4.pt'))
+# A second set of weights, taking alternate frames. See detect().
+ALT_MODEL_PATH = Path(os.environ['DRONE_MODEL_ALT']) if os.environ.get('DRONE_MODEL_ALT') else None
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
 # Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
@@ -199,36 +204,51 @@ for _item in filter(None, os.environ.get('DRONE_SET', '').split(',')):
 # --------------------------------------------------------------------------- #
 
 _model = None
+_models = []
 _model_lock = threading.Lock()
 
 
+def _load_one(path: Path):
+    from ultralytics import YOLO
+
+    yolo = YOLO(str(path))
+    # One ordinary prediction builds Ultralytics' inference wrapper, which runs
+    # the network ~30 % faster on this CPU than calling the module directly.
+    yolo.predict(np.zeros((540, 960, 3), np.uint8), imgsz=IMGSZ, device=DEVICE, verbose=False)
+    order = [OBJECT_CLASSES.index(yolo.names[i]) for i in range(len(yolo.names))]
+    return yolo.predictor.model, order
+
+
 def load_model():
-    """Load and warm up the detector once; None if the weights are missing."""
-    global _model
+    """Load and warm up the detector(s) once; None if the weights are missing."""
+    global _model, _models
     if _model is not None:
         return _model
     if not MODEL_PATH.exists():
         logger.error('No model at %s: answering with empty detections', MODEL_PATH)
         return None
     import torch
-    from ultralytics import YOLO
 
     torch.set_num_threads(THREADS)
-    yolo = YOLO(str(MODEL_PATH))
-    # One ordinary prediction builds Ultralytics' inference wrapper, which runs
-    # the network ~30 % faster on this CPU than calling the module directly.
-    yolo.predict(np.zeros((540, 960, 3), np.uint8), imgsz=IMGSZ, device=DEVICE, verbose=False)
-    net = yolo.predictor.model
-    order = [OBJECT_CLASSES.index(yolo.names[i]) for i in range(len(yolo.names))]
-    _model = (net, order)
+    _models = [_load_one(MODEL_PATH)]
+    _model = _models[0]
     # The first inference is the slow one; pay for it before the clock starts.
     for _ in range(2):
         raw_detections(np.zeros((540, 960, 3), np.uint8))
     logger.info('Loaded %s on %s', MODEL_PATH, DEVICE)
+
+    if ALT_MODEL_PATH is not None:
+        if not ALT_MODEL_PATH.exists():
+            logger.error('No alternate model at %s: running one model only', ALT_MODEL_PATH)
+        else:
+            _models.append(_load_one(ALT_MODEL_PATH))
+            for _ in range(2):
+                raw_detections(np.zeros((540, 960, 3), np.uint8), 1)
+            logger.info('Loaded alternate %s; models alternate per frame', ALT_MODEL_PATH)
     return _model
 
 
-def raw_detections(image: np.ndarray):
+def raw_detections(image: np.ndarray, which: int = 0):
     """YOLO on one image: (boxes xyxy in image pixels, per-class scores).
 
     Ultralytics' own predictor keeps only the best class of each box. Doing the
@@ -238,7 +258,7 @@ def raw_detections(image: np.ndarray):
     import torch
     import torchvision
 
-    net, order = _model
+    net, order = _models[which % len(_models)] if _models else _model
     height, width = image.shape[:2]
     ratio = IMGSZ / max(height, width)
     new_h, new_w = round(height * ratio), round(width * ratio)
@@ -269,12 +289,19 @@ def raw_detections(image: np.ndarray):
     return xyxy, probabilities
 
 
-def detect(image: np.ndarray, source_region) -> list:
-    """Detections on one view as (class, confidence, source box, class scores)."""
+def detect(image: np.ndarray, source_region, frame: int = 0) -> list:
+    """Detections on one view as (class, confidence, source box, class scores).
+
+    With DRONE_MODEL_ALT set, the two models take alternate frames. They fail on
+    different classes, and every detection goes into the same object memory, so
+    a run sees the union of what both can find without paying for both on any
+    one frame. Measured on the recorded flight (v4 + v5): the per-class mean hit
+    rate is 42.6 % for v4 alone, 37.9 % for v5 alone and 46.2 % alternating.
+    """
     if load_model() is None:
         return []
     with _model_lock:
-        xyxy, probabilities = raw_detections(image)
+        xyxy, probabilities = raw_detections(image, frame)
     rx1, ry1, rx2, ry2 = source_region
     height, width = image.shape[:2]
     scale = np.array([(rx2 - rx1) / width, (ry2 - ry1) / height] * 2)
@@ -700,7 +727,7 @@ def predict(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDt
 
     view = request.view
     try:
-        detections = detect(decode_view(view), view.source_region_xyxy)
+        detections = detect(decode_view(view), view.source_region_xyxy, request.frame)
     except Exception:
         logger.exception('Detector failed on frame %s', request.frame)
         detections = []
