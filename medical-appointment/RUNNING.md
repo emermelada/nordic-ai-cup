@@ -76,7 +76,16 @@ Running processes keep their loaded code until restarted.
 | gpt-oss-20b, compact + span rules + 8-bit ASR | 0.760 | 0.727 |
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
-| **Same consensus, earlier-occurrence tie-break + grounding guards** | **0.781** | not yet validated |
+| Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
+
+Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
+00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
+with no platform errors. All 19 requests completed without logged fallbacks;
+mean/worst server time was **19.65/24.96 seconds**. The result is below the best
+validated single-9B build, despite its higher local score. It does not isolate the
+earlier-occurrence tie-break from the rest of the two-model build. Platform
+accuracy/tIoU components were not supplied. Raw result and attribution:
+`runs/platform-validation-c1dcda85/`.
 
 Span consensus across models is the one lever that moved the training score materially:
 three-model consensus reached 0.774, two models plus the retrieval referee 0.770-0.775,
@@ -143,13 +152,16 @@ Accuracy stays **384/390**; mean tIoU rises **0.626161 → 0.644756**; zero-over
 positives fall **30 → 26**. Seven spans change: five improve, one regresses, one
 remains disjoint. A paired conversation bootstrap gives a descriptive 95% raw-gain
 interval of **[0.00249, 0.02200]**; it does not correct for selecting candidates on
-reused training data. Hidden-validation improvement is not established.
+reused training data. Subsequent platform validation scored 0.717908, below the
+best validated 0.743 single-model build; the local gain did not establish a
+hidden-validation gain.
 
 All **83 CPU tests** pass; the unchanged scoring oracle returns **1.000**. Replaying
 cached worker frames through `Pipeline.predict` matches all **39/390** archived
 conversation/question outputs (IPC mocked). No fresh ASR/LLM inference, HTTP latency
-benchmark, serving restart or platform submission was performed. The running server
-still needs a uvicorn-only restart before this candidate can be validated.
+benchmark, serving restart or platform submission was performed during that
+implementation pass. The API was subsequently restarted under a supervisor and
+the user submitted the validation result recorded above.
 
 Artifacts: `runs/grounding-fixes-20260917/earlier-tied-span/` contains per-question
 scores, all changed spans and the runtime-parity result. `replay.py` beside it
