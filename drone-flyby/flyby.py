@@ -8,16 +8,23 @@ Three parts, one request at a time:
    predictably between frames (see ``MOTION``), so each track is moved forward
    to the current frame, matched against the new detections, and reported for
    the whole frame even when the camera is looking elsewhere.
-3. **Steer.** Sweep a 3x2 grid of Level-1 views, one step per answered
+3. **Steer.** Walk a fixed pattern of Level-1 views, one step per answered
    frame; every move is checked with the evaluator's own rules first.
+   The evaluator renders a frame when it is emitted, usually before our
+   previous answer has arrived, so a camera command lands one answer late.
+   Moves are therefore planned from the last *requested* view, not from the
+   view in the current image.
 
 Configuration, all optional, through environment variables:
 
     DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v1.pt)
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
+    DRONE_THREADS CPU threads for inference  (default: 6)
     DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
     DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
+    DRONE_CAMERA      sweep pattern: full, top or mixed       (default: top)
+    DRONE_INSPECT     zoom to Level 2 on small unsure objects (default: 0)
 """
 
 import logging
@@ -46,6 +53,8 @@ logger = logging.getLogger(__name__)
 MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v1.pt'))
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
+# Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
+THREADS = int(os.environ.get('DRONE_THREADS', '6'))
 
 # Two thresholds. mAP rewards ranked low-confidence guesses, so anything above
 # DETECTION_CONFIDENCE is reported for the frame it was seen in. Only detections
@@ -81,8 +90,30 @@ MAX_SEQUENCES = 8
 # A detection this close to the view edge is probably cut off.
 CUT_OFF_PIXELS = 3
 
-# Level-1 sweep: every move is at most 1080 px, inside the 1102 px L1 limit.
-SWEEP = [(960, 540), (1920, 540), (2880, 540), (2880, 1620), (1920, 1620), (960, 1620)]
+# Level-1 sweep patterns; every step is at most 1080 px, inside the 1102 px
+# L1 limit, including the step from the last point back to the first.
+# New objects enter at the top edge and memory carries them down, so the top
+# row matters most once the whole frame has been seen.
+TL, TM, TR = (960, 540), (1920, 540), (2880, 540)
+BL, BM, BR = (960, 1620), (1920, 1620), (2880, 1620)
+FULL_SWEEP = [TL, TM, TR, BR, BM, BL]
+TOP_SWEEP = [TL, TM, TR, TM]
+SWEEPS = {
+    'full': FULL_SWEEP,
+    'top': FULL_SWEEP + TOP_SWEEP * 1000,          # one full look, then the top
+    'mixed': FULL_SWEEP + TOP_SWEEP * 3,           # repeats: full now and then
+}
+CAMERA = os.environ.get('DRONE_CAMERA', 'top')
+SWEEP = SWEEPS[CAMERA]
+
+# Level-2 inspection: a small object whose class is still unsure gets one
+# close look, then the sweep resumes.
+INSPECT = os.environ.get('DRONE_INSPECT', '0') == '1'
+INSPECT_MAX_SIDE = 60          # source pixels: bigger ones read fine at L1
+INSPECT_SURE_SHARE = 0.75      # vote share above which a class counts as settled
+INSPECT_MAX_Y = 1500           # only while there is time left to use the answer
+INSPECT_EVERY = 4              # answered frames between inspections, at least
+INSPECT_LEAD = 3               # frames between deciding and the view arriving
 
 
 # --------------------------------------------------------------------------- #
@@ -101,8 +132,10 @@ def load_model():
     if not MODEL_PATH.exists():
         logger.error('No model at %s: answering with empty detections', MODEL_PATH)
         return None
+    import torch
     from ultralytics import YOLO
 
+    torch.set_num_threads(THREADS)
     model = YOLO(str(MODEL_PATH))
     # The first inference is the slow one; pay for it before the clock starts.
     model.predict(np.zeros((540, 960, 3), np.uint8), imgsz=IMGSZ, device=DEVICE, verbose=False)
@@ -171,6 +204,7 @@ class Track:
     best_level: int = 0
     hits: int = 0
     misses: int = 0
+    inspected: bool = False
 
     def label(self) -> Tuple[str, float]:
         name = max(self.votes, key=self.votes.get)
@@ -182,6 +216,9 @@ class Sequence:
     tracks: List[Track] = field(default_factory=list)
     sweep_index: int = 0
     last_frame: int = -1
+    # The last view we asked for: (level, x, y).
+    pending: Optional[Tuple[int, int, int]] = None
+    answers_since_inspection: int = 0
 
 
 _sequences: Dict[str, Sequence] = {}
@@ -299,39 +336,76 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
 # Camera
 # --------------------------------------------------------------------------- #
 
-def legal(request: DroneFlybyPredictRequestDto, level: int, x: int, y: int) -> bool:
-    view = request.view
-    return describe_camera_rejection(
-        view.resolution_level, (view.center_x, view.center_y), level, (x, y)
-    ) is None
+def legal(base: Tuple[int, int, int], level: int, x: int, y: int) -> bool:
+    return describe_camera_rejection(base[0], (base[1], base[2]), level, (x, y)) is None
+
+
+def inspection_target(state: Sequence, base, frame: int) -> Optional[Tuple[int, int, int]]:
+    """The most doubtful small object reachable from ``base``, as an L2 view."""
+    best, best_doubt = None, 0.0
+    for track in state.tracks:
+        if track.inspected or track.best_level >= 2:
+            continue
+        box = advance(track.box, INSPECT_LEAD)
+        width, height = box[2] - box[0], box[3] - box[1]
+        if max(width, height) > INSPECT_MAX_SIDE or box[1] > INSPECT_MAX_Y or box[3] < 0:
+            continue
+        share = max(track.votes.values()) / sum(track.votes.values())
+        doubt = (1 - share) + (1 - track.best_confidence)
+        if share >= INSPECT_SURE_SHARE and track.best_confidence >= 0.6:
+            continue
+        x = int(min(max((box[0] + box[2]) / 2, 480), 3360))
+        y = int(min(max((box[1] + box[3]) / 2, 270), 1890))
+        if doubt > best_doubt and legal(base, 2, x, y):
+            best, best_doubt = (track, (2, x, y)), doubt
+    if best is None:
+        return None
+    best[0].inspected = True
+    return best[1]
 
 
 def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> Optional[RequestedViewDto]:
     view = request.view
-    if view.resolution_level == 2:
+    here = (view.resolution_level, view.center_x, view.center_y)
+    # Where the camera will be when this command is applied: our previous
+    # request, unless the evaluator refused it.
+    base = here
+    if state.pending is not None and request.camera_command_feedback is None:
+        base = state.pending
+
+    target = None
+    state.answers_since_inspection += 1
+    if INSPECT and base[0] == 1 and state.answers_since_inspection >= INSPECT_EVERY:
+        target = inspection_target(state, base, request.frame)
+    if target is not None:
+        state.answers_since_inspection = 0
+    elif base[0] == 2:
         # Back up to Level 1 as close as the 551 px limit allows.
-        bounds = request.camera_constraints.bounds_for_level(1)
-        x = int(min(max(view.center_x, bounds.minimum_center_x), bounds.maximum_center_x))
-        y = int(min(max(view.center_y, bounds.minimum_center_y), bounds.maximum_center_y))
+        x = int(min(max(base[1], 960), 2880))
+        y = int(min(max(base[2], 540), 1620))
         target = (1, x, y)
     else:
-        # Continue the sweep from the grid point nearest to where we are.
-        if view.resolution_level == 1:
-            here = min(
-                range(len(SWEEP)),
-                key=lambda i: (SWEEP[i][0] - view.center_x) ** 2 + (SWEEP[i][1] - view.center_y) ** 2,
+        position = SWEEP[state.sweep_index % len(SWEEP)]
+        if base == (1, *position):
+            state.sweep_index = (state.sweep_index + 1) % len(SWEEP)
+        elif base[0] == 1:
+            # Off the pattern (start-up, a refusal): rejoin at the nearest point.
+            nearest = min(
+                range(len(FULL_SWEEP)),
+                key=lambda i: (FULL_SWEEP[i][0] - base[1]) ** 2 + (FULL_SWEEP[i][1] - base[2]) ** 2,
             )
-            state.sweep_index = here + 1
-        x, y = SWEEP[state.sweep_index % len(SWEEP)]
-        target = (1, x, y)
+            state.sweep_index = SWEEP.index(FULL_SWEEP[nearest]) + 1
+        target = (1, *SWEEP[state.sweep_index % len(SWEEP)])
 
-    level, x, y = target
-    if legal(request, level, x, y):
-        return RequestedViewDto(resolution_level=level, center_x=x, center_y=y)
-    # Something unexpected: the full view is always one step from L1, and
-    # from L0 we simply stay.
-    if legal(request, 0, *FULL_FRAME_CENTER):
+    if target is not None and legal(base, *target):
+        state.pending = target
+        return RequestedViewDto(resolution_level=target[0], center_x=target[1], center_y=target[2])
+    # Something unexpected: the full view is always one step from L0 and L1.
+    full = (0, *FULL_FRAME_CENTER)
+    if legal(base, *full):
+        state.pending = full
         return RequestedViewDto(resolution_level=0, center_x=FULL_FRAME_CENTER[0], center_y=FULL_FRAME_CENTER[1])
+    state.pending = None
     return None
 
 

@@ -18,7 +18,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from dtos import DroneFlybyPredictRequestDto, DroneFlybyPredictResponseDto
 from flyby import load_model, predict
@@ -57,8 +60,22 @@ def warm_up():
 
 
 @app.post('/predict', response_model=DroneFlybyPredictResponseDto)
-def predict_endpoint(request: DroneFlybyPredictRequestDto):
-    """Answer one frame."""
+async def predict_endpoint(raw: Request):
+    """Answer one frame.
+
+    The body is parsed straight from bytes and the answer serialised directly:
+    FastAPI's own request/response validation costs several milliseconds on a
+    1.5 MB request, and every millisecond is frames we do not skip.
+    """
+    try:
+        request = DroneFlybyPredictRequestDto.model_validate_json(await raw.body())
+    except ValidationError as exc:
+        return JSONResponse(status_code=422, content={'detail': exc.errors(include_url=False)})
+    response = await run_in_threadpool(answer, request)
+    return Response(content=response.model_dump_json(), media_type='application/json')
+
+
+def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto:
     response = predict(request)
 
     # Fail here, loudly, rather than having the evaluator silently discard the
