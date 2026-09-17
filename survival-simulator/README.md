@@ -163,3 +163,32 @@ The default movement logic for agents can be found in [dummy_agent_policy.py](sr
 The simulation is deterministic as long as it runs on the same OS. If you want to test how a specific seed runs on the validation/evaluation server, you should test on a Linux machine.
 
 To avoid bottlenecking the system, the server will wait for responses for up to 10 seconds. If no responses are received from the agent server within that time or if the accumulated wait time reaches 600 seconds, the run will end.
+
+---
+
+## How our team serves this use case (differs from the skeleton)
+
+The rest of this README documents the organisers' simulator, which we use verbatim. Our
+**serving** shape differs from the repo skeleton on purpose, so a reader looking for `api.py` /
+`dtos.py` here should read this section instead:
+
+| Skeleton | Ours | Why |
+|---|---|---|
+| `api.py` (FastAPI app, port 8000, `/api`) | `agent_server.py` (port **9052**, `GET /`, `POST /predict`) | The organisers' server calls `POST /predict` with a `StepResponse` and expects `ActionRequest`s. One endpoint, one contract. |
+| `dtos.py` (copied from the template) | `src/utils/DTOs.py` (authoritative copy from the organisers' package) | The README warns that a field/type mismatch in the DTOs **scores zero**. Keeping a single definition avoids two competing ones drifting apart. |
+| `ports: ["8003:8000"]` | `ports: ["9052:9052"]` | The service listens on the organiser-defined port and overrides the shared `/api` healthcheck with its own. |
+
+Serving in production: the container is fronted by Caddy with TLS at
+`https://<host>/predict`; the request log and `/debug/stats` are available on the same port.
+
+Evaluation facts that constrain the controller (from the README above):
+- One response per tick per agent; the server tolerates up to 10 s per response but ends the run
+  once **accumulated** wait reaches 600 s — so **latency caps the achievable score**
+  (score ≈ min(ticks, 600 s / per-tick latency)).
+- The final evaluation runs **three attempts in a row and averages** the result, on **preset seeds**;
+  validation attempts are unlimited and use random seeds.
+- The simulation is only deterministic within one OS — it is validated on Linux, so results measured
+  on macOS can differ. Prefer a Linux host for faithful evaluation.
+
+Our controller is `best_controller.py` + `best_controller/params.json` (an evolved potential-field
+policy), with the evaluation harness and diagnostics under `experiments/`.
