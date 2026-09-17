@@ -111,6 +111,24 @@ class EvidenceTests(unittest.TestCase):
         blank = response([True], [None], [None])
         self.assertEqual(consensus_response(missing, blank, referee), missing)
 
+    def test_consensus_breaks_equal_referee_scores_by_earlier_occurrence(self):
+        primary = response([True] * 4, [10.0, 30.0, 50.0, 70.0], [12.0, 32.0, 52.0, 72.0])
+        secondary = response([True] * 4, [5.0, 29.0, 40.0, 70.0], [7.0, 31.0, 42.0, 74.0])
+        referee = response([True] * 4, [20.0, 29.5, 50.0, 90.0], [22.0, 31.5, 52.0, 92.0])
+        actual = consensus_response(primary, secondary, referee)
+        self.assertEqual(actual, response([True] * 4, [5.0, 29.0, 50.0, 70.0],
+                                         [7.0, 31.0, 52.0, 72.0]))
+        self.assertEqual(primary.evidence_start, [10.0, 30.0, 50.0, 70.0])
+        self.assertEqual(secondary.evidence_start, [5.0, 29.0, 40.0, 70.0])
+
+    def test_consensus_preserves_answers_and_handles_missing_evidence(self):
+        primary = response([True, True, True, False], [None, 10.0, 30.0, None], [None, 12.0, 32.0, None])
+        secondary = response([True] * 4, [5.0, None, 25.0, 40.0], [7.0, None, 27.0, 42.0])
+        referee = response([True] * 4, [5.0, 10.0, None, 40.0], [7.0, 12.0, None, 42.0])
+        self.assertEqual(consensus_response(primary, secondary, referee),
+                         response([True, True, True, False],
+                                  [None, 10.0, 25.0, None], [None, 12.0, 27.0, None]))
+
     def test_quoted_question_extends_to_short_reply(self):
         words = make_words('Any swelling? No swelling either. Is the rash itchy? It is itchy only when I sit still at night.')
         spans = response([True, True, True, False],

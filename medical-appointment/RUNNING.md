@@ -12,12 +12,13 @@ python3.11 -m venv .venv311
 
 These model snapshots must already be complete in the local Hugging Face cache:
 
-- `mlx-community/whisper-large-v3-turbo-8bit` (serving ASR, staged locally; see below)
-- `mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit-REAP-19B` (serving answers)
-- `mlx-community/Qwen3.5-9B-4bit`, `mlx-community/Qwen3-8B-4bit`, `whisper-large-v3-turbo` (earlier builds)
+- `mlx-community/whisper-large-v3-turbo` (fp16 serving ASR)
+- `mlx-community/Qwen3.5-9B-4bit` (primary answers and evidence)
+- `mlx-community/Qwen3-8B-4bit` (secondary evidence)
 
-mlx-whisper loads `weights.safetensors`, but the 8-bit repo ships `model.safetensors`,
-so stage it once into the gitignored `models/` directory:
+For the optional 8-bit ASR experiment, mlx-whisper loads `weights.safetensors`, but
+that repo ships `model.safetensors`. Stage it into the gitignored `models/`
+directory before selecting it; this is not required by the current serving build:
 
 ```bash
 SNAP=$(ls -d ~/.cache/huggingface/hub/models--mlx-community--whisper-large-v3-turbo-8bit/snapshots/*/)
@@ -39,7 +40,9 @@ fail startup rather than downloading them. No hosted APIs are used for inference
 Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all questions in one
 deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
 opinion. The answers are always the first model's; where the two cite different passages,
-the retrieval span picks between them (`consensus_response`). Two answering models
+the retrieval span picks between them (`consensus_response`). Equal retrieval-overlap
+scores prefer the earlier model span, including when retrieval has no evidence.
+Two answering models
 disagree about which mention to cite more often than either is outright wrong, and that
 disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
 both models resident in 9.9 GB and 14-20 s of generation. A reasoning channel, if a model
@@ -72,7 +75,8 @@ Running processes keep their loaded code until restarted.
 | Qwen3.5-9B, minimal prompt | 0.751 | 0.731 |
 | gpt-oss-20b, compact + span rules + 8-bit ASR | 0.760 | 0.727 |
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
-| **Qwen3.5-9B + Qwen3-8B consensus, compact** | **0.770** | not yet validated |
+| Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
+| **Same consensus, earlier-occurrence tie-break + grounding guards** | **0.781** | not yet validated |
 
 Span consensus across models is the one lever that moved the training score materially:
 three-model consensus reached 0.774, two models plus the retrieval referee 0.770-0.775,
@@ -120,8 +124,45 @@ word also preserves all 390 outputs while preventing loss of a quiet first word.
 These are correctness fixes, not measured score gains. Exact-repeat citation
 tie-breaking scored **0.764762** and was removed from serving code; the candidate
 and its tests remain archived under `exact-repeat-citations/`. This result does not
-exclude using occurrence-aware candidates with a better selector. No fresh
-inference, serving restart or platform submission was performed.
+exclude using occurrence-aware candidates with a better selector. Blanket shared
+span/intersection (**0.765982**) and combined span/union (**0.761582**) rules also
+regressed and were removed; both experiments are archived.
+
+**Retained gain:** prefer the earlier model span only when retrieval-overlap scores
+are exactly tied. Missing retrieval evidence scores both spans at zero. Non-tied
+choices and all primary-model answers stay unchanged. No additional inference is
+needed. Full replay results:
+
+| Public-training subset | Original consensus | Earlier-occurrence tie-break |
+| --- | ---: | ---: |
+| All 39 conversations | 0.769543 | **0.780700** |
+| Development, 30 conversations | 0.770360 | **0.781627** |
+| Previously inspected holdout, 9 conversations | 0.766820 | **0.777600** |
+
+Accuracy stays **384/390**; mean tIoU rises **0.626161 → 0.644756**; zero-overlap
+positives fall **30 → 26**. Seven spans change: five improve, one regresses, one
+remains disjoint. A paired conversation bootstrap gives a descriptive 95% raw-gain
+interval of **[0.00249, 0.02200]**; it does not correct for selecting candidates on
+reused training data. Hidden-validation improvement is not established.
+
+All **83 CPU tests** pass; the unchanged scoring oracle returns **1.000**. Replaying
+cached worker frames through `Pipeline.predict` matches all **39/390** archived
+conversation/question outputs (IPC mocked). No fresh ASR/LLM inference, HTTP latency
+benchmark, serving restart or platform submission was performed. The running server
+still needs a uvicorn-only restart before this candidate can be validated.
+
+Artifacts: `runs/grounding-fixes-20260917/earlier-tied-span/` contains per-question
+scores, all changed spans and the runtime-parity result. `replay.py` beside it
+replays both cached models; ordinary `tools.eval_offline` currently scores only the
+primary model. To reproduce the consensus score, choose an unused output name:
+
+```bash
+.venv311/bin/python runs/grounding-fixes-20260917/replay.py verification
+```
+
+Fallback commits: `1ae5d06` is the original consensus; `eab9557` adds reply guards;
+`edcd070` also protects the first word. All three score 0.769543 on this replay.
+Optimization stopped after the first measured gain for user-run platform validation.
 
 ### Deploy behind the tunnel
 
