@@ -4,3 +4,5 @@ data/
 # 400 MB of sample frames; only local_evaluator.py / visualize.py need them
 src/
 annotated/
+# training code and notebooks never run in the service
+training/
