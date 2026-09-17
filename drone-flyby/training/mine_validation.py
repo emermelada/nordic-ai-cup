@@ -86,6 +86,8 @@ def mine(args):
         for box, p in zip(xyxy, probabilities):
             if p.max() < args.min_conf:
                 continue
+            if args.classes and flyby.OBJECT_CLASSES[int(p.argmax())] not in args.classes:
+                continue
             # Skip boxes cut by the view edge: their size is wrong.
             if box[0] < 3 or box[1] < 3 or box[2] > 957 or box[3] > 537:
                 continue
@@ -189,6 +191,7 @@ def main() -> int:
     parser.add_argument('--model', type=Path, default=Path.home() / 'models' / 'drone-yolo11n-v2.pt')
     parser.add_argument('--min-conf', type=float, default=0.4)
     parser.add_argument('--min-sightings', type=int, default=2)
+    parser.add_argument('--classes', nargs='*', default=None, help='Only mine detections of these classes.')
     parser.add_argument('--accept', nargs='*', help='candidate:class pairs to add to the object list')
     args = parser.parse_args()
     import logging

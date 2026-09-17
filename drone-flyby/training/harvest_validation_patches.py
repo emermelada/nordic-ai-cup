@@ -36,6 +36,9 @@ FILLED = 0.72               # a mask this full is GrabCut's ellipse fallback
 MIN_IOU = 0.6               # mask box vs matched box
 SEARCH = 24                 # source pixels to search around the carried box
 MIN_MATCH = 0.55            # template match score needed to trust a view
+# Many recorded runs show the same flight: keep at most this many views per
+# object, one per frame and level, spread over its frames.
+MAX_PER_OBJECT = 40
 
 a, b, c, d, e, f = MOTION
 FORWARD = np.array([[1 + b, c], [e, 1 + f]])
@@ -161,10 +164,20 @@ def main() -> int:
     counts, tiles = {}, []
 
     for obj in objects:
+        chosen, seen = [], set()
         for png, frame, region in locator.views:
-            found = locator.locate(obj, png, frame, region)
-            if found is None:
+            key = (frame, region[2] - region[0])
+            if key in seen or locator.carried(obj, frame) is None:
                 continue
+            seen.add(key)
+            chosen.append((png, frame, region))
+        located = []
+        for png, frame, region in chosen:
+            found = locator.locate(obj, png, frame, region)
+            if found is not None:
+                located.append((png, frame, region, found))
+        step = max(1, len(located) // MAX_PER_OBJECT)
+        for png, frame, region, found in located[::step][:MAX_PER_OBJECT]:
             x1, y1, x2, y2 = found
             image = locator.image(png)
             pad_x, pad_y = int((x2 - x1) * MARGIN) + 3, int((y2 - y1) * MARGIN) + 3
