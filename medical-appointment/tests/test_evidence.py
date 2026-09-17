@@ -103,13 +103,25 @@ class EvidenceTests(unittest.TestCase):
         referee = response([True, True, True], [20.2, 10.0, 5.0], [22.2, 12.0, 6.0])
         actual = consensus_response(primary, secondary, referee)
         # Question 1: the referee backs the secondary span; question 2: it backs neither
-        # clearly, so the primary stands. Answers always come from the primary.
+        # clearly, so the primary stands. A primary no is never promoted to yes.
         self.assertEqual(actual.evidence_start, [20.0, 30.0, None])
         self.assertEqual(actual.evidence_end, [22.0, 32.0, None])
         self.assertEqual(actual.answers, [True, True, False])
         missing = response([True], [10.0], [12.0])
         blank = response([True], [None], [None])
         self.assertEqual(consensus_response(missing, blank, referee), missing)
+
+    def test_consensus_requires_both_models_to_support_yes(self):
+        primary = response([True, True, False, False, True],
+                           [1.0, 3.0, None, None, None], [2.0, 4.0, None, None, None])
+        secondary = response([True, False, True, False, False],
+                             [1.0, None, 5.0, None, None], [2.0, None, 6.0, None, None])
+        referee = response([True] * 5, [1.0] * 5, [2.0] * 5)
+        before = [item.model_copy(deep=True) for item in (primary, secondary, referee)]
+        self.assertEqual(consensus_response(primary, secondary, referee),
+                         response([True, False, False, False, False],
+                                  [1.0, None, None, None, None], [2.0, None, None, None, None]))
+        self.assertEqual([primary, secondary, referee], before)
 
     def test_consensus_breaks_equal_referee_scores_by_earlier_occurrence(self):
         primary = response([True] * 4, [10.0, 30.0, 50.0, 70.0], [12.0, 32.0, 52.0, 72.0])

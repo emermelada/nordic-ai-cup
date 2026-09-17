@@ -1,5 +1,6 @@
 import base64
 import concurrent.futures
+import functools
 import json
 import multiprocessing
 import os
@@ -65,6 +66,14 @@ class FakeBackend:
              'units': [0], 'quote': 'You should take it after a meal.'}
             for index in range(len(questions))
         ]})
+
+
+class SecondaryAnswerBackend(FakeBackend):
+    def __init__(self, raw):
+        self.raw = raw
+
+    def complete_second(self, words, questions):
+        return self.raw
 
 
 class FailedStartupBackend(FakeBackend):
@@ -170,6 +179,28 @@ class RuntimeTests(unittest.TestCase):
             self.assertEqual(response.answers, [i % 2 == 0 for i in range(count)])
             self.assert_valid(response, count)
             self.assertEqual(pipeline._process.pid, pid)
+
+    def test_secondary_veto_requires_a_valid_answer_for_that_question(self):
+        raw = json.dumps({'results': [
+            {'q': 1, 'answer': 'no'}, {'q': 2, 'answer': 'yes'},
+            {'q': 3, 'answer': 'unknown'},
+            {'q': 5, 'answer': 'no'}, {'q': 5, 'answer': 'yes'},
+        ]})
+        pipeline = self.make_pipeline(backend_factory=functools.partial(SecondaryAnswerBackend, raw))
+        actual = pipeline.predict(request(questions=['Was a concert discussed?'] * 7))
+        self.assertEqual(actual.answers, [False, False, True, False, True, False, True])
+        self.assert_valid(actual, 7)
+        self.assertEqual(actual.evidence_start, [None, None, 0.0, None, 0.0, None, 0.0])
+
+    def test_unusable_or_skipped_secondary_keeps_primary_answers(self):
+        for raw in ('', '{}', 'not JSON'):
+            with self.subTest(raw=raw):
+                pipeline = self.make_pipeline(backend_factory=functools.partial(SecondaryAnswerBackend, raw))
+                actual = pipeline.predict(request(questions=['Was a concert discussed?']))
+                self.assertEqual(actual.answers, [True])
+                self.assertEqual(actual.evidence_start, [0.0])
+                self.assert_valid(actual, 1)
+                pipeline.close()
 
     def test_invalid_audio_returns_floor_and_next_request_works(self):
         pipeline = self.make_pipeline()

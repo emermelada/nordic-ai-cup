@@ -308,9 +308,12 @@ class Pipeline:
                     )
                     response = refine_evidence(response, words, envelope)
                     if message.get('second'):
+                        secondary_fallback = fallback.model_copy(deep=True)
+                        # Missing or invalid secondary answers cannot veto the primary.
+                        secondary_fallback.answers = response.answers.copy()
                         alternative = answer_response(
                             message['second'], words, request.questions, duration,
-                            fallback=fallback, deadline=deadline, alignment='numeric',
+                            fallback=secondary_fallback, deadline=deadline, alignment='numeric',
                         )
                         response = consensus_response(
                             response, refine_evidence(alternative, words, envelope), fallback,

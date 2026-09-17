@@ -39,9 +39,12 @@ fail startup rather than downloading them. No hosted APIs are used for inference
 
 Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all questions in one
 deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
-opinion. The answers are always the first model's; where the two cite different passages,
-the retrieval span picks between them (`consensus_response`). Equal retrieval-overlap
-scores prefer the earlier model span, including when retrieval has no evidence.
+opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a primary
+"no" is never promoted. Missing, invalid or duplicate secondary answers inherit the
+primary decision rather than a retrieval veto. Where both models answer yes and cite
+different passages, retrieval picks between them (`consensus_response`). Equal
+retrieval-overlap scores prefer the earlier model span, including when retrieval has
+no evidence. This answer-veto candidate is not yet deployed or validated.
 Two answering models
 disagree about which mention to cite more often than either is outright wrong, and that
 disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
@@ -77,6 +80,7 @@ Running processes keep their loaded code until restarted.
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
+| Same consensus + explicit secondary-no veto (candidate) | 0.783777 | not yet validated |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -175,6 +179,48 @@ primary model. To reproduce the consensus score, choose an unused output name:
 Fallback commits: `1ae5d06` is the original consensus; `eab9557` adds reply guards;
 `edcd070` also protects the first word. All three score 0.769543 on this replay.
 Optimization stopped after the first measured gain for user-run platform validation.
+
+### Secondary-answer veto and ranker experiments (2026-09-18)
+
+Two CPU-only ridge rankers used five conversation-disjoint folds, with scaling and
+weights fitted only on training folds. The broad question-aware candidate ranker
+scored **0.762816**, below the **0.780700** control. Restricting candidates to nearby
+boundaries of the serving span scored **0.778313**. Neither is deployed. The broad
+pool's **0.914520 candidate oracle** measures coverage with gold-based selection,
+not achievable ranking performance; selection remains unsolved by these prototypes.
+Scripts, fold assignments, weights and predictions: `runs/span-ranker-20260918/`.
+These results do not rule out stronger question-conditioned selectors.
+
+Inspecting the six wrong primary answers led to a smaller candidate: veto a primary
+"yes" only when the secondary provides a valid "no" for that question. An omitted,
+invalid or duplicate entry keeps the primary answer; a skipped second pass also
+keeps the primary. No model, prompt, generation budget or additional pass changes.
+
+| Public-training subset | Before veto | With veto |
+| --- | ---: | ---: |
+| All 39 conversations | 0.780700 | **0.783777** |
+| Development, 30 conversations | 0.781627 | **0.784294** |
+| Previously inspected holdout, 9 conversations | 0.777600 | **0.782044** |
+
+Accuracy rises **384/390 → 387/390**. All **195 gold-positive outputs are identical**;
+mean tIoU stays **0.644756**, with **26** zero-overlap positives. Only three false
+positives change: abnormal examination, fever present, and the officially negative
+but semantically ambiguous hobby question. Remaining errors are the implied
+stethoscope examination, "molluscs" versus "molluscum," and diabetes complications
+that both models incorrectly affirm despite "no complications."
+
+Using the secondary's answers wholesale also gets 387 correct and scores 0.784204,
+but introduces a new false positive about blood-test results while recovering the
+stethoscope answer. The narrower veto avoids that new error on these data. This is
+a three-question gain on reused public data, not evidence of hidden-set superiority;
+a secondary false negative could hurt both accuracy and evidence credit there.
+
+All **86 CPU tests** pass. The official scoring oracle remains **1.000**. Cached
+frames through the actual `Pipeline.predict` match all **39/390** replay outputs
+(IPC mocked; no fresh ASR/LLM inference or HTTP benchmark). Replay and code snapshots:
+`runs/grounding-fixes-20260917/secondary-veto/`; answer audit and runtime-parity check:
+`runs/answer-veto-20260918/`. The API and tunnel were not restarted. The live process
+still serves the earlier-tie build; `9222c1c` is the pre-veto fallback commit.
 
 ### Deploy behind the tunnel
 

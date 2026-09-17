@@ -11,8 +11,8 @@ WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
 LLM_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
-# A second, independent answering model only supplies an alternative span: where the two
-# disagree, the retrieval span picks between them. None disables the second pass.
+# The second model can reject a primary yes and supplies an alternative evidence span.
+# None disables the second pass.
 SECOND_LLM_MODEL = 'mlx-community/Qwen3-8B-4bit'
 # Skip the second pass when the first already ran long, so it cannot cost the deadline.
 SECOND_PASS_BUDGET_SECONDS = 25.0

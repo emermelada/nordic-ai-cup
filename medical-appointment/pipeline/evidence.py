@@ -162,13 +162,17 @@ def _span_overlap(a, b):
 
 
 def consensus_response(primary, secondary, referee):
-    """Keep the primary answers; take whichever model span the retrieval span agrees with.
+    """Reject a primary yes on a secondary no; use retrieval to choose evidence.
 
     Retrieval overlap selects the passage; equal scores prefer the earlier occurrence.
     Missing retrieval evidence gives both model spans a score of zero.
     """
     result = primary.model_copy(deep=True)
     for i, answer in enumerate(result.answers):
+        if answer and not secondary.answers[i]:
+            result.answers[i] = False
+            result.evidence_start[i] = result.evidence_end[i] = None
+            continue
         chosen = (result.evidence_start[i], result.evidence_end[i])
         other = (secondary.evidence_start[i], secondary.evidence_end[i])
         judge = (referee.evidence_start[i], referee.evidence_end[i])
