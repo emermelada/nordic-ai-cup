@@ -3,10 +3,11 @@ fastapi>=0.115              # [0.141.1]
 uvicorn[standard]>=0.30     # [0.52.4]
 pydantic>=2.7,<3            # [2.13.4]
 numpy>=1.26                 # [2.5.2]
-# headless: the GUI build needs libGL, absent in slim images
-opencv-python-headless>=4.9
-# torch
-# ultralytics
+# ultralytics pulls in opencv-python; the Dockerfile adds the libGL it needs.
+opencv-python>=4.9
+torch
+# Same version as training (Kaggle notebook), so best.pt loads.
+ultralytics==8.4.152
 
 # Only needed by local_evaluator.py (same scorer as the competition).
 requests>=2.31

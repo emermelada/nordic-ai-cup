@@ -20,6 +20,10 @@ services:
     <<: *common
     build: ./drone-flyby
     ports: ["8002:8000"]
+    environment:
+      DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v1.pt}
+    volumes:
+      - ${HOME}/models:/models:ro
 
   survival-simulator:
     <<: *common

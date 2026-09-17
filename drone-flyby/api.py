@@ -16,7 +16,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from dtos import DroneFlybyPredictRequestDto, DroneFlybyPredictResponseDto
-from example import predict
+from flyby import load_model, predict
 from utils import validate_response
 
 HOST = '0.0.0.0'
@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 start_time = time.time()
+
+
+@app.on_event('startup')
+def warm_up():
+    # Load and warm the model before the first frame arrives.
+    load_model()
 
 
 @app.post('/predict', response_model=DroneFlybyPredictResponseDto)
