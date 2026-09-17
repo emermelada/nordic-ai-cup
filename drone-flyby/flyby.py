@@ -27,8 +27,7 @@ Configuration, all optional, through environment variables:
                       quad0, full0, dwell or survey (data)    (default: full)
     DRONE_SET         NAME=value,... overrides any setting below, for experiments
                       DRONE_SET=MOTION_MIN_SAMPLES=999999 pins the ground motion
-                      to the Helsinki fit again, which is the A/B for the
-                      online fit; SPARE_BAND=0 turns off the spare answers
+                      to the Helsinki fit again: the A/B for the online fit
     DRONE_INSPECT     zoom to Level 2 on small unsure objects (default: 0)
 """
 
@@ -113,17 +112,22 @@ RUNNER_UPS = 4
 RUNNER_UP_SHARE = 0.03
 # Class scores below this are not counted as votes.
 MIN_VOTE_SCORE = 0.02
-
-# A response may carry 500 annotations and we were sending about 8. Average
-# precision sorts every answer by confidence and walks down the list, so a guess
-# ranked below a better one cannot lower the precision already banked - it can
-# only add recall if it happens to be right. Classes we never name score exactly
-# 0, so every remaining slot goes to another class for a box we already have,
-# in a confidence band strictly under the 0.001 floor of a real answer.
-ANSWER_LIMIT = 500
-SPARE_BAND = 0.0009
-SPARE_UNVOTED = 0.01    # a class the detector gave this box no score at all
-
+# Every reported box is scaled about its centre by this. Objects in the
+# validation flight measure 0.55-0.85x their Helsinki box diagonal, so our
+# boxes may be systematically too big for the 0.50 IoU the scorer needs.
+BOX_SCALE = 1.0
+# A response may carry 500 annotations and we send ~10, so naming every class
+# on every object looked free. It is not: validation with v4 scored 0.134 with
+# it at 0.01, against 0.143 without, because those floor boxes outrank genuine
+# low-confidence detections of the same class in other frames. Off by default.
+# Note for anyone tempted to retry this: average precision pools every frame
+# before ranking, so "below the real answers" has to hold across the whole
+# flight, not within one response. At 0.01 these boxes land in the same band as
+# our own faint detections elsewhere, which is what cost the 0.009. The variant
+# that has *not* been measured is a floor strictly under the 0.001 clip - low
+# enough that it can never outrank a real answer in any frame. That may be
+# worth one run; naming classes at 0.01 is not.
+FLOOR_ALL_CLASSES = float(os.environ.get('DRONE_FLOOR_ALL', '0'))
 # A box partly outside the view is a guess at the object's size: report it
 # lower, and let any whole sighting replace it.
 TRUNCATED_WEIGHT = 0.5
@@ -501,10 +505,17 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
 
 def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlybyPredictionDto]:
     annotations = []
-    # Classes a track did not name, kept apart so they can be ranked strictly
-    # below every real answer. See the note by ANSWER_LIMIT.
-    spares = []
+
+    def scaled(box):
+        if BOX_SCALE == 1.0:
+            return box
+        x1, y1, x2, y2 = box
+        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        w, h = (x2 - x1) * BOX_SCALE / 2, (y2 - y1) * BOX_SCALE / 2
+        return np.array([cx - w, cy - h, cx + w, cy + h])
+
     for name, confidence, box in transient:
+        box = scaled(box)
         bbox = clip_bbox_to_frame((
             box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT, box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
         ))
@@ -514,9 +525,10 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
                 confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
             ))
     for track in state.tracks:
+        box = scaled(track.box)
         bbox = clip_bbox_to_frame((
-            track.box[0] / IMAGE_WIDTH, track.box[1] / IMAGE_HEIGHT,
-            track.box[2] / IMAGE_WIDTH, track.box[3] / IMAGE_HEIGHT,
+            box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT,
+            box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
         ))
         if bbox is None:
             continue
@@ -532,35 +544,23 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             share = vote / top_vote
             if rank and share < RUNNER_UP_SHARE:
                 break
-            confidence = base if rank == 0 else base * 0.9 * share
             named.add(name)
+            confidence = base if rank == 0 else base * 0.9 * share
             annotations.append(DroneFlybyPredictionDto(
                 object_id=name,
                 bbox=[round(c, 6) for c in bbox],
                 confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
             ))
-        # Everything else this box could be, in the spare band. A class we never
-        # name scores exactly 0 on this box; a class we name last costs nothing.
-        if SPARE_BAND:
-            for name in (n for n, _ in ranked if n not in named):
-                share = track.votes[name] / top_vote
-                spares.append((SPARE_BAND * max(share, 1e-3), name, bbox))
-                named.add(name)
+        if FLOOR_ALL_CLASSES:
             for name in OBJECT_CLASSES:
                 if name not in named:
-                    spares.append((SPARE_BAND * SPARE_UNVOTED, name, bbox))
-
+                    annotations.append(DroneFlybyPredictionDto(
+                        object_id=name,
+                        bbox=[round(c, 6) for c in bbox],
+                        confidence=round(float(np.clip(base * FLOOR_ALL_CLASSES, 0.001, 1.0)), 4),
+                    ))
     annotations.sort(key=lambda a: -a.confidence)
-    room = ANSWER_LIMIT - len(annotations)
-    if room > 0 and spares:
-        spares.sort(key=lambda s: -s[0])
-        for confidence, name, bbox in spares[:room]:
-            annotations.append(DroneFlybyPredictionDto(
-                object_id=name,
-                bbox=[round(c, 6) for c in bbox],
-                confidence=round(float(confidence), 6),
-            ))
-    return annotations[:ANSWER_LIMIT]
+    return annotations[:500]
 
 
 # --------------------------------------------------------------------------- #
@@ -652,8 +652,12 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
         if base == position:
             state.sweep_index = (state.sweep_index + 1) % len(SWEEP)
         elif base in SWEEP and base[0] == 1:
-            # Off the pattern (a refusal, a restart): carry on from here.
-            state.sweep_index = (SWEEP.index(base) + 1) % len(SWEEP)
+            # Off the pattern (a refusal, a restart): carry on from the nearest
+            # matching point at or after the current index, so repeated points
+            # in a pattern do not send the sweep back to its opening pass.
+            offsets = range(len(SWEEP))
+            step = next((k for k in offsets if SWEEP[(state.sweep_index + k) % len(SWEEP)] == base), 0)
+            state.sweep_index = (state.sweep_index + step + 1) % len(SWEEP)
         target = SWEEP[state.sweep_index % len(SWEEP)]
         if base[0] == 1 and target[0] == 1 and not legal(base, *target):
             # Too far for one move: rejoin the pattern at the nearest Level-1 point.
@@ -705,11 +709,14 @@ def predict(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDt
         # Requests can overlap when one runs long; the newest frame wins.
         with _sequences_lock:
             transient = []
-            if request.frame >= state.last_frame:
+            stale = request.frame < state.last_frame
+            if not stale:
                 transient = update_tracks(state, request.frame, view.resolution_level, view.source_region_xyxy, detections)
                 state.last_frame = request.frame
             annotations = annotations_for(state, request.frame, transient)
-            requested_view = choose_next_view(request, state)
+            # A late frame's answer is still scored, but its view is out of
+            # date: leave the camera plan to the newest frame.
+            requested_view = None if stale else choose_next_view(request, state)
     except Exception:
         logger.exception('Tracking failed on frame %s', request.frame)
         annotations, requested_view = [], None
