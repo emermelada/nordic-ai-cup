@@ -70,6 +70,25 @@ evicts its own weights, ASR slows from 9 s to 16 s, and requests miss the deadli
 resulting swapping also killed the cloudflared tunnel once. Keep the answering model
 near 12 GB on this machine.
 
+### What the score is not limited by (measured 2026-09-17)
+
+The best contiguous word span each transcript could give, scored against the gold spans
+with onset refinement, is the localisation ceiling:
+
+| Transcripts | Ceiling | Score with the 9B |
+| --- | ---: | ---: |
+| whisper-large-v3-turbo fp16 (serving) | 0.945 | 0.7505 |
+| whisper-large-v3-turbo 8-bit | 0.945 | 0.7558 |
+| whisper-large-v3-turbo 4-bit | 0.942 | 0.7274 |
+| whisper-large-v3 (full) 8-bit | 0.892 | 0.7196 |
+
+Actual tIoU is ~0.59 against a 0.945 ceiling, so the loss is passage selection, not ASR
+timing. The full large-v3 is worse on both counts: coarser word timestamps (3.6 s mean
+segments against turbo's 2.3 s) and twice the latency. Prompt wording moved nothing on
+the 9B either: quote-the-whole-sentence 0.7355, prefer-the-explicit-statement 0.7467,
+prefer-the-first-mention 0.7535, against 0.7505 for the serving prompt. Snapping span
+boundaries to sentence ends was flat or worse at every setting tried.
+
 Training-set scores did not predict validation: the prompt rules were written from
 Qwen3-8B errors on those conversations. Choose builds by platform validation.
 Offline, a LoRA on the training spans regressed on held-out folds and a worked

@@ -10,7 +10,7 @@ from pathlib import Path
 WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
-LLM_MODEL = 'mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit-REAP-19B'
+LLM_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
 DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
