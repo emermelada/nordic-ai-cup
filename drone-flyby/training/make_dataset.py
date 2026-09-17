@@ -66,20 +66,39 @@ BACKGROUND_SKIP_WORDS = ('mask', '/gt/', 'drone-flyby-code')
 BACKGROUND_MIN_SIDE = 2000   # smaller photos would need blurry upscaling
 BACKGROUND_SCALE = (0.8, 1.25)
 
+# Patches cut from recorded validation views (--extra-patches) are used for
+# this share of pastes of their class; they carry that scene's lighting.
+EXTRA_PATCH_SHARE = 0.4
+# Photometric and shadow variation per pasted object, so a model does not learn
+# one scene's light: validation objects are darker and cast hard shadows.
+GRADE_SHARE = 0.6
+BLUR_SHARE = 0.3
+SHADOW_SHARE = 0.5
+
 # Filled in per worker by _init_worker.
 _patches = {}
+_extra_patches = {}
 _frames = []
 _backgrounds = []
 
 
-def load_patches(folder: Path):
+def load_patches(folder: Path, required: bool = True):
     patches = {}
     for name in OBJECT_CLASSES:
         files = sorted((folder / name).glob('*.png'))
         if not files:
-            raise SystemExit(f'No patches for {name} in {folder}: run extract_patches.py first')
+            if required:
+                raise SystemExit(f'No patches for {name} in {folder}: run extract_patches.py first')
+            continue
         patches[name] = [cv2.imread(str(path), cv2.IMREAD_UNCHANGED) for path in files]
     return patches
+
+
+def pick_patch(name: str, rng: random.Random) -> np.ndarray:
+    extra = _extra_patches.get(name)
+    if extra and rng.random() < EXTRA_PATCH_SHARE:
+        return rng.choice(extra)
+    return rng.choice(_patches[name])
 
 
 def find_backgrounds(folders) -> List[Path]:
@@ -92,9 +111,13 @@ def find_backgrounds(folders) -> List[Path]:
     return sorted(found)
 
 
-def _init_worker(patch_folder: Path, backgrounds):
-    global _patches, _frames, _backgrounds
+def _init_worker(patch_folder: Path, backgrounds, extra_folders=()):
+    global _patches, _frames, _backgrounds, _extra_patches
     _patches = load_patches(patch_folder)
+    _extra_patches = {}
+    for folder in extra_folders:
+        for name, images in load_patches(folder, required=False).items():
+            _extra_patches.setdefault(name, []).extend(images)
     _frames = frame_numbers()
     _backgrounds = backgrounds
 
@@ -153,7 +176,16 @@ def transform_patch(patch: np.ndarray, rng: random.Random) -> np.ndarray:
     bgr = patch[:, :, :3].astype(np.float32)
     bgr = bgr * rng.uniform(0.85, 1.15) + rng.uniform(-12, 12)
     bgr *= np.array([rng.uniform(0.95, 1.05) for _ in range(3)], np.float32)
+    if rng.random() < GRADE_SHARE:
+        # Another scene's light: gamma (mostly darker), flatter, greyer.
+        bgr = 255.0 * (np.clip(bgr, 0, 255) / 255.0) ** rng.uniform(0.8, 1.8)
+        mean = bgr.mean()
+        bgr = mean + (bgr - mean) * rng.uniform(0.6, 1.1)
+        grey = bgr.mean(axis=2, keepdims=True)
+        bgr = grey + (bgr - grey) * rng.uniform(0.4, 1.2)
     patch[:, :, :3] = np.clip(bgr, 0, 255).astype(np.uint8)
+    if rng.random() < BLUR_SHARE:
+        patch[:, :, :3] = cv2.GaussianBlur(patch[:, :, :3], (0, 0), rng.uniform(0.4, 1.2))
     return patch
 
 
@@ -163,6 +195,23 @@ def overlaps(box, boxes, gap: int = 8) -> bool:
         x1 - gap < bx2 and bx1 < x2 + gap and y1 - gap < by2 and by1 < y2 + gap
         for bx1, by1, bx2, by2 in boxes
     )
+
+
+def cast_shadow(scene: np.ndarray, patch: np.ndarray, x: int, y: int, rng: random.Random) -> None:
+    """Darken the ground where the object's silhouette would throw a shadow."""
+    height, width = patch.shape[:2]
+    length = rng.uniform(0.15, 0.6) * max(height, width)
+    angle = rng.uniform(0, 2 * math.pi)
+    dx, dy = int(length * math.cos(angle)), int(length * math.sin(angle))
+    sx1, sy1 = max(0, x + dx), max(0, y + dy)
+    sx2, sy2 = min(scene.shape[1], x + dx + width), min(scene.shape[0], y + dy + height)
+    if sx2 <= sx1 or sy2 <= sy1:
+        return
+    mask = patch[sy1 - y - dy:sy2 - y - dy, sx1 - x - dx:sx2 - x - dx, 3].astype(np.float32) / 255.0
+    mask = cv2.GaussianBlur(mask, (0, 0), rng.uniform(0.8, 2.5))[:, :, None]
+    darkness = rng.uniform(0.3, 0.65)
+    region = scene[sy1:sy2, sx1:sx2].astype(np.float32)
+    scene[sy1:sy2, sx1:sx2] = (region * (1 - darkness * mask)).astype(np.uint8)
 
 
 def paste(scene: np.ndarray, patch: np.ndarray, x: int, y: int) -> None:
@@ -200,7 +249,8 @@ def build_scene(rng: random.Random):
     occupied = [box[1:] for box in labels]
     for _ in range(rng.randint(*PASTES_PER_SCENE)):
         name = rng.choice(OBJECT_CLASSES)
-        patch = transform_patch(rng.choice(_patches[name]), rng)
+        source = pick_patch(name, rng)
+        patch = transform_patch(source, rng)
         if patch is None:
             continue
         height, width = patch.shape[:2]
@@ -209,6 +259,10 @@ def build_scene(rng: random.Random):
             y = rng.randint(0, IMAGE_HEIGHT - height)
             box = (x, y, x + width, y + height)
             if not overlaps(box, occupied):
+                # Only cut-outs with a real silhouette get a shadow: a
+                # rectangle's shadow would be a giveaway.
+                if rng.random() < SHADOW_SHARE and (patch[:, :, 3] > 0).mean() < FILLED_MASK:
+                    cast_shadow(image, patch, x, y, rng)
                 paste(image, patch, x, y)
                 occupied.append(box)
                 labels.append((name, *box))
@@ -310,6 +364,8 @@ def main() -> int:
                         help='png matches what the evaluator sends; jpg is ~6x smaller.')
     parser.add_argument('--backgrounds', type=Path, nargs='*', default=[],
                         help='Folders searched for large aerial photos to paste onto.')
+    parser.add_argument('--extra-patches', type=Path, nargs='*', default=[],
+                        help='More patch folders (e.g. data/patches_val), used for part of the pastes.')
     parser.add_argument('--workers', type=int, default=None)
     parser.add_argument('--preview', action='store_true', help='Also draw labels onto a few views.')
     args = parser.parse_args()
@@ -331,7 +387,7 @@ def main() -> int:
         (i, 'val' if i < val_count else 'train', args.seed * 1_000_003 + i, args.out, args.format)
         for i in range(args.scenes)
     ]
-    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds)) as pool:
+    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds, [p for p in args.extra_patches if p.exists()])) as pool:
         total = 0
         for done, written in enumerate(pool.imap_unordered(make_scene, jobs), 1):
             total += written
