@@ -16,6 +16,8 @@ Configuration, all optional, through environment variables:
     DRONE_MODEL   path to the YOLO weights  (default: ~/models/drone-yolo11n-v1.pt)
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
+    DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
+    DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
 """
 
 import logging
@@ -45,8 +47,15 @@ MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
 
-# Low: mAP rewards ranked low-confidence guesses more than it punishes them.
-DETECTION_CONFIDENCE = 0.05
+# Two thresholds. mAP rewards ranked low-confidence guesses, so anything above
+# DETECTION_CONFIDENCE is reported for the frame it was seen in. Only detections
+# above NEW_TRACK_CONFIDENCE start a track that is remembered and reported on
+# later frames; otherwise false alarms pile up (v1 reached 137 per frame).
+DETECTION_CONFIDENCE = float(os.environ.get('DRONE_DET_CONF', '0.01'))
+NEW_TRACK_CONFIDENCE = float(os.environ.get('DRONE_TRACK_CONF', '0.25'))
+# One-frame guesses rank below remembered objects of the same confidence.
+TRANSIENT_WEIGHT = 0.5
+MAX_TRACKS = 120
 NMS_IOU = 0.5
 
 # Per-frame ground motion in source pixels, fitted on the Helsinki frames
@@ -179,7 +188,8 @@ _sequences: Dict[str, Sequence] = {}
 _sequences_lock = threading.Lock()
 
 
-def update_tracks(state: Sequence, frame: int, level: int, region, detections) -> None:
+def update_tracks(state: Sequence, frame: int, level: int, region, detections) -> list:
+    """Fold this view's detections into memory; return the unremembered ones."""
     # Bring every track to this frame; forget the ones that left the ground.
     alive = []
     for track in state.tracks:
@@ -194,6 +204,7 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
     rx1, ry1, rx2, ry2 = region
     cut_off = CUT_OFF_PIXELS * (rx2 - rx1) / 960
     matched = set()
+    transient = []
     for name, confidence, box in sorted(detections, key=lambda d: -d[1]):
         best, best_iou = None, MATCH_IOU
         for track in state.tracks:
@@ -201,6 +212,9 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
             if overlap > best_iou:
                 best, best_iou = track, overlap
         if best is None:
+            if confidence < NEW_TRACK_CONFIDENCE:
+                transient.append((name, confidence * TRANSIENT_WEIGHT, box))
+                continue
             best = Track(box=box, frame=frame, best_level=level)
             state.tracks.append(best)
         elif id(best) in matched:
@@ -238,10 +252,23 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
                 and x2 < rx2 - EDGE_MARGIN and y2 < ry2 - EDGE_MARGIN):
             track.misses += 1
     state.tracks = [t for t in state.tracks if t.misses < MAX_MISSES]
+    if len(state.tracks) > MAX_TRACKS:
+        state.tracks.sort(key=lambda t: -t.best_confidence)
+        del state.tracks[MAX_TRACKS:]
+    return transient
 
 
-def annotations_for(state: Sequence, frame: int) -> List[DroneFlybyPredictionDto]:
+def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlybyPredictionDto]:
     annotations = []
+    for name, confidence, box in transient:
+        bbox = clip_bbox_to_frame((
+            box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT, box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
+        ))
+        if bbox is not None:
+            annotations.append(DroneFlybyPredictionDto(
+                object_id=name, bbox=[round(c, 6) for c in bbox],
+                confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
+            ))
     for track in state.tracks:
         bbox = clip_bbox_to_frame((
             track.box[0] / IMAGE_WIDTH, track.box[1] / IMAGE_HEIGHT,
@@ -334,10 +361,11 @@ def predict(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDt
     try:
         # Requests can overlap when one runs long; the newest frame wins.
         with _sequences_lock:
+            transient = []
             if request.frame >= state.last_frame:
-                update_tracks(state, request.frame, view.resolution_level, view.source_region_xyxy, detections)
+                transient = update_tracks(state, request.frame, view.resolution_level, view.source_region_xyxy, detections)
                 state.last_frame = request.frame
-            annotations = annotations_for(state, request.frame)
+            annotations = annotations_for(state, request.frame, transient)
             requested_view = choose_next_view(request, state)
     except Exception:
         logger.exception('Tracking failed on frame %s', request.frame)
