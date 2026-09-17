@@ -6,7 +6,8 @@ import time
 from pathlib import Path
 
 WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
-QWEN_MODEL = 'mlx-community/Qwen3-8B-4bit'
+QWEN_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
+DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
 ASR_SETTINGS = {
@@ -55,7 +56,10 @@ def decode_audio(audio_bytes: bytes):
 
 
 class MLXBackend:
-    def __init__(self):
+    def __init__(self, prompt=DEFAULT_PROMPT):
+        if prompt not in ('legacy', 'focused', 'compact'):
+            raise ValueError(f'Unknown answer prompt: {prompt}')
+        self.prompt = prompt
         self._whisper_path = None
         self._llm = None
         self._tokenizer = None
@@ -72,6 +76,8 @@ class MLXBackend:
         )
 
     def transcribe(self, audio_bytes: bytes) -> dict:
+        from pipeline.evidence import energy_envelope
+
         started = time.monotonic()
         samples = decode_audio(audio_bytes)
         result = self._transcribe(samples)
@@ -99,9 +105,18 @@ class MLXBackend:
             'duration': len(samples) / SAMPLE_RATE,
             'segments': segments,
             'text': result['text'],
+            'energy_db': energy_envelope(samples),
         }
 
     def _generate(self, words: list[dict], questions: list[str], max_tokens: int) -> str:
+        from pipeline.core import build_messages
+        from pipeline.evidence import build_compact_messages, build_focused_messages
+
+        builder = {'legacy': build_messages, 'focused': build_focused_messages,
+                   'compact': build_compact_messages}[self.prompt]
+        return self.generate_messages(builder(words, questions), max_tokens)
+
+    def generate_messages(self, messages: list[dict], max_tokens: int = 900) -> str:
         if self._llm is None:
             snapshot = resolve_snapshot(QWEN_MODEL)
             from mlx_lm import load
@@ -112,10 +127,9 @@ class MLXBackend:
             )
             self._sampler = make_sampler(temp=0.0)
         from mlx_lm import generate
-        from pipeline.core import build_messages
 
         prompt = self._tokenizer.apply_chat_template(
-            build_messages(words, questions),
+            messages,
             add_generation_prompt=True,
             tokenize=False,
             enable_thinking=False,

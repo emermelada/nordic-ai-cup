@@ -15,6 +15,7 @@ from pipeline.core import (
     sanitize_response,
     words_from_transcript,
 )
+from pipeline.evidence import refine_evidence
 from utils import decode_audio, validate_response
 
 logger = logging.getLogger(__name__)
@@ -281,6 +282,7 @@ class Pipeline:
                 'questions': request.questions,
             }, deadline, self._closed)
             words = []
+            envelope = None
             while True:
                 message = _receive_frame(self._channel, deadline, self._closed)
                 if any(message.get(key) != value for key, value in identity.items()):
@@ -293,13 +295,17 @@ class Pipeline:
                         raise ValueError('Transcript exceeds inference limit')
                     duration = transcript['duration']
                     asr_seconds = transcript.get('seconds')
-                    fallback = retrieval_response(words, request.questions, duration)
+                    envelope = transcript.get('energy_db')
+                    fallback = refine_evidence(
+                        retrieval_response(words, request.questions, duration), words, envelope,
+                    )
                 elif kind == 'result':
                     generation_seconds = message.get('generation_seconds')
                     response = answer_response(
                         message['raw'], words, request.questions, duration,
-                        fallback=fallback, deadline=deadline,
+                        fallback=fallback, deadline=deadline, alignment='numeric',
                     )
+                    response = refine_evidence(response, words, envelope)
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
                     outcome = 'completed'

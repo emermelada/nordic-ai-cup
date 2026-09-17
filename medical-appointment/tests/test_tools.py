@@ -103,7 +103,7 @@ class BackendTests(unittest.TestCase):
         with patch.dict(sys.modules, modules), \
                 patch.object(mlx_backend, 'resolve_snapshot', return_value='/cached/qwen'), \
                 patch('pipeline.core.build_messages', return_value=['messages']) as messages:
-            backend = mlx_backend.MLXBackend()
+            backend = mlx_backend.MLXBackend(prompt='legacy')
             self.assertEqual(backend.complete(WORDS, ['question']), RAW)
             self.assertIsNone(backend._whisper_path)
             self.assertGreaterEqual(backend.last_generation_seconds, 0)
@@ -122,6 +122,16 @@ class BackendTests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 backend.complete(WORDS, ['question'])
             generate.assert_not_called()
+
+    def test_serving_default_uses_compact_prompt(self):
+        backend = mlx_backend.MLXBackend()
+        with patch('pipeline.evidence.build_compact_messages', return_value=['compact']) as messages, \
+                patch.object(backend, 'generate_messages', return_value=RAW) as generate:
+            self.assertEqual(backend.complete(WORDS, ['question']), RAW)
+        messages.assert_called_once_with(WORDS, ['question'])
+        generate.assert_called_once_with(['compact'], 900)
+        with self.assertRaises(ValueError):
+            mlx_backend.MLXBackend(prompt='missing')
 
     def test_warmup_runs_minimal_generation(self):
         backend = mlx_backend.MLXBackend()
@@ -154,6 +164,8 @@ class ToolTests(unittest.TestCase):
         self.directory = Path(self.temporary.name)
         self.conversations = [('conversation_sample_x.mp3', ROWS)]
         self.enterContext(contextlib.redirect_stdout(io.StringIO()))
+        self.enterContext(patch.object(eval_offline, 'load_sample_audio', return_value=b'audio'))
+        self.enterContext(patch.object(eval_offline, 'decode_audio', return_value=[0.0] * 64000))
 
     def test_atomic_writes_never_overwrite_unknown_files(self):
         target = self.directory / 'output.json'
@@ -219,6 +231,22 @@ class ToolTests(unittest.TestCase):
         replayed = eval_offline.prepare_inputs(self.conversations, None, saved)
         self.assertEqual(replayed[0]['words'], prepared[0]['words'])
         self.assertTrue((self.directory / 'questions.csv').is_file())
+
+    def test_replay_retains_recorded_alignment_and_prompt(self):
+        dump = replay_dump()
+        dump['sample_x'].update(prompt='focused', alignment='numeric', model='recorded/model')
+        prepared = eval_offline.prepare_inputs(self.conversations, None, dump)
+        with patch.object(eval_offline, 'answer_response', wraps=eval_offline.answer_response) as answer:
+            summary = eval_offline.evaluate(
+                prepared, replay=True, retrieval_only=False, start_offset=0, output=self.directory,
+                subset='holdout',
+            )
+        self.assertEqual(answer.call_args.kwargs['alignment'], 'numeric')
+        self.assertEqual(summary['prompt'], ['focused'])
+        self.assertEqual(summary['alignment'], ['numeric'])
+        self.assertEqual(summary['subset'], 'holdout')
+        saved = json.loads((self.directory / 'raw_outputs.json').read_text())
+        self.assertEqual(saved['sample_x']['model'], 'recorded/model')
 
     def test_missing_conversation_and_changed_questions_fail(self):
         with self.assertRaises(FileNotFoundError):

@@ -300,9 +300,11 @@ def _unit_span(units, ids):
 def answer_response(
     raw: str, words, questions, duration: float,
     fallback: ASRQuestionResponseDto | None = None, start_offset: float = 0.0,
-    deadline: float | None = None,
+    deadline: float | None = None, alignment: str = 'legacy',
 ) -> ASRQuestionResponseDto:
     """Keep valid answers; start_offset shifts only model-aligned/cited evidence."""
+    if alignment not in ('legacy', 'numeric'):
+        raise ValueError(f'Unknown quote alignment: {alignment}')
     words = _normalize_words(words)
     count = len(questions)
     if not words or not count:
@@ -332,7 +334,12 @@ def answer_response(
         result.evidence_start[i] = result.evidence_end[i] = None
         if not answer:
             continue
-        span = fuzzy_span(words, entry.get("quote"), deadline=deadline)
+        if alignment == 'numeric':
+            from pipeline.evidence import align_quote
+
+            span = align_quote(words, entry.get('quote'), deadline)
+        else:
+            span = fuzzy_span(words, entry.get("quote"), deadline=deadline)
         if span:
             span = _bounded_span(span[0] + offset, span[1], duration)
         if span is None and not _expired(deadline):

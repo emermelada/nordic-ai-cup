@@ -19,7 +19,8 @@ from pipeline.core import (
     answer_response, retrieval_response, sanitize_response, split_units,
     words_from_transcript,
 )
-from pipeline.mlx_backend import MLXBackend
+from pipeline.evidence import energy_envelope, refine_evidence
+from pipeline.mlx_backend import DEFAULT_PROMPT, QWEN_MODEL, MLXBackend, decode_audio
 from tools.transcribe_all import (
     CACHE_PRODUCER, atomic_write_json, atomic_write_text, positive_limit,
     validate_transcript,
@@ -29,6 +30,15 @@ from utils import (
     group_questions_by_conversation, load_sample_audio, temporal_iou,
     validate_response,
 )
+
+
+def split_conversations(conversations, subset):
+    if subset not in ('all', 'dev', 'holdout'):
+        raise ValueError(f'Unknown dataset split: {subset}')
+    ids = [rows[0]['transcript_id'] for _, rows in conversations]
+    holdout = set(sorted(ids, key=lambda value: hashlib.sha256(value.encode()).hexdigest())[:9])
+    return [(filename, rows) for filename, rows in conversations
+            if subset == 'all' or (rows[0]['transcript_id'] in holdout) == (subset == 'holdout')]
 
 
 def _finite_seconds(value):
@@ -103,6 +113,7 @@ def prepare_inputs(conversations, transcripts: Path | None, replay: dict | None)
         prepared.append({
             'id': sample_id, 'filename': filename, 'rows': rows, 'words': words,
             'units': units, 'duration': float(duration), 'duration_source': duration_source,
+            'envelope': energy_envelope(decode_audio(load_sample_audio(filename))),
             'entry': entry,
             'cached_asr_seconds': _finite_seconds(transcript.get('seconds')) if transcript else None,
         })
@@ -119,14 +130,15 @@ def _timing_summary(values):
 
 
 def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: float,
-             output: Path) -> dict:
+             output: Path, subset: str = 'all', prompt: str | None = None,
+             alignment: str | None = None) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     destinations = [output / name for name in ('questions.csv', 'summary.json', 'raw_outputs.json')]
     for destination in destinations:
         if destination.exists() or destination.is_symlink():
             raise FileExistsError(f'Refusing to overwrite an existing output: {destination}')
     mode = 'retrieval_only' if retrieval_only else ('replay' if replay else 'fresh_llm')
-    backend = MLXBackend() if mode == 'fresh_llm' else None
+    backend = (MLXBackend(prompt=prompt) if prompt else MLXBackend()) if mode == 'fresh_llm' else None
     statistics = Statistics()
     question_results = []
     raw_outputs = {}
@@ -148,6 +160,10 @@ def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: floa
         elif replay and not retrieval_only:
             raw = item['entry']['raw']
             replay_seconds = _finite_seconds(item['entry'].get('seconds'))
+        quote_alignment = alignment or (
+            item['entry'].get('alignment', 'legacy') if replay else 'numeric'
+        )
+        prompt_name = (prompt or DEFAULT_PROMPT) if backend else (item['entry'] or {}).get('prompt', 'legacy')
         started_cpu = time.process_time()
         fallback = retrieval_response(words, questions, duration)
         if retrieval_only:
@@ -155,8 +171,9 @@ def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: floa
         else:
             response = answer_response(
                 raw, words, questions, duration, fallback=fallback,
-                start_offset=start_offset,
+                start_offset=start_offset, alignment=quote_alignment,
             )
+        response = refine_evidence(response, words, item.get('envelope'))
         response = sanitize_response(response, len(questions), duration)
         validate_response(response, len(questions))
         postprocess_cpu_seconds = time.process_time() - started_cpu
@@ -197,6 +214,8 @@ def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: floa
         if not retrieval_only:
             raw_outputs[item['id']] = {
                 'raw': raw, 'seconds': fresh_seconds if backend else replay_seconds,
+                'prompt': prompt_name, 'alignment': quote_alignment,
+                'model': QWEN_MODEL if backend else item['entry'].get('model'),
                 'generation_source': 'fresh' if backend else 'historical_replay',
                 'duration': duration, 'duration_source': item['duration_source'],
                 'units': [{'words': unit} for unit in item['units']],
@@ -210,7 +229,9 @@ def evaluate(prepared, *, replay: bool, retrieval_only: bool, start_offset: floa
             }
         print(f'{index}/{len(prepared)} {item["id"]}: {processing_seconds:.3f}s offline processing', flush=True)
     summary = {
-        'mode': mode, 'start_offset': start_offset,
+        'mode': mode, 'start_offset': start_offset, 'subset': subset,
+        'prompt': (prompt or DEFAULT_PROMPT) if backend else sorted({entry['prompt'] for entry in raw_outputs.values()}),
+        'alignment': sorted({entry['alignment'] for entry in raw_outputs.values()}),
         'conversations': statistics.conversations, 'questions': statistics.total,
         'correct': statistics.correct, 'failed_conversations': statistics.failed_conversations,
         'accuracy': statistics.accuracy, 'mean_tiou': statistics.mean_tiou,
@@ -268,6 +289,11 @@ def main(argv=None) -> int:
     parser.add_argument('--transcripts', type=Path)
     parser.add_argument('--replay-llm', type=Path)
     parser.add_argument('--limit', type=positive_limit)
+    parser.add_argument('--subset', choices=['all', 'dev', 'holdout'], default='all')
+    parser.add_argument('--alignment', choices=['legacy', 'numeric'],
+                        help='Quote alignment; defaults to serving mode or recorded replay mode.')
+    parser.add_argument('--prompt', choices=['legacy', 'focused', 'compact'],
+                        help='Prompt for fresh generation; default is the serving prompt.')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--start-offset', type=float, default=0.0,
                         help='Shift aligned/cited LLM evidence starts in seconds.')
@@ -284,14 +310,17 @@ def main(argv=None) -> int:
         replay = json.loads(args.replay_llm.read_text())
         if not isinstance(replay, dict):
             parser.error('--replay-llm must contain a conversation-keyed JSON object')
-    conversations = group_questions_by_conversation()[:args.limit]
+    if args.prompt and (args.replay_llm or args.retrieval_only):
+        parser.error('--prompt applies only to fresh generation')
+    conversations = split_conversations(group_questions_by_conversation(), args.subset)[:args.limit]
     prepared = prepare_inputs(conversations, args.transcripts, replay)
     output = args.output or (
         Path(__file__).resolve().parents[1] / 'runs' / 'offline'
         / datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     )
     evaluate(prepared, replay=replay is not None, retrieval_only=args.retrieval_only,
-             start_offset=args.start_offset, output=output)
+             start_offset=args.start_offset, output=output, subset=args.subset, prompt=args.prompt,
+             alignment=args.alignment)
     return 0
 
 
