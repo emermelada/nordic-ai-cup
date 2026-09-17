@@ -1,3 +1,6 @@
 __pycache__/
 data/
 .venv/
+# 400 MB of sample frames; only local_evaluator.py / visualize.py need them
+src/
+annotated/

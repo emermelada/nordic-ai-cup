@@ -9,3 +9,6 @@ data/
 runs/
 .env
 .ipynb_checkpoints/
+# drone-flyby: official sample frames (copy from the official repo) and renders
+drone-flyby/src/
+drone-flyby/annotated/

@@ -1,6 +1,13 @@
-fastapi
-uvicorn[standard]
-pydantic>=2
+# Service dependencies (official template versions in brackets).
+fastapi>=0.115              # [0.141.1]
+uvicorn[standard]>=0.30     # [0.52.4]
+pydantic>=2.7,<3            # [2.13.4]
+numpy>=1.26                 # [2.5.2]
+# headless: the GUI build needs libGL, absent in slim images
+opencv-python-headless>=4.9
 # torch
 # ultralytics
-# opencv-python-headless   # headless: the GUI build needs libGL, absent in slim images
+
+# Only needed by local_evaluator.py (same scorer as the competition).
+requests>=2.31
+faster-coco-eval>=1.7.2,<2

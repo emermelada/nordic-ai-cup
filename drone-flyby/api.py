@@ -1,35 +1,67 @@
-"""Placeholder API for drone-flyby.
+"""The endpoint the evaluation service calls.
 
-Day 1: replace dtos.py and /predict with the schema from the official
-use-case template (emily open <use-case>, or <use-case>/dtos.py in the repo).
-Goal for day 1 is only: endpoint returns something *valid*.
+You should not need to change much in here. Put your model in ``example.py``
+and leave the transport alone.
+
+The URL you submit is used exactly as you give it, path included, so if you
+keep the ``/predict`` route below then submit ``http://<your-host>:9053/predict``
+rather than just the host.
 """
+
 import datetime
+import logging
 import time
 
-from fastapi import Body, FastAPI
+import uvicorn
+from fastapi import FastAPI
 
-from dtos import PredictRequestDto, PredictResponseDto
+from dtos import DroneFlybyPredictRequestDto, DroneFlybyPredictResponseDto
+from example import predict
+from utils import validate_response
 
-SERVICE = "drone-flyby"
-app = FastAPI(title=SERVICE)
+HOST = '0.0.0.0'
+PORT = 9053
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
 start_time = time.time()
 
 
-@app.get("/")
+@app.post('/predict', response_model=DroneFlybyPredictResponseDto)
+def predict_endpoint(request: DroneFlybyPredictRequestDto):
+    """Answer one frame."""
+    response = predict(request)
+
+    # Fail here, loudly, rather than having the evaluator silently discard the
+    # frame. Every rule this checks is a rule the evaluator also enforces.
+    validate_response(response)
+
+    logger.info(
+        'frame %s (index %s) L%s at (%s, %s): returned %s detections',
+        request.frame,
+        request.frame_index,
+        request.view.resolution_level,
+        request.view.center_x,
+        request.view.center_y,
+        len(response.annotations),
+    )
+    return response
+
+
+@app.get('/api')
+def hello():
+    return {
+        'service': 'drone-flyby-usecase',
+        'uptime': '{}'.format(datetime.timedelta(seconds=time.time() - start_time)),
+    }
+
+
+@app.get('/')
 def index():
     return "Your endpoint is running!"
 
 
-@app.get("/api")
-def health():
-    return {
-        "service": SERVICE,
-        "uptime": str(datetime.timedelta(seconds=time.time() - start_time)),
-    }
-
-
-@app.post("/predict", response_model=PredictResponseDto)
-def predict(request: PredictRequestDto = Body(...)):
-    # TODO: call the model here
-    return PredictResponseDto(prediction=None)
+if __name__ == '__main__':
+    uvicorn.run('api:app', host=HOST, port=PORT)
