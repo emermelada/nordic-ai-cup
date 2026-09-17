@@ -22,8 +22,10 @@ services:
     ports: ["8002:8000"]
     environment:
       DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v1.pt}
+      DRONE_RECORD_DIR: /recordings
     volumes:
       - ${HOME}/models:/models:ro
+      - ./drone-flyby/data/recordings:/recordings
 
   survival-simulator:
     <<: *common

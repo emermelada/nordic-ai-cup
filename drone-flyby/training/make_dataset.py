@@ -6,8 +6,9 @@
 
 For every synthetic scene:
 
-1. take one of the 4K Helsinki frames (randomly flipped), keeping its real
-   objects and their labels;
+1. take a background: one of the 4K Helsinki frames (randomly flipped, real
+   objects and labels kept), or, with --backgrounds, a random 3840x2160 cut
+   from any large aerial photo (no objects of ours in it, so no labels);
 2. paste extra objects from data/patches at free spots, classes drawn evenly,
    each randomly rotated, scaled and recoloured a little;
 3. cut camera views out of it exactly the way the evaluator does (the crop for
@@ -18,13 +19,18 @@ Output: data/yolo/{images,labels}/{train,val}/ and data/yolo/data.yaml.
 
 import argparse
 import math
+import os
 import random
 import sys
 from multiprocessing import Pool
 from pathlib import Path
+from typing import List, Optional
 
-import cv2
-import numpy as np
+# GeoTIFF photos carry map tags OpenCV does not know; the warnings are noise.
+os.environ.setdefault('OPENCV_LOG_LEVEL', 'ERROR')
+
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -52,9 +58,18 @@ FILLED_MASK = 0.7              # mask this full is the ellipse fallback
 
 CLASS_INDEX = {name: i for i, name in enumerate(OBJECT_CLASSES)}
 
+# With --backgrounds, this share of scenes still uses the Helsinki frames.
+HELSINKI_SHARE = 0.2
+BACKGROUND_SUFFIXES = {'.png', '.jpg', '.jpeg', '.tif', '.tiff'}
+# Label rasters live next to the photos in segmentation datasets.
+BACKGROUND_SKIP_WORDS = ('mask', '/gt/', 'drone-flyby-code')
+BACKGROUND_MIN_SIDE = 2000   # smaller photos would need blurry upscaling
+BACKGROUND_SCALE = (0.8, 1.25)
+
 # Filled in per worker by _init_worker.
 _patches = {}
 _frames = []
+_backgrounds = []
 
 
 def load_patches(folder: Path):
@@ -67,10 +82,45 @@ def load_patches(folder: Path):
     return patches
 
 
-def _init_worker(patch_folder: Path):
-    global _patches, _frames
+def find_backgrounds(folders) -> List[Path]:
+    found = []
+    for folder in folders:
+        for path in Path(folder).rglob('*'):
+            text = str(path).lower()
+            if path.suffix.lower() in BACKGROUND_SUFFIXES and not any(w in text for w in BACKGROUND_SKIP_WORDS):
+                found.append(path)
+    return sorted(found)
+
+
+def _init_worker(patch_folder: Path, backgrounds):
+    global _patches, _frames, _backgrounds
     _patches = load_patches(patch_folder)
     _frames = frame_numbers()
+    _backgrounds = backgrounds
+
+
+def load_background(rng: random.Random) -> Optional[np.ndarray]:
+    """A random 3840x2160 cut from one of the aerial photos, or None."""
+    for _attempt in range(5):
+        path = rng.choice(_backgrounds)
+        image = cv2.imread(str(path), cv2.IMREAD_COLOR)
+        if image is None or min(image.shape[:2]) < BACKGROUND_MIN_SIDE:
+            continue
+        scale = rng.uniform(*BACKGROUND_SCALE)
+        # Never smaller than the frame.
+        scale = max(scale, IMAGE_WIDTH / image.shape[1], IMAGE_HEIGHT / image.shape[0])
+        if abs(scale - 1) > 0.01:
+            image = cv2.resize(image, None, fx=scale, fy=scale,
+                               interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
+        y = rng.randint(0, image.shape[0] - IMAGE_HEIGHT)
+        x = rng.randint(0, image.shape[1] - IMAGE_WIDTH)
+        image = image[y:y + IMAGE_HEIGHT, x:x + IMAGE_WIDTH]
+        if rng.random() < 0.5:
+            image = image[::-1, ::-1]
+        # Nudge the colours a little so photos from one city do not all look alike.
+        image = image.astype(np.float32) * rng.uniform(0.85, 1.15) + rng.uniform(-15, 15)
+        return np.ascontiguousarray(np.clip(image, 0, 255).astype(np.uint8))
+    return None
 
 
 def transform_patch(patch: np.ndarray, rng: random.Random) -> np.ndarray:
@@ -127,8 +177,14 @@ def paste(scene: np.ndarray, patch: np.ndarray, x: int, y: int) -> None:
 
 def build_scene(rng: random.Random):
     """One 4K image plus its labels as [(class, x1, y1, x2, y2)]."""
-    image, annotations = load_sample(rng.choice(_frames))
-    labels = [(a['object_id'], *a['bbox']) for a in annotations]
+    image = None
+    if _backgrounds and rng.random() >= HELSINKI_SHARE:
+        image = load_background(rng)
+    if image is not None:
+        labels = []
+    else:
+        image, annotations = load_sample(rng.choice(_frames))
+        labels = [(a['object_id'], *a['bbox']) for a in annotations]
 
     if rng.random() < 0.5:
         image = image[:, ::-1]
@@ -252,6 +308,8 @@ def main() -> int:
     parser.add_argument('--out', type=Path, default=HERE.parent / 'data' / 'yolo')
     parser.add_argument('--format', choices=['png', 'jpg'], default='png',
                         help='png matches what the evaluator sends; jpg is ~6x smaller.')
+    parser.add_argument('--backgrounds', type=Path, nargs='*', default=[],
+                        help='Folders searched for large aerial photos to paste onto.')
     parser.add_argument('--workers', type=int, default=None)
     parser.add_argument('--preview', action='store_true', help='Also draw labels onto a few views.')
     args = parser.parse_args()
@@ -260,12 +318,20 @@ def main() -> int:
         for split in ('train', 'val'):
             (args.out / kind / split).mkdir(parents=True, exist_ok=True)
 
+    backgrounds = find_backgrounds(args.backgrounds)
+    if args.backgrounds:
+        print(f'{len(backgrounds)} background photos found', flush=True)
+        for path in backgrounds[:5]:
+            print('  e.g.', path)
+        if not backgrounds:
+            raise SystemExit('No background photos found in ' + ', '.join(map(str, args.backgrounds)))
+
     val_count = max(1, int(args.scenes * args.val_share))
     jobs = [
         (i, 'val' if i < val_count else 'train', args.seed * 1_000_003 + i, args.out, args.format)
         for i in range(args.scenes)
     ]
-    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches,)) as pool:
+    with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds)) as pool:
         total = 0
         for done, written in enumerate(pool.imap_unordered(make_scene, jobs), 1):
             total += written
