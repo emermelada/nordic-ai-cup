@@ -93,7 +93,7 @@ class BackendTests(unittest.TestCase):
         self.assertIsNone(holder.model)
         self.assertEqual(output['duration'], 2.0)
         self.assertEqual(output['segments'][0]['words'][0]['p'], 0.8)
-        self.assertIsNone(backend._llm)
+        self.assertEqual(backend._models, {})
         transcribe.assert_called_once_with(
             samples, path_or_hf_repo='/cached/whisper', **mlx_backend.ASR_SETTINGS
         )
@@ -138,7 +138,7 @@ class BackendTests(unittest.TestCase):
                 patch.object(backend, 'generate_messages', return_value=RAW) as generate:
             self.assertEqual(backend.complete(WORDS, ['question']), RAW)
         messages.assert_called_once_with(WORDS, ['question'])
-        generate.assert_called_once_with(['compact'], 1200)
+        generate.assert_called_once_with(['compact'], 1200, None)
         with self.assertRaises(ValueError):
             mlx_backend.MLXBackend(prompt='missing')
 

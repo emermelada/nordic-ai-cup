@@ -58,6 +58,14 @@ class FakeBackend:
             for index in range(len(questions))
         ]})
 
+    def complete_second(self, words, questions):
+        # A different span for the same answers; the retrieval span picks between them.
+        return json.dumps({'results': [
+            {'q': index + 1, 'answer': 'yes' if index % 2 == 0 else 'no',
+             'units': [0], 'quote': 'You should take it after a meal.'}
+            for index in range(len(questions))
+        ]})
+
 
 class FailedStartupBackend(FakeBackend):
     def warmup(self):

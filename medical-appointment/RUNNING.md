@@ -36,9 +36,15 @@ fail startup rather than downloading them. No hosted APIs are used for inference
 
 ## Current solution
 
-Whisper-large-v3-turbo supplies word timestamps; a 13 GB MoE answering model
-(Qwen3.6-35B-A3B pruned to 19B) answers all questions in one deterministic call with
-thinking disabled. A reasoning channel, if a model emits one, is stripped before parsing. The `compact` prompt
+Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all questions in one
+deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
+opinion. The answers are always the first model's; where the two cite different passages,
+the retrieval span picks between them (`consensus_response`). Two answering models
+disagree about which mention to cite more often than either is outright wrong, and that
+disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
+both models resident in 9.9 GB and 14-20 s of generation. A reasoning channel, if a model
+emits one, is stripped before parsing. `SECOND_LLM_MODEL = None` disables the second pass,
+which is also skipped automatically when the first generation exceeds 25 s. The `compact` prompt
 keeps the original answering rules but asks for one-line JSON with unit ids and a
 quote per yes, about a third of the original output tokens. Decimal-aware alignment
 maps the quote back to words without confusing `2.5` with `25`. Two span rules then
@@ -63,7 +69,13 @@ Running processes keep their loaded code until restarted.
 | **Qwen3.5-9B, compact + span rules** | 0.751 | **0.743** |
 | Qwen3.5-9B, minimal prompt | 0.751 | 0.731 |
 | gpt-oss-20b, compact + span rules + 8-bit ASR | 0.760 | 0.727 |
-| Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | not yet validated |
+| Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
+| **Qwen3.5-9B + Qwen3-8B consensus, compact** | **0.770** | not yet validated |
+
+Span consensus across models is the one lever that moved the training score materially:
+three-model consensus reached 0.774, two models plus the retrieval referee 0.770-0.775,
+while the same model under three different prompts gained nothing (0.750), and free
+candidates from one model (its cited units, sentence expansion) were flat or worse.
 
 Qwen3.8-27B (16 GB) scored 0.755 offline but cannot serve here: with Whisper loaded it
 evicts its own weights, ASR slows from 9 s to 16 s, and requests miss the deadline. The

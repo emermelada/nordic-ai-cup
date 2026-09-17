@@ -144,3 +144,28 @@ def refine_evidence(response, words, envelope=None):
             start = _speech_onset(envelope, start, end)
         result.evidence_start[i], result.evidence_end[i] = start, end
     return result
+
+
+def _span_overlap(a, b):
+    if a[0] is None or b[0] is None:
+        return 0.0
+    union = max(a[1], b[1]) - min(a[0], b[0])
+    return max(0.0, min(a[1], b[1]) - max(a[0], b[0])) / union if union > 0 else 0.0
+
+
+def consensus_response(primary, secondary, referee):
+    """Keep the primary answers; take whichever model span the retrieval span agrees with.
+
+    Two answering models disagree about which mention to cite more often than either is
+    wrong, so the retrieval span breaks the tie.
+    """
+    result = primary.model_copy(deep=True)
+    for i, answer in enumerate(result.answers):
+        chosen = (result.evidence_start[i], result.evidence_end[i])
+        other = (secondary.evidence_start[i], secondary.evidence_end[i])
+        judge = (referee.evidence_start[i], referee.evidence_end[i])
+        if not answer or chosen[0] is None or other[0] is None or judge[0] is None:
+            continue
+        if _span_overlap(other, judge) > _span_overlap(chosen, judge):
+            result.evidence_start[i], result.evidence_end[i] = other
+    return result

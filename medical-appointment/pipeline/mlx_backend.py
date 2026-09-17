@@ -11,6 +11,11 @@ WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
 LLM_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
+# A second, independent answering model only supplies an alternative span: where the two
+# disagree, the retrieval span picks between them. None disables the second pass.
+SECOND_LLM_MODEL = 'mlx-community/Qwen3-8B-4bit'
+# Skip the second pass when the first already ran long, so it cannot cost the deadline.
+SECOND_PASS_BUDGET_SECONDS = 25.0
 DEFAULT_PROMPT = 'compact'
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
@@ -78,8 +83,7 @@ class MLXBackend:
             raise ValueError(f'Unknown answer prompt: {prompt}')
         self.prompt = prompt
         self._whisper_path = None
-        self._llm = None
-        self._tokenizer = None
+        self._models = {}
         self._sampler = None
         self.last_generation_seconds = None
 
@@ -129,7 +133,8 @@ class MLXBackend:
             'energy_db': energy_envelope(samples),
         }
 
-    def _generate(self, words: list[dict], questions: list[str], max_tokens: int) -> str:
+    def _generate(self, words: list[dict], questions: list[str], max_tokens: int,
+                  model_id: str | None = None) -> str:
         from pipeline.core import build_messages
         from pipeline.evidence import (
             build_compact_messages, build_focused_messages, build_minimal_messages,
@@ -137,21 +142,24 @@ class MLXBackend:
 
         builder = {'legacy': build_messages, 'focused': build_focused_messages,
                    'compact': build_compact_messages, 'minimal': build_minimal_messages}[self.prompt]
-        return self.generate_messages(builder(words, questions), max_tokens)
+        return self.generate_messages(builder(words, questions), max_tokens, model_id)
 
-    def generate_messages(self, messages: list[dict], max_tokens: int = 900) -> str:
-        if self._llm is None:
-            snapshot = resolve_snapshot(LLM_MODEL)
+    def generate_messages(self, messages: list[dict], max_tokens: int = 900,
+                          model_id: str | None = None) -> str:
+        model_id = model_id or LLM_MODEL
+        if model_id not in self._models:
+            snapshot = resolve_snapshot(model_id)
             from mlx_lm import load
             from mlx_lm.sample_utils import make_sampler
 
-            self._llm, self._tokenizer = load(
+            self._models[model_id] = load(
                 snapshot, tokenizer_config={'local_files_only': True}
             )
             self._sampler = make_sampler(temp=0.0)
+        model, tokenizer = self._models[model_id]
         from mlx_lm import generate
 
-        prompt = self._tokenizer.apply_chat_template(
+        prompt = tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
             tokenize=False,
@@ -162,7 +170,7 @@ class MLXBackend:
         )
         started = time.monotonic()
         result = generate(
-            self._llm, self._tokenizer, prompt=prompt, max_tokens=max_tokens,
+            model, tokenizer, prompt=prompt, max_tokens=max_tokens,
             sampler=self._sampler, verbose=False,
         )
         self.last_generation_seconds = time.monotonic() - started
@@ -172,8 +180,18 @@ class MLXBackend:
         # gpt-oss reasons before answering: 769 output tokens at most over the training set.
         return self._generate(words, questions, max_tokens=1200)
 
+    def complete_second(self, words: list[dict], questions: list[str]) -> str:
+        if not SECOND_LLM_MODEL:
+            return ''
+        if (self.last_generation_seconds or 0) > SECOND_PASS_BUDGET_SECONDS:
+            return ''
+        return self._generate(words, questions, max_tokens=1200, model_id=SECOND_LLM_MODEL)
+
     def warmup(self) -> None:
         import numpy as np
 
         self._transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32))
         self._generate([], ['Was fever discussed?'], max_tokens=1)
+        if SECOND_LLM_MODEL:
+            self._generate([], ['Was fever discussed?'], max_tokens=1, model_id=SECOND_LLM_MODEL)
+        self.last_generation_seconds = None

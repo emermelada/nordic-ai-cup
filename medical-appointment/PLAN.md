@@ -1,5 +1,7 @@
 # Medical Appointment: Implementation Plan
 
+> Historical implementation plan. See [UPGRADE_PLAN.md](UPGRADE_PLAN.md) for the current baseline, a reassessment of earlier experiments, and the roadmap toward 0.90 raw.
+
 Written 2026-09-17 (competition day 1 of 4; deadline **Sunday 2026-09-20 16:00 CEST**).
 Audience: whoever implements this next, human or AI. Everything here is grounded in the
 files in this folder (`README.md`, `local_evaluator.py`, `utils.py`, `dtos.py`,

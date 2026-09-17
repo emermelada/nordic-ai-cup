@@ -3,7 +3,8 @@ from unittest.mock import patch
 
 from pipeline.core import answer_response, build_messages, floor_response
 from pipeline.evidence import (
-    align_quote, build_compact_messages, build_focused_messages, energy_envelope, refine_evidence,
+    align_quote, build_compact_messages, build_focused_messages, consensus_response,
+    energy_envelope, refine_evidence,
 )
 from tests.test_core import make_words, raw_results, response
 from tools.compare_evidence import split_conversations
@@ -95,6 +96,20 @@ class EvidenceTests(unittest.TestCase):
         repaired = answer_response('```json\n{"results":[{"q":1,"answer":"no"},]}\n```',
                                    words, ['a', 'b'], 20, fallback, alignment='numeric')
         self.assertEqual(repaired, fallback)
+
+    def test_consensus_takes_the_span_the_referee_agrees_with(self):
+        primary = response([True, True, False], [10.0, 30.0, None], [12.0, 32.0, None])
+        secondary = response([True, True, True], [20.0, 30.5, 5.0], [22.0, 32.5, 6.0])
+        referee = response([True, True, True], [20.2, 10.0, 5.0], [22.2, 12.0, 6.0])
+        actual = consensus_response(primary, secondary, referee)
+        # Question 1: the referee backs the secondary span; question 2: it backs neither
+        # clearly, so the primary stands. Answers always come from the primary.
+        self.assertEqual(actual.evidence_start, [20.0, 30.0, None])
+        self.assertEqual(actual.evidence_end, [22.0, 32.0, None])
+        self.assertEqual(actual.answers, [True, True, False])
+        missing = response([True], [10.0], [12.0])
+        blank = response([True], [None], [None])
+        self.assertEqual(consensus_response(missing, blank, referee), missing)
 
     def test_quoted_question_extends_to_short_reply(self):
         words = make_words('Any swelling? No swelling either. Is the rash itchy? It is itchy only when I sit still at night.')

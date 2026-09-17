@@ -15,7 +15,7 @@ from pipeline.core import (
     sanitize_response,
     words_from_transcript,
 )
-from pipeline.evidence import refine_evidence
+from pipeline.evidence import consensus_response, refine_evidence
 from utils import decode_audio, validate_response
 
 logger = logging.getLogger(__name__)
@@ -107,8 +107,9 @@ def _worker_main(channel, generation, backend_factory):
                 words = words_from_transcript(transcript)
                 started = time.monotonic()
                 raw = backend.complete(words, message['questions']) if words else ''
+                second = backend.complete_second(words, message['questions']) if raw else ''
                 _send_frame(channel, {
-                    **identity, 'kind': 'result', 'raw': raw,
+                    **identity, 'kind': 'result', 'raw': raw, 'second': second,
                     'generation_seconds': time.monotonic() - started,
                 })
             except Exception as exc:
@@ -306,6 +307,14 @@ class Pipeline:
                         fallback=fallback, deadline=deadline, alignment='numeric',
                     )
                     response = refine_evidence(response, words, envelope)
+                    if message.get('second'):
+                        alternative = answer_response(
+                            message['second'], words, request.questions, duration,
+                            fallback=fallback, deadline=deadline, alignment='numeric',
+                        )
+                        response = consensus_response(
+                            response, refine_evidence(alternative, words, envelope), fallback,
+                        )
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
                     # Both platform sets are exactly half yes; the rate is a label-free sanity check.
