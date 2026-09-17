@@ -98,6 +98,7 @@ def align_quote(words, quote, deadline=None):
 FRAME_SAMPLES = 160  # 10 ms at 16 kHz
 ONSET_THRESHOLD_DB = -45.0
 REPLY_MAX_WORDS = 6
+REPLY_MAX_GAP_SECONDS = 2.0
 
 
 def energy_envelope(samples):
@@ -124,11 +125,15 @@ def _reply_end(words, start, end):
     if not inside or not words[inside[-1]]['word'].strip().endswith('?'):
         return end
     reply = []
+    previous_end = end
     for word in words[inside[-1] + 1:]:
-        reply.append(word)
-        if len(reply) > REPLY_MAX_WORDS:
+        if word['start'] - previous_end > REPLY_MAX_GAP_SECONDS:
             return end
-        if word['word'].strip().endswith(('.', '?', '!')):
+        previous_end = word['end']
+        reply.append(word)
+        if len(reply) > REPLY_MAX_WORDS or word['word'].strip().endswith('?'):
+            return end
+        if word['word'].strip().endswith(('.', '!')):
             return reply[-1]['end']
     return end
 

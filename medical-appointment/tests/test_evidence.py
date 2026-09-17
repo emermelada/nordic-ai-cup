@@ -121,6 +121,23 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(actual.evidence_start, spans.evidence_start)
         self.assertEqual(spans.evidence_end[0], words[1]['end'])
 
+    def test_quoted_question_does_not_attach_another_question(self):
+        words = make_words('Any swelling? Did you bring paperwork? No, I forgot it.')
+        spans = response([True], [words[0]['start']], [words[1]['end']])
+        actual = refine_evidence(spans, words)
+        self.assertEqual(actual, spans)
+        self.assertEqual(refine_evidence(actual, words), spans)
+
+    def test_quoted_question_does_not_cross_a_long_pause(self):
+        for pause_before in (2, 3):
+            with self.subTest(pause_before=pause_before):
+                words = make_words('Any swelling? No swelling either.')
+                for word in words[pause_before:]:
+                    word['start'] += 5
+                    word['end'] += 5
+                spans = response([True], [words[0]['start']], [words[1]['end']])
+                self.assertEqual(refine_evidence(spans, words), spans)
+
     def test_start_moves_to_audible_speech_within_the_span(self):
         words = make_words('Your heart sounds normal.', start=1.0, step=0.5)
         envelope = [-90.0] * 130 + [-20.0] * 200

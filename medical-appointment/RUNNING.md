@@ -50,7 +50,8 @@ quote per yes, about a third of the original output tokens. Decimal-aware alignm
 maps the quote back to words without confusing `2.5` with `25`. Two span rules then
 apply to every yes:
 
-- a quote that ends in a question is extended to a reply of at most six words;
+- a quote that ends in a question is extended to a reply of at most six words,
+  but not another question or across a pause longer than two seconds;
 - the start moves to the first 10 ms frame above -45 dBFS, because Whisper often
   starts a word inside the preceding pause while the annotations start at speech.
 
@@ -105,6 +106,16 @@ Training-set scores did not predict validation: the prompt rules were written fr
 Qwen3-8B errors on those conversations. Choose builds by platform validation.
 Offline, a LoRA on the training spans regressed on held-out folds and a worked
 example in the prompt traded accuracy for spans; neither is in the serving path.
+
+### Grounding fixes (2026-09-17)
+
+A CPU replay of the exact serving consensus path on all 39 cached conversations
+scores **0.769543 raw**, **0.626161 mean tIoU**, **384/390 correct**. Inputs, source
+hashes, code snapshots and per-question outputs are archived in
+`runs/grounding-fixes-20260917/`. Reply guards reject a following question or a
+pause longer than two seconds; regression tests pass, and all 390 final outputs
+remain identical to the control. This is a correctness fix, not a measured score
+gain. No fresh inference, serving restart or platform submission was performed.
 
 ### Deploy behind the tunnel
 
