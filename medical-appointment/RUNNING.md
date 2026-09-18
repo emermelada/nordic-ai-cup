@@ -41,15 +41,19 @@ Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all question
 deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
 opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a primary
 "no" is never promoted. Missing, invalid or duplicate secondary answers inherit the
-primary decision rather than a retrieval veto. **The checked-out candidate keeps only
+primary decision rather than a retrieval veto. **Live build `543cf3e` keeps only
 primary-model evidence** (`primary_evidence_response`), while preserving that answer
-policy. It is not deployed or platform-validated yet; its local score is lower.
+policy. Request capture is active. Platform validation is pending; its local score
+is lower than the preceding consensus build's.
 
-**The live process still runs `d0a5391`:** retrieval chooses between the two models'
-spans, with equal overlap scores preferring the earlier occurrence, even when
-retrieval has no evidence. Its platform score is 0.717908, unchanged from the preceding
-two-model build and below the best validated single-9B build. The candidate isolates
-this span selector without changing models, prompts or answer decisions.
+Current public prediction URL (replaced on 2026-09-18):
+`https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
+The previous `computed-frequencies-lamp-carolina` hostname is no longer usable.
+
+The preceding build `d0a5391` used retrieval to choose between the two models' spans,
+with equal overlap scores preferring the earlier occurrence. Its platform score was
+0.717908, below the best validated single-9B build. The live candidate isolates this
+span selector without changing models, prompts or answer decisions.
 
 Both answering models remain resident in 9.9 GB, with 14-20 s of generation in prior
 runs. A reasoning channel, if emitted, is stripped before parsing.
@@ -84,8 +88,8 @@ Running processes keep their loaded code until restarted.
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
-| Same consensus + explicit secondary-no veto (live) | 0.783777 | 0.717908 |
-| Primary-only evidence + same veto (candidate, not live) | 0.753538 | not yet validated |
+| Same consensus + explicit secondary-no veto | 0.783777 | 0.717908 |
+| Primary-only evidence + same veto (live) | 0.753538 | not yet validated |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -257,7 +261,7 @@ to test it is the historical single-9B validation advantage despite its weaker l
 score. Do not disable the secondary model for this comparison: that also removes
 the answer veto. No deployment or platform attempt was made in this implementation pass.
 
-After deployment, the API captures requests that reached the worker under gitignored
+The deployed API captures requests that reached the worker under gitignored
 `runs/request-captures/`. Each private JSON file contains the full base64 audio request,
 ordered questions, transcript/word timings, both raw generations when available,
 parsed primary/secondary/referee outputs, final response, outcome, process identity
@@ -313,8 +317,29 @@ with **10/10 answers correct**, including the answer-veto regression case. This 
 a smoke test, not platform validation. Record: `runs/deploy-d0a5391-20260918/smoke-test.json`;
 server log: `runs/serve-9054/server-20260918-083032.log`.
 
-The cloudflared quick tunnel forwards to 127.0.0.1:9054; restarting cloudflared
-changes the public hostname. With `tools/serve.sh` running, check the latest
+Build **`543cf3e` was deployed at 14:02 CEST on 2026-09-18** by restarting Uvicorn
+under the existing supervisor. API PID **98962**, inference worker **98964**;
+server log: `runs/serve-9054/server-20260918-140226.log`. Fresh local `sample_33`
+returned HTTP 200, **10/10 correct in 19.89 seconds**, without fallback. Its capture
+confirms the source hashes, primary-only evidence and an active secondary-no veto.
+
+The old tunnel had already failed before this restart: its log reported
+`Unauthorized: Tunnel not found` from 12:37 CEST, readiness was HTTP 503 with zero
+connections, and both local DNS and Cloudflare's 1.1.1.1 resolver returned NXDOMAIN.
+The old process was stopped gracefully and replaced at 14:10 CEST. New tunnel PID
+**99355**, log `runs/cloudflared-20260918-141056.log`, metrics still on 127.0.0.1:20241.
+The unrelated tunnel to port 9053 was not touched.
+
+**Use the new URL:** `https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
+Public health and a fresh HTTPS audio request both returned HTTP 200; the public
+smoke test scored **10/10 in 26.91 seconds**, without fallback, and produced a
+verified capture. Local and public smoke outputs were identical. These are smoke
+tests, not platform validation. Records: `runs/deploy-543cf3e-20260918/`.
+
+The cloudflared quick tunnel forwards to 127.0.0.1:9054; restarting a healthy tunnel
+changes the public hostname. A running process and `/quicktunnel`'s reported hostname
+do not prove it is usable: also check `/ready` and public DNS/health. Keep the Mac
+awake and online during validation. With `tools/serve.sh` running, check the latest
 `runs/serve-9054/` log and active connections for in-flight requests, then restart
 only Uvicorn. The supervisor starts its replacement; do not launch a second server.
 
