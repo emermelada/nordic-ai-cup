@@ -14,7 +14,9 @@ not: record your own with `DRONE_RECORD_DIR` (see below).
 | v3 | 0.132, 0.119 | + cut-outs of real validation objects, light/shadow variation |
 | v4 | 0.1445, 0.1425 | + Poisson-blended pasting, more objects, weak classes weighted |
 | v6 | not run | real flight backgrounds; offline a wash alone, see 18 Sep evening |
-| **v4+v6 alternating (served)** | **0.2365** | the two fail on opposite classes; best score so far, +0.09 on v4 |
+| v4+v6 alternating | 0.2365 | the two fail on opposite classes; +0.09 on v4 |
+| v4+v6, BOTH_MODELS=1 | 0.2450 | inside noise of 0.2365, as predicted; buys determinism |
+| **v4@960 + v6@1280 (served)** | **0.3048** | the resolution floor, confirmed on a real run: +0.06 |
 
 Best Danish team 0.36, best overall 0.46 (as of Thursday evening).
 
@@ -662,3 +664,38 @@ It sets **both** `flyby.IMGSZ` (the cache key) and `flyby.IMGSZ_LIST` (what
 `raw_detections` actually resizes with). Setting only the first names a cache
 file 1280 while computing at 960 -- a poisoned cache that reads as a working
 one, and it already cost another session four silently wrong runs.
+
+### The patch harvester was carrying boxes with the Helsinki prior
+
+`training/harvest_validation_patches.py` carried each object's box from its
+nearest sighting with `flyby.MOTION` -- the same stale prior Franek found in the
+tracker and `tools/score_offline.py`, one layer further back. It runs
+~2.6 px/frame short here, and `MAX_FRAME_DISTANCE` is 20 frames: up to ~52 px of
+drift against a `SEARCH` window of 24 source px, so past about nine frames the
+object sits outside the window the template match looks in and the view is
+dropped or cut off-centre. Here it cost training data rather than score, which
+is why nothing caught it.
+
+It now fits the motion on the flight's own objects (`--prior-motion` restores
+the old behaviour to A/B it). Measured, same recordings:
+
+| | patches | of which native (L2) |
+|---|---|---|
+| prior (`flyby.MOTION`) | 228 | 34 |
+| **fitted** | **262** | 36 |
+
+`training/patches_val` has been regenerated with the fitted harvest: tank 69 ->
+77, jammer 13 -> 26, spacecraft 15 -> 17, helicopter 28 -> 32.
+
+**The native count barely moved, and that is the useful finding.** Only 36 of
+262 cut-outs are native resolution; the rest come from Level-1 views and carry
+half the real detail they appear to. `small_launcher` patches are ~16 px wide
+with ~8 px of information in them. The limit is not the carry, it is coverage:
+`survey` sweeps the top half only, and the flight is deterministic, so repeating
+it returns byte-identical views and harvests nothing new. More native patches
+need a *different* survey pattern (the bottom rows, y=1350 and y=1890) and one
+recorded run with `DRONE_RECORD=1`. The score of such a run is irrelevant.
+
+This matters more now than it did: we serve at 1280 and are about to train
+there, while most of the cut-outs teaching the model what an object looks like
+were cut from half-resolution views.
