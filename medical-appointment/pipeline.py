@@ -41,7 +41,9 @@ YES_THRESHOLD = float(os.environ.get('YES_THRESHOLD', '0.22'))
 # stop waiting for the answerer well before that and send what we have.
 ANSWER_DEADLINE_SECONDS = float(os.environ.get('ANSWER_DEADLINE_SECONDS', '50'))
 
-ANSWERER_SPEC = os.environ.get('ANSWERER', 'answering:lexical')
+# The LLM by default, so a forgotten environment variable cannot ship the
+# no-model floor. With no LLM server running it degrades to lexical per question.
+ANSWERER_SPEC = os.environ.get('ANSWERER', 'llm:answer')
 
 _answerer = load(ANSWERER_SPEC)
 # More than one worker, so an answerer still stuck past its deadline on one

@@ -18,11 +18,14 @@ ceiling of each way of pointing, and prove the plumbing: ``gold`` below 1.000
 means a transcript or the matcher is off, not an answerer.
 
 Few-shot examples taken from the training conversations must not be scored on
-the conversations they came from: pass ``--skip`` with those transcript ids.
+the conversations they came from. An answerer module that lists them in
+``FEW_SHOT_SOURCES`` (``llm.py`` does) has them left out automatically;
+``--skip`` adds more.
 """
 
 import argparse
 import collections
+import importlib
 import random
 import statistics
 import sys
@@ -128,6 +131,14 @@ def score(args) -> int:
     answerer = None if oracle else load(args.answerer)
     rng = random.Random(0)
     skip = set(args.skip.split(',')) if args.skip else set()
+
+    # An answerer that learned from some training conversations (its prompt's
+    # worked examples) would be marking its own homework on them.
+    if not oracle:
+        module = importlib.import_module(args.answerer.partition(':')[0])
+        skip |= set(getattr(module, 'FEW_SHOT_SOURCES', ()))
+    if skip:
+        print(f'Leaving out {len(skip)} conversations: {", ".join(sorted(skip))}')
 
     # One entry per question: everything needed to rescore at any threshold.
     records = []

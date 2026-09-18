@@ -73,11 +73,50 @@ python eval_offline.py score llm:answer --verbose     # step 5 onward
 ANSWERER=llm:answer python api.py       # serve it
 ```
 
-**Step 5 is one file:** `llm.py` exporting
-`answer(transcript, questions, deadline) -> List[Optional[Answer]]`. It reads
-`transcript.render()` and returns `p_yes` plus `lines` and/or `quote` per
-question. Return by `deadline` and leave `None` for anything unfinished;
-`pipeline` fills those in.
+**Step 5 is written, but no real model has been run through it yet**
+(`llm.py`). It talks to a local OpenAI-compatible server (vLLM or
+llama.cpp):
+- One request per question, all ten in parallel, with the instructions,
+  worked examples and transcript as a shared prefix.
+- The reply is four labelled lines: `LINES`, `QUOTE`, `CHECK`, `ANSWER`.
+- `p_yes` comes from the logprobs at the answer token.
+- The 11 worked examples are verbatim training excerpts. Their 7 source
+  conversations are listed in `FEW_SHOT_SOURCES`, and the harness leaves them
+  out automatically (320 questions scored).
+- Tested against a fake server:
+  - parsing and logprob extraction work;
+  - 10 requests run in parallel;
+  - a missed deadline falls back per question;
+  - "no server" logs a warning and falls back without crashing.
+
+## Rented 5090 runbook (vast.ai)
+
+1. Rent the instance:
+   - on-demand, not interruptible
+   - plain CUDA ≥ 12.8 image with Python
+   - disk ≥ 100 GB
+   - expose port 9054
+2. Get the code:
+   `git clone https://github.com/emermelada/nordic-ai-cup && cd nordic-ai-cup && git checkout medical-appointment-exact-evidence && cd medical-appointment`
+3. Run `bash gpu_setup.sh`. It:
+   - installs two venvs
+   - fetches the training data
+   - runs the timestamp gate (expect 390/390)
+   - starts vLLM with `nvidia/Qwen3.6-35B-A3B-NVFP4`
+   - scores offline, writing to `data/logs/offline_score.txt`
+4. Read the offline score and the threshold sweep. If the best τ differs from
+   0.22, set `YES_THRESHOLD`. Offline runs cost no attempts, so iterate here.
+5. Run `tmux new -s med 'bash gpu_setup.sh serve'`, then submit
+   `http://<public ip>:<port mapped to 9054>/predict` and validate.
+6. Stop the instance. On Sunday, repeat steps 2–5 on whatever box you get, and
+   do one validation before the evaluation.
+
+If vLLM will not run the NVFP4 build on this GPU, there are two alternatives:
+- `LLM_HF_MODEL=openai/gpt-oss-20b LLM_THINKING=omit LLM_MAX_TOKENS=2048 bash gpu_setup.sh`
+- llama.cpp with `unsloth/Qwen3.6-35B-A3B-GGUF` (UD-Q4_K_XL, 22.4 GB):
+  `llama-server -hf unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL -ngl 999 -c 65536 -np 10 --port 8080 --jinja --alias local`
+
+`llm.py` works with either.
 
 ## Scoring levers besides the timestamps
 

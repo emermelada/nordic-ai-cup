@@ -8,3 +8,4 @@
 | 2026-09-17 | Z | survival-simulator | Hermes Agent subagents (same model) | Parallel workstreams: parameter/robustness sweeps, imitation-learning pipeline, behaviour-preserving CPU optimisation |
 | 2026-09-18 | F | medical-appointment | Claude Code (claude-opus-5) | Found that the evidence labels are faster-whisper `base` int8 word timestamps; exact-timestamp ASR, evidence mapper, offline harness, plan |
 | 2026-09-18 | F | medical-appointment | faster-whisper `base` (Systran/faster-whisper-base, int8, CPU) | Served ASR: word timestamps in the annotators' coordinate system. Also compared small, small.en, base.en, medium.en, large-v3 to identify it |
+| 2026-09-18 | F | medical-appointment | Qwen3.6-35B-A3B (nvidia/Qwen3.6-35B-A3B-NVFP4) via vLLM, on our rented GPU | Answering model behind the endpoint (llm.py), running locally on the serving box |

@@ -11,7 +11,7 @@ identical logic.
 ``deadline`` is a ``time.monotonic()`` value. An answerer should return by
 then, leaving ``None`` for any question it did not get to; those fall back to
 ``lexical``. Select one with ``ANSWERER=module:function`` (default
-``answering:lexical``).
+``llm:answer``).
 
 ``lexical`` is the floor, not a contender: no model, just word overlap. Measured
 with the annotators' own transcript it finds the right sentence about half the
