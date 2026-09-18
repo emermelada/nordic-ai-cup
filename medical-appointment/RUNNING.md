@@ -46,6 +46,11 @@ primary-model evidence** (`primary_evidence_response`), while preserving that an
 policy. Request capture is active. Platform validation scored **0.743079**, up from
 **0.717908** with consensus, despite its lower local training score.
 
+The **local working tree now includes a learned boundary selector**, verified but not
+deployed. It preserves those answers and adjusts evidence near the primary passage.
+See [learned-boundary integration](#learned-boundary-integration-2026-09-18-not-deployed)
+for the matched tests and the remaining deployment check.
+
 Current public prediction URL (replaced on 2026-09-18):
 `https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
 The previous `computed-frequencies-lamp-carolina` hostname is no longer usable.
@@ -355,12 +360,55 @@ is approximately **[0.000003, 0.021396]**; this is a small exploratory signal on
 training data, not proof of hidden-validation improvement. The all-data fit scores
 0.774568 on its training data and is not the out-of-fold result.
 
-This is the next integration candidate, **not deployed or ready to submit yet**. Its
-boundary-pool gold oracle is only 0.845590 raw, so it cannot reach 0.90 without additional
+This became the integration candidate below; it is **not deployed or ready to submit yet**.
+Its boundary-pool gold oracle is only 0.845590 raw, so it cannot reach 0.90 without additional
 passage-selection improvements. Artifacts, fold models and the all-data model:
 `runs/span-boost-20260918/primary-boundaries/`; broad comparison: `broad/` alongside it.
 Scikit-learn and its helper dependencies were installed only under that experiment's
 `dependencies/` directory; the serving environment, API and tunnel were not changed.
+
+### Learned-boundary integration (2026-09-18; not deployed)
+
+`pipeline/boundary.py` now applies the frozen ranker after the existing secondary-no veto.
+Its 150 shallow trees are exported as a **66 kB JSON artifact**, without scikit-learn,
+joblib, a new model call, or runtime access to training data. Primary overlap and the
+two-second endpoint limits remain mandatory. The optional stage checks a 250 ms budget
+within the request deadline, with text, word and candidate-work limits; failures retain
+the completed primary/veto response without restarting the worker. Secondary features
+are identical with capture enabled or disabled, and selected spans are not refined again.
+Captures fingerprint both the selector code and the weight file.
+
+| Matched comparison, 39 public-training conversations | Primary raw | Boundary raw, out of fold | Gain |
+| --- | ---: | ---: | ---: |
+| Original frozen inputs | 0.753538 | 0.764041 | +0.010504 |
+| Fresh ASR/model outputs from the unchanged server | 0.751809 | 0.762963 | +0.011154 |
+
+The fresh comparison improves all five folds, changes **none of the 390 answers**
+(387 correct), increases mean tIoU **0.591476 → 0.610067**, and reduces zero-overlap
+positives **31 → 30**. The descriptive conversation-bootstrap gain interval is
+[0.000826, 0.022243]. These are reused training conversations, not a new holdout or
+platform validation. The all-data selector scores 0.772381 on these fresh outputs;
+that optimistic training-conversation result is **not** the out-of-fold measurement.
+
+The 39 fresh audio requests used the existing live server: zero failures/timeouts,
+19.79 s mean and 34.76 s worst HTTP round trip. Their captured worker frames were then
+replayed through the candidate's actual FastAPI/runtime path, not another GPU stack.
+Final candidate adjustment time was **17.5 ms mean, 31.5 ms worst** on those frames,
+with zero skipped adjustments. This is **not a full candidate HTTP latency benchmark**.
+
+All six exported models exactly match the research features, scores and selected spans
+on all **17,335 cached candidates**. Both cached and fresh API replays verify all
+390 decisions, capture-on/off equivalence and 39 complete captures each. **117 CPU
+tests pass**, and the official scoring oracle remains **1.000**. The one final review
+identified unbounded text preparation; early text limits and per-term deadline checks
+were added, then the complete verification was rerun without changing either score.
+
+Artifacts: `runs/boundary-integration-20260918/` — `model-parity-final.json`,
+`cached-api-final/`, `fresh/`, `fresh-api-final/`, `tests-final.log`, `oracle-final.log`.
+The live API/worker remain **98962/98964**, with source **543cf3e** and validated score
+**0.743079**; public health and tunnel readiness passed without a restart. This local
+candidate is ready for separately authorized deployment testing. A genuine fresh-audio
+candidate HTTP rehearsal is still required before recommending a platform submission.
 
 ### Rehearsal of the serving path (2026-09-18, consensus build)
 
