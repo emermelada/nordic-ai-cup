@@ -14,8 +14,9 @@ Every question gets its own request with the same prefix — instructions, worke
 examples, then the transcript — so the server's prompt cache pays for that once
 per conversation and the ten requests run side by side.
 
-The model replies in four labelled lines: the sentences it read, the shortest
-verbatim quote that settles the question, a one-line check, and yes or no.
+The model replies in four labelled lines: the sentences it read, the verbatim
+passage that settles the question (whole sentences, the way the annotators
+quoted), a one-line check, and yes or no.
 The quote becomes the span (``evidence.locate``); the probability the model put
 on "yes" at the answer token becomes ``p_yes``, so the pipeline's threshold
 works on a real confidence rather than a coin that only ever lands 0 or 1.
@@ -74,93 +75,31 @@ are checked the same way as any other.
 
 Reply in exactly this format, four lines, nothing else:
 LINES: <first>-<last>, or none
-QUOTE: <the shortest verbatim excerpt that establishes the answer, or none>
+QUOTE: <the verbatim passage that establishes the answer, or none>
 CHECK: <one short sentence comparing the question with the transcript>
 ANSWER: <yes or no>
 
 The QUOTE is copied character for character from the transcript, misspellings \
-included, and may run across consecutive lines. Keep it minimal: start at the \
-beginning of the clause that states the fact, leaving out lead-ins such as \
-"So,", "Then", "Yes,", "That is right,", "It means" or "Putting it together,". \
-Stop right after the last word the fact needs, leaving out trailing clauses \
-that add nothing. When the fact is established by an exchange — a question and \
-its answer, or a list and its confirmation — quote the whole exchange."""
+included. Quote the whole sentence that states the fact, from its first word — \
+keep openers such as "So," or "Yes," — to its end. When the fact takes several \
+sentences — a question and its answer, a list and its confirmation, an \
+examination and its finding — quote all of them. Only when a single sentence \
+packs several separate facts, quote just the part about the fact asked: from \
+where that part starts to its last word."""
 
 # (excerpt, question, reply). Verbatim base-model transcript lines, with the
-# line numbers they have in their own conversation.
+# line numbers they have in their own conversation, and the annotators' own
+# quote as the QUOTE. The mix follows the annotations: most quotes are whole
+# sentences, a third are cut to one fact of a sentence that states several.
 _EXAMPLES = [
     (
-        '[55] Yes.\n'
-        '[56] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n'
-        '[57] That is a weight off my mind.',
-        'Is Pamol one of the medicines requested?',
-        'LINES: 56-56\n'
-        'QUOTE: I am creating prescriptions for both Pamol\n'
-        'CHECK: Pamol is one of the two medicines being prescribed.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[55] Yes.\n'
-        '[56] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n'
-        '[57] That is a weight off my mind.',
-        'Were both prescriptions issued?',
-        'LINES: 56-56\n'
-        'QUOTE: I am creating prescriptions for both\n'
-        'CHECK: The doctor is creating both prescriptions.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[18] What does the treatment involve?\n'
-        '[19] Sporanox, 100 milligrams daily for two weeks.\n'
-        '[20] You take it after a meal.',
-        'Should the daily dose be 100 mg?',
+        '[18] Your chest and heart both sound normal.\n'
+        '[19] Nothing abnormal to report.\n'
+        '[20] Good.',
+        'Is the heart examination without abnormal findings?',
         'LINES: 19-19\n'
-        'QUOTE: 100 milligrams daily\n'
-        'CHECK: The dose is 100 milligrams daily.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[12] This is the chronic pain since your neck operation.\n'
-        '[13] That is right, the cervical disc prolapse operated in 2017.\n'
-        '[14] And honestly, the pain has just carried on regardless.',
-        'Did the patient undergo surgery for a cervical disc prolapse in 2017?',
-        'LINES: 13-13\n'
-        'QUOTE: the cervical disc prolapse operated in 2017.\n'
-        'CHECK: The cervical disc prolapse was operated on in 2017.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[10] All right.\n'
-        '[11] And you are still taking Pantoprazole alongside it?\n'
-        '[12] Yes, every day with it.\n'
-        '[13] Good.',
-        'Is the patient also taking Pantoprazole?',
-        'LINES: 11-12\n'
-        'QUOTE: And you are still taking Pantoprazole alongside it? Yes, every day with it.\n'
-        'CHECK: Asked whether they still take Pantoprazole, the patient confirms.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[35] Which prescriptions will I get?\n'
-        '[36] Active L, Aromere and Esomeprizol.\n'
-        '[37] All three renewed.\n'
-        '[38] The Esomeprizol is the one for the reflux?',
-        'Is Airomir among the renewed medicines?',
-        'LINES: 36-37\n'
-        'QUOTE: Active L, Aromere and Esomeprizol. All three renewed.\n'
-        'CHECK: "Aromere" is Airomir, and all three were renewed.\n'
-        'ANSWER: yes',
-    ),
-    (
-        '[23] This is what a stable annual check looks like.\n'
-        '[24] So, what happens with my treatment?\n'
-        '[25] No changes.\n'
-        '[26] You carry on exactly as you are.\n'
-        '[27] Nothing at all.',
-        'Will the current treatment continue unchanged?',
-        'LINES: 24-26\n'
-        'QUOTE: what happens with my treatment? No changes. You carry on exactly as you are.\n'
-        'CHECK: The doctor says there are no changes and the patient carries on as before.\n'
+        'QUOTE: Nothing abnormal to report.\n'
+        'CHECK: The doctor reports nothing abnormal.\n'
         'ANSWER: yes',
     ),
     (
@@ -174,14 +113,35 @@ _EXAMPLES = [
         'ANSWER: no',
     ),
     (
-        '[31] The one you always check for me?\n'
-        '[32] Your creatinine is normal.\n'
-        '[33] Well, that is all three of them behaving themselves.',
-        'Did the creatinine turn out to be elevated?',
-        'LINES: 32-32\n'
-        'QUOTE: Your creatinine is normal.\n'
-        'CHECK: The creatinine is normal, not elevated.\n'
-        'ANSWER: no',
+        '[8] It tells me we are running on time for once.\n'
+        '[9] So, this is your annual follow-up.\n'
+        '[10] It is, for the asthma.\n'
+        '[11] Exactly that.',
+        'Did the patient attend for an annual asthma follow-up?',
+        'LINES: 9-10\n'
+        'QUOTE: So, this is your annual follow-up. It is, for the asthma.\n'
+        'CHECK: The visit is the annual follow-up, and it is for asthma.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[34] I will take that gladly.\n'
+        '[35] So my assessment is that your diabetes is stable, and there are no signs of complications.\n'
+        '[36] No complications.',
+        'Are there no signs of complications?',
+        'LINES: 35-35\n'
+        'QUOTE: there are no signs of complications.\n'
+        'CHECK: The sentence states two facts; the part about complications says there are none.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[26] And you will still renew the ibumet in today?\n'
+        '[27] Yes, the prescription is created.\n'
+        '[28] Does that plan sound workable to you?',
+        'Has the Ibumetin prescription been issued?',
+        'LINES: 27-27\n'
+        'QUOTE: Yes, the prescription is created.\n'
+        'CHECK: Asked about renewing Ibumetin ("ibumet in"), the doctor confirms the prescription is created.\n'
+        'ANSWER: yes',
     ),
     (
         '[13] I have almost run out of my painkillers and I was hoping to have the prescriptions renewed.\n'
@@ -193,6 +153,78 @@ _EXAMPLES = [
         'QUOTE: Pamol and Ibu Metin.\n'
         'CHECK: The patient asked for Pamol and Ibumetin; morphine is never mentioned.\n'
         'ANSWER: no',
+    ),
+    (
+        '[35] Your gate and standing are normal.\n'
+        '[36] I can feel muscle tension in your neck and shoulders.\n'
+        '[37] That tension is exactly where it always sits, right across there.',
+        'Was muscle tension found in the neck and shoulders?',
+        'LINES: 36-36\n'
+        'QUOTE: I can feel muscle tension in your neck and shoulders.\n'
+        'CHECK: The doctor finds muscle tension in the neck and shoulders.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[18] What does the treatment involve?\n'
+        '[19] Sporanox, 100 milligrams daily for two weeks.\n'
+        '[20] You take it after a meal.',
+        'Should the daily dose be 100 mg?',
+        'LINES: 19-19\n'
+        'QUOTE: 100 milligrams daily\n'
+        'CHECK: The sentence gives drug, dose and duration; the dose part is 100 milligrams daily.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[21] I have been curious about them all week.\n'
+        '[22] Your hemoglobin A1c is 42 millimoles per mole.\n'
+        '[23] And that is a good one?',
+        'Was the HbA1c 42 mmol/mol?',
+        'LINES: 22-22\n'
+        'QUOTE: Your hemoglobin A1c is 42 millimoles per mole.\n'
+        'CHECK: The HbA1c is 42 mmol/mol.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[31] The one you always check for me?\n'
+        '[32] Your creatinine is normal.\n'
+        '[33] Well, that is all three of them behaving themselves.',
+        'Did the creatinine turn out to be elevated?',
+        'LINES: 32-32\n'
+        'QUOTE: Your creatinine is normal.\n'
+        'CHECK: The creatinine is normal, not elevated.\n'
+        'ANSWER: no',
+    ),
+    (
+        '[10] All right.\n'
+        '[11] And you are still taking Pantoprazole alongside it?\n'
+        '[12] Yes, every day with it.\n'
+        '[13] Good.',
+        'Is the patient also taking Pantoprazole?',
+        'LINES: 11-12\n'
+        'QUOTE: And you are still taking Pantoprazole alongside it? Yes, every day with it.\n'
+        'CHECK: Asked whether they still take Pantoprazole, the patient confirms.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[55] Yes.\n'
+        '[56] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n'
+        '[57] That is a weight off my mind.',
+        'Is Pamol one of the medicines requested?',
+        'LINES: 56-56\n'
+        'QUOTE: I am creating prescriptions for both Pamol\n'
+        'CHECK: The sentence covers two medicines and the pharmacy; the part about Pamol shows it is prescribed.\n'
+        'ANSWER: yes',
+    ),
+    (
+        '[35] Which prescriptions will I get?\n'
+        '[36] Active L, Aromere and Esomeprizol.\n'
+        '[37] All three renewed.\n'
+        '[38] The Esomeprizol is the one for the reflux?',
+        'Is Airomir among the renewed medicines?',
+        'LINES: 36-37\n'
+        'QUOTE: Active L, Aromere and Esomeprizol. All three renewed.\n'
+        'CHECK: "Aromere" is Airomir, and all three were renewed.\n'
+        'ANSWER: yes',
     ),
     (
         '[27] I was worried it might have drifted since last time.\n'

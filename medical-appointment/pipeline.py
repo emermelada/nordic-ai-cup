@@ -28,7 +28,7 @@ import numpy as np
 import asr
 from answering import Answer, Answerer, load, lexical
 from dtos import ASRQuestionRequestDto, ASRQuestionResponseDto
-from evidence import Evidence, locate
+from evidence import Evidence, locate, widen_to_sentences
 from utils import Span, decode_audio
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,11 @@ YES_THRESHOLD = float(os.environ.get('YES_THRESHOLD', '0.22'))
 # stop waiting for the answerer well before that and send what we have.
 ANSWER_DEADLINE_SECONDS = float(os.environ.get('ANSWER_DEADLINE_SECONDS', '50'))
 
+# How a located quote becomes the span sent back: 'quote' as the model cut it,
+# or 'sentences', widened to the whole sentences it touches.
+EVIDENCE_POLICY = os.environ.get('EVIDENCE_POLICY', 'quote')
+EVIDENCE_POLICIES = ('quote', 'sentences')
+
 # The LLM by default, so a forgotten environment variable cannot ship the
 # no-model floor. With no LLM server running it degrades to lexical per question.
 ANSWERER_SPEC = os.environ.get('ANSWERER', 'llm:answer')
@@ -51,9 +56,22 @@ _answerer = load(ANSWERER_SPEC)
 _executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
-def evidence_for(transcript: asr.Transcript, answer: Answer, question: str) -> Evidence:
-    """Where an answer points, as a span — quote first, then its sentences."""
-    return locate(transcript, answer.quote, answer.lines, question)
+def evidence_for(
+    transcript: asr.Transcript,
+    answer: Answer,
+    question: str,
+    policy: Optional[str] = None,
+) -> Evidence:
+    """Where an answer points, as a span — quote first, then its sentences.
+
+    ``quote`` sends the model's quote as cut; ``sentences`` widens it to the
+    whole sentences it touches. eval_offline.py scores both from the same
+    answers; pick with EVIDENCE_POLICY.
+    """
+    evidence = locate(transcript, answer.quote, answer.lines, question)
+    if (policy or EVIDENCE_POLICY) == 'sentences':
+        evidence = widen_to_sentences(transcript, evidence)
+    return evidence
 
 
 def finalize(

@@ -89,6 +89,26 @@ llama.cpp):
   - a missed deadline falls back per question;
   - "no server" logs a warning and falls back without crashing.
 
+**First real run (vast 5090, template's default Qwen3.5-9B, 320 questions).**
+
+| Metric | Result |
+|---|---|
+| Accuracy | **0.991**: positives 0.987, hard negatives **1.000**, off-topic 0.976 |
+| tIoU | 0.593 |
+| Score | 0.752 |
+| LLM time | 1.4 s per conversation |
+
+- **Answering is solved.** The span extent is the gap: the old examples taught
+  aggressive clause-trimming, but 69% of gold quotes are whole sentences.
+- **Prompt now follows the annotation mix.** The rule is whole sentence(s) by
+  default, and just the relevant part only when one sentence states several
+  facts. The examples are the annotators' own quotes.
+- **`EVIDENCE_POLICY=sentences`** widens any quote to whole sentences (0.873
+  with the right sentences). The harness scores both policies from the same
+  answers, and `--dump` writes the per-question detail.
+- **This box's timestamps drift slightly**: 217/390 boundaries exact, the rest
+  ±1–2 ticks. The ceiling with perfect quotes is still tIoU 0.987 here.
+
 ## Rented 5090 runbook (vast.ai)
 
 1. Rent the instance:

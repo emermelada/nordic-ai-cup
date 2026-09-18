@@ -216,6 +216,21 @@ def locate(
     return Evidence(span=None, method='none')
 
 
+def widen_to_sentences(transcript: Transcript, evidence: Evidence) -> Evidence:
+    """The same passage, widened to the whole sentences it touches.
+
+    69% of the annotated quotes are exactly whole sentences, and with the right
+    sentences this scores tIoU 0.873 against them — a floor for a model whose
+    own trimming is worse than that.
+    """
+    if evidence.first_word is None or evidence.last_word is None:
+        return evidence
+
+    first = transcript.sentences[transcript.sentence_of(evidence.first_word)].first_word
+    last = transcript.sentences[transcript.sentence_of(evidence.last_word)].last_word
+    return Evidence(transcript.span(first, last), evidence.method, first, last)
+
+
 def words_in_span(transcript: Transcript, span: Span) -> List[int]:
     """Indices of the words whose midpoint falls inside ``span``."""
     start, end = span

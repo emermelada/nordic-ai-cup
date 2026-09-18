@@ -17,6 +17,7 @@ numbered sentences. Sentences are the unit an answering model reads and cites;
 words are the unit a span is cut from.
 """
 
+import bisect
 import json
 import os
 import re
@@ -78,6 +79,11 @@ class Transcript:
     def sentence_span(self, first: int, last: int) -> Span:
         """The time span covering whole sentences ``first..last``."""
         return self.sentences[first].start, self.sentences[last].end
+
+    def sentence_of(self, word: int) -> int:
+        """Index of the sentence that word ``word`` belongs to."""
+        starts = [sentence.first_word for sentence in self.sentences]
+        return max(bisect.bisect_right(starts, word) - 1, 0)
 
     def render(self) -> str:
         """One numbered line per sentence, the way an answering model reads it."""
