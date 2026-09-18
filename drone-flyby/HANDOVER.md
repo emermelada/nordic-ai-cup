@@ -322,3 +322,41 @@ machinery in the orthophoto, not a rendered asset. The flight crosses a dense
 industrial area full of cars, containers and rooftop structures that mimic the
 target classes. Do not add speculative labels --- a wrong one poisons both the
 training set and the offline scorer.
+
+### The online motion fit is right — and how the A/B nearly said otherwise
+
+Franek's fit is on by default and it is correct. During a full replay of the best
+v4 run it converges to **69.33 px/frame** at the frame centre, against the
+Helsinki prior's 66.21. Two independent ground-truth estimates bracket it: 68.84
+(fitted on all 29 confirmed objects) and 69.44 (Franek's, fitted on the three
+static classes). The fit lands between them.
+
+`tools/score_offline.py` first scored it at 0.277 with the fit on against 0.286
+with it pinned off, which looks like a regression and is not one. Both scorers
+carry the ground truth with *their own* fit, so the number partly measures
+"does flyby agree with my truth" rather than "is flyby right". Our truth is
+0.49 px/frame below where flyby converges, so a better motion scores slightly
+worse against it. Do not read a sub-0.01 difference here as a verdict on motion.
+
+Franek excludes aircraft from his truth fit in case they fly. Measured, they do
+not: median dy excess over the Helsinki prior is 1.86 px/frame for the aircraft
+classes against 2.12 for his static references and 2.11 for the other ground
+objects, a spread well inside the per-class scatter. Every object in this flight
+is a static prop, so fitting on all 29 is the better-sampled choice (156 point
+samples against 6 objects); both fits agree the prior is ~3 px/frame short,
+which is the part that matters.
+
+**Correction to commit 550e132:** its message says the merge brought in the
+spare-slot answer band. It did not. Franek dropped that himself in 8aeafe5,
+keeping our measured `DRONE_FLOOR_ALL` result (0.134 against 0.143). The one
+variant still unmeasured is a floor strictly under the 0.001 clip, low enough
+that it can never outrank a real answer in any frame.
+
+**Two bugs found while checking the merge**, both in `tools/score_offline.py`:
+its `fake_detect` still had the old two-argument signature after `flyby.detect`
+gained a `frame` parameter, so `--replay` silently returned **zero** predictions
+and scored 0.000 rather than raising; and the predictions-per-frame figure
+divided all predictions by the scored subset, so `--frames 40` reported 83.5
+boxes per frame instead of 13.4. Both fixed. The first is the same shape as the
+missing-model bug that cost us an attempt: a wrong answer that looks like a
+working one.

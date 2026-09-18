@@ -188,7 +188,7 @@ def from_replay(run: str, model: Path, overrides):
     current = {}
     flyby.decode_view = lambda view: None
 
-    def fake_detect(image, region):
+    def fake_detect(image, region, frame: int = 0):
         xyxy, probabilities = cache[current['key']]
         rx1, ry1, rx2, ry2 = region
         scale = np.array([(rx2 - rx1) / 960, (ry2 - ry1) / 540] * 2)
@@ -232,7 +232,8 @@ def main() -> int:
     frames = [f for f in range(1, args.frames + 1) if f >= args.from_frame]
 
     predictions = from_replay(args.run, args.model, args.set) if args.replay else from_recording(args.run)
-    total = sum(len(v) for v in predictions.values())
+    # Only the frames actually scored, or --frames makes the per-frame rate nonsense.
+    total = sum(len(predictions.get(f, [])) for f in frames)
     import flyby
     motion = flyby.MOTION if args.truth_motion == 'prior' else fit_truth_motion(objects)[0]
     samples = fit_truth_motion(objects)[1] if args.truth_motion != 'prior' else 0
