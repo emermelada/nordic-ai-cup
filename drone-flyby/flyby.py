@@ -21,6 +21,7 @@ Configuration, all optional, through environment variables:
     DRONE_MODEL_ALT  second weights taking alternate frames; the two models'
                      detections meet in the object memory, so a run gets the
                      union of what both can find (see detect())
+                     DRONE_SET=BOTH_MODELS=1 runs both on every frame instead
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
     DRONE_THREADS CPU threads for inference  (default: 6)
@@ -66,6 +67,14 @@ DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
 # Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
 THREADS = int(os.environ.get('DRONE_THREADS', '6'))
+# With two models loaded: 0 alternates them by frame, 1 runs both on every frame
+# and concatenates. Alternating saves compute we do not need (the pair answers in
+# ~25 ms of a 333 ms budget on the M4) and pays for it in variance: the model a
+# frame gets is decided by request.frame, so every skipped frame flips the
+# assignment, and offline the same pair scored 0.346 or 0.303 on that choice
+# alone. Running both also stops update_tracks charging a miss to an object only
+# the other model can see. DRONE_SET=BOTH_MODELS=1.
+BOTH_MODELS = 0
 
 # Two thresholds. mAP rewards ranked low-confidence guesses, so anything above
 # DETECTION_CONFIDENCE is reported for the frame it was seen in. Only detections
@@ -301,7 +310,12 @@ def detect(image: np.ndarray, source_region, frame: int = 0) -> list:
     if load_model() is None:
         return []
     with _model_lock:
-        xyxy, probabilities = raw_detections(image, frame)
+        if BOTH_MODELS and len(_models) > 1:
+            parts = [raw_detections(image, which) for which in range(len(_models))]
+            xyxy = np.concatenate([part[0] for part in parts])
+            probabilities = np.concatenate([part[1] for part in parts])
+        else:
+            xyxy, probabilities = raw_detections(image, frame)
     rx1, ry1, rx2, ry2 = source_region
     height, width = image.shape[:2]
     scale = np.array([(rx2 - rx1) / width, (ry2 - ry1) / height] * 2)
@@ -562,7 +576,10 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         ranked = sorted(track.votes.items(), key=lambda item: -item[1])
         base = track.best_confidence
         base *= min(1.0, 0.7 + 0.1 * track.hits)
-        base *= UNSEEN_DECAY ** (frame - track.last_seen)
+        # max(0, ...): a stale frame is behind tracks already moved to a later
+        # one, and a negative exponent would *raise* the confidence above
+        # best_confidence instead of decaying it.
+        base *= UNSEEN_DECAY ** max(0, frame - track.last_seen)
         if track.truncated:
             base *= TRUNCATED_WEIGHT
         top_vote = ranked[0][1]
@@ -732,6 +749,7 @@ def predict(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDt
         logger.exception('Detector failed on frame %s', request.frame)
         detections = []
 
+    annotations, requested_view = [], None
     try:
         # Requests can overlap when one runs long; the newest frame wins.
         with _sequences_lock:
@@ -740,13 +758,22 @@ def predict(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDt
             if not stale:
                 transient = update_tracks(state, request.frame, view.resolution_level, view.source_region_xyxy, detections)
                 state.last_frame = request.frame
-            annotations = annotations_for(state, request.frame, transient)
+            # Separate try blocks: these two answer different questions, and a
+            # failure building annotations used to discard the camera command as
+            # well, which steers the rest of the run, not just this frame.
+            try:
+                annotations = annotations_for(state, request.frame, transient)
+            except Exception:
+                logger.exception('Building annotations failed on frame %s', request.frame)
             # A late frame's answer is still scored, but its view is out of
             # date: leave the camera plan to the newest frame.
-            requested_view = None if stale else choose_next_view(request, state)
+            if not stale:
+                try:
+                    requested_view = choose_next_view(request, state)
+                except Exception:
+                    logger.exception('Camera planning failed on frame %s', request.frame)
     except Exception:
         logger.exception('Tracking failed on frame %s', request.frame)
-        annotations, requested_view = [], None
 
     return DroneFlybyPredictResponseDto(
         request_id=request.request_id,

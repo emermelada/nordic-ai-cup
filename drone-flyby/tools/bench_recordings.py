@@ -124,7 +124,7 @@ def known_boxes(objects, frame, motion=None):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--model', type=Path, default=Path.home() / 'models' / 'drone-yolo11n-v2.pt')
+    parser.add_argument('--model', type=Path, default=ROOT / 'models' / 'drone-yolo11n-v4.pt')
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting to override.')
     parser.add_argument('--sequences', nargs='*', default=None)
     parser.add_argument('--per-object', action='store_true')
@@ -133,6 +133,12 @@ def main() -> int:
                         help='Only score frames from here on (e.g. 200: frames no model trained on).')
     args = parser.parse_args()
 
+    # This tool patches flyby.detect, which sits above the per-frame model
+    # selection in raw_detections, so a second set of weights cannot take
+    # effect here. Say so rather than quietly measuring one model.
+    if os.environ.get('DRONE_MODEL_ALT'):
+        raise SystemExit('bench_recordings cannot bench a model pair; '
+                         'use tools/score_offline.py --model-alt instead')
     os.environ['DRONE_MODEL'] = str(args.model)
     import logging
     logging.disable(logging.WARNING)

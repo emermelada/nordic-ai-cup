@@ -14,7 +14,7 @@ not: record your own with `DRONE_RECORD_DIR` (see below).
 | v3 | 0.132, 0.119 | + cut-outs of real validation objects, light/shadow variation |
 | v4 | 0.1445, 0.1425 | + Poisson-blended pasting, more objects, weak classes weighted |
 | v6 | not run | real flight backgrounds; offline a wash alone, see 18 Sep evening |
-| **v4+v6 alternating (served)** | **not run yet** | the two fail on opposite classes; offline ~0.30–0.35 against ~0.277 |
+| **v4+v6 alternating (served)** | **0.2365** | the two fail on opposite classes; best score so far, +0.09 on v4 |
 
 Best Danish team 0.36, best overall 0.46 (as of Thursday evening).
 
@@ -85,18 +85,34 @@ curl -s localhost:9053/api
 when only one of the two loaded. Asking for an alternate that is not there now
 refuses to start rather than quietly serving one model (see the bug below).
 
-`DRONE_DEVICE=mps` still has not been run. The code is device-clean (the input
-goes `.to(DEVICE)` and results come back through `.cpu()`), but the likely
-failure is `torchvision.ops.nms` not being implemented for MPS. If it raises,
-start it with `PYTORCH_ENABLE_MPS_FALLBACK=1` in the environment, which runs
-that one op on the CPU. Test this *before* the day, not on it.
+`DRONE_DEVICE=mps` **has been run** (18 Sep evening) and needs no special
+handling: `torchvision.ops.nms` did not raise, so `PYTORCH_ENABLE_MPS_FALLBACK=1`
+is not needed. On the M4 the served pair answers a full round trip, PNG decode
+included, in **25 ms median against the 333 ms budget** — 7 % of it. Detector
+only, over 40 real frames: v4 9.2 ms, v6 14.8 ms, both on every frame 22.6 ms.
 
-Then measure `python local_evaluator.py --realtime --url http://localhost:9053/predict`
-(needs `src/helsinki/`) and read "round trip ms" and "frames skipped" — not the
-Helsinki score, which the detector has memorised. The budget is 333 ms per
-frame. Measured on the Linux i5 box for reference: v4 alone 197 ms mean and
-7 of 25 frames skipped, the pair 359 ms mean and 12 of 25 skipped. The pair
-needs the M4; on that laptop it costs half the frames.
+**Compute is not the constraint on the M4; the link is.** Two runs minutes
+apart from the same process answered 68/249 and 248/249 frames. The quick
+tunnel in `data/tunnel.log` dropped (`sendmsg: network is unreachable`) and
+took ~5 s over three retries to re-register, and its own banner says
+account-less tunnels have no uptime guarantee. Use a named tunnel for the
+evaluation. The Linux i5 box is a different story — there the pair is genuinely
+too slow (median 608 ms, 18 of 19 frames over budget) — but do not carry that
+number over to the Mac, and do not read "we need a smaller model" from it.
+
+Before an attempt, against the URL you will actually submit:
+
+```bash
+python tools/preflight.py --url https://<host>/predict
+```
+
+It checks `models_loaded`, replays real recorded frames, and reports the round
+trip against the 333 ms budget, excluding the cold first request. Run it on the
+public URL, not localhost, or it measures the wrong link.
+
+`python local_evaluator.py --realtime --url http://localhost:9053/predict`
+(needs `src/helsinki/`) still gives "round trip ms" and "frames skipped" — read
+those, not the Helsinki score, which the detector has memorised.
 
 The submitted URL is used verbatim, so it must end in `/predict`.
 
@@ -467,3 +483,79 @@ model" check:
 Both are the same lesson as the `fake_detect` signature bug and the missing-model
 bug that cost an attempt: the dangerous failures here are the ones that look
 like success.
+
+---
+
+## 2026-09-18, late: 0.2365, and what the service review changed
+
+**The pair scored 0.2365 on validation**, against 0.1445 for v4 — the first
+move outside the noise since v2, and it came from pairing two models, not from
+a better one. Leader 0.640.
+
+Which of the two logged runs was the scored one is not established: the attempt
+ran 14:42:05–14:43:28 UTC, and `serve.log` had no timestamps to line up against
+it. The shapes say it was the healthy 248/249 run — its single skip is right
+after frame 1, which matches the cold first request — while the 68/249 run
+matches the tunnel flapping at 14:40:33Z, ~90 s before the attempt started.
+Treat that as inference. Logs are timestamped now, so the next one is decidable.
+
+### Both models on every frame: measured, and it is a variance argument
+
+`DRONE_SET=BOTH_MODELS=1` runs both models on every frame instead of
+alternating. Offline, against the same recorded run:
+
+| configuration | offline mAP |
+|---|---|
+| v4 alone | 0.277 |
+| v6 alone | 0.276 |
+| alternating, v4 on even frames | 0.346 |
+| alternating, v6 on even frames | 0.303 |
+| **both on every frame** | **0.326** |
+
+0.326 is almost exactly the midpoint of the two alternating orders (0.325), and
+that is the whole point. Alternating assigns models on `request.frame`, so
+**every skipped frame flips the assignment** — and frames get skipped. The 0.346
+is not a configuration anyone can choose, it is the lucky end of a coin flip
+whose expected value is 0.325. Running both buys that expectation outright for
+~14 ms of a ~300 ms budget on the M4, and stops `update_tracks` charging a miss
+to an object only the other model can see.
+
+It is off by default: it has not been run on validation, and the one previous
+measurement of this shape (v4+v5) found nothing in the mean, 46.4 % against
+46.2 %. Turn it on with `DRONE_SET=BOTH_MODELS=1` and spend one run on it.
+
+### The offline scorer now knows about the pair
+
+`tools/score_offline.py --model-alt` replays a pair, alternating by frame like
+the service, and honours `--set BOTH_MODELS=1`. Both tools patch `flyby.detect`,
+which sits *above* the model selection in `raw_detections`, so before this the
+served configuration was invisible to them and `DRONE_MODEL_ALT` changed
+nothing. It reproduces the scratch harness exactly (0.346, 5169 predictions).
+`tools/bench_recordings.py` cannot do pairs and now refuses rather than
+silently measuring one model.
+
+### Other fixes from the review
+
+* `api.py` logs carry a timestamp and each frame's own round-trip cost, so
+  `serve.log` can be lined up against `tunnel.log` and a bad run blamed on the
+  model or the link. This is what made the 0.2365 run undecidable.
+* `tools/preflight.py` — checks a live service before an attempt: which weights
+  are loaded, real frames replayed, round trip against the 333 ms budget.
+* A stale frame no longer raises a track's confidence above `best_confidence`
+  (`UNSEEN_DECAY ** max(0, ...)`; the exponent could go negative).
+* One malformed annotation no longer discards the whole frame's annotations,
+  and a failure building annotations no longer discards the camera command with
+  them — that steers the rest of the run, not just one frame.
+* `docker-compose.yml` defaults to the pair from the weights baked into the
+  image, so `docker compose up -d --build drone-flyby` starts the documented
+  service on a fresh clone. `up -d` alone still does **not** rebuild.
+
+### Still open
+
+* **Named tunnel** for the evaluation. The quick tunnel is the one failure here
+  that has actually cost frames, and it is not the model.
+* A self-ping every 30 s to keep the first-request cost off frame 1.
+* `spacecraft` and `small_launcher` remain dead; `small_launcher` is
+  resolution-limited at ~7 px.
+* v6's `jammer` collapse (0.239 → 0.002 alone) is still unexplained. Both models
+  every frame recovers it to 0.241, which is a second reason to try it.

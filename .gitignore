@@ -15,3 +15,6 @@ drone-flyby/annotated/
 
 # Handover: the served weights and the validation cut-outs travel with the repo
 !drone-flyby/models/*.pt
+
+# macOS
+.DS_Store

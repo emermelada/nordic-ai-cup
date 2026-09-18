@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # Hit every service's health + predict endpoint and print latency.
+#
+# This only proves a port answers: the default '{}' payload is not a valid
+# request, so /predict returning 422 is the expected pass. Before a drone-flyby
+# attempt run drone-flyby/tools/preflight.py against the submitted URL instead,
+# which checks the loaded weights and replays real frames against the budget.
 #   scripts/smoke-test.sh                      # local ports 8001-8003
 #   scripts/smoke-test.sh https://xyz.trycloudflare.com   # one public URL
 #   CONCURRENT=1 scripts/smoke-test.sh         # fire all at once (contention test)

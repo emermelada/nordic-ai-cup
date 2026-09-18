@@ -1,7 +1,7 @@
 """The endpoint the evaluation service calls.
 
-You should not need to change much in here. Put your model in ``example.py``
-and leave the transport alone.
+The detector, object memory and camera policy all live in ``flyby.py``; this
+module is transport only. (``example.py`` is the untouched original template.)
 
 The URL you submit is used exactly as you give it, path included, so if you
 keep the ``/predict`` route below then submit ``http://<your-host>:9053/predict``
@@ -31,7 +31,10 @@ from utils import validate_response
 HOST = '0.0.0.0'
 PORT = 9053
 
-logging.basicConfig(level=logging.INFO)
+# With a timestamp: serve.log has to be lined up against tunnel.log to tell a
+# network stall from a slow model, and the default format has no time at all.
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -86,6 +89,7 @@ async def predict_endpoint(raw: Request):
 
 
 def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto:
+    started = time.perf_counter()
     response = predict(request)
 
     # Check the evaluator's rules, but never fail the request over them: an
@@ -94,21 +98,43 @@ def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto
     try:
         validate_response(response)
     except ValueError:
-        logger.exception('Invalid response for frame %s, dropping its annotations', request.frame)
-        response.annotations = []
+        logger.exception('Invalid response for frame %s, salvaging it', request.frame)
+        # Drop only what is actually wrong. Emptying the whole frame throws away
+        # every good detection over one bad box, and the frame is scored either
+        # way, so a single malformed annotation used to cost a whole frame.
+        kept = []
+        for annotation in response.annotations:
+            probe = DroneFlybyPredictResponseDto(
+                request_id=response.request_id, frame=response.frame,
+                annotations=[annotation], requested_view=None)
+            try:
+                validate_response(probe)
+            except ValueError:
+                continue
+            kept.append(annotation)
+        response.annotations = kept[:500]
+        try:
+            validate_response(response)
+        except ValueError:
+            # Then it was the camera command, not the boxes.
+            logger.exception('Camera command invalid on frame %s, dropping it', request.frame)
+            response.requested_view = None
 
     if RECORD_DIR:
         # In the background: the frame clock does not wait for the disk.
         _recorder.submit(record, request, response)
 
+    # The per-frame cost, so a bad run can be blamed on the model or the link
+    # from this log alone. Budget is 333 ms; the pair answers in ~25 ms on the M4.
     logger.info(
-        'frame %s (index %s) L%s at (%s, %s): returned %s detections',
+        'frame %s (index %s) L%s at (%s, %s): returned %s detections in %.0f ms',
         request.frame,
         request.frame_index,
         request.view.resolution_level,
         request.view.center_x,
         request.view.center_y,
         len(response.annotations),
+        (time.perf_counter() - started) * 1000,
     )
     return response
 

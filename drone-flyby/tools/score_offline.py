@@ -170,12 +170,22 @@ def from_recording(run: str):
     return predictions
 
 
-def from_replay(run: str, model: Path, overrides):
-    """Replay the recorded requests through flyby.predict with cached detections."""
+def from_replay(run: str, model: Path, overrides, model_alt: Path = None):
+    """Replay the recorded requests through flyby.predict with cached detections.
+
+    With ``model_alt``, this mirrors what the service actually does with two sets
+    of weights: flyby.raw_detections picks ``_models[which % len(_models)]``, so
+    the models alternate on the request frame, and DRONE_SET=BOTH_MODELS=1 runs
+    both on every frame and concatenates. The patch below replaces flyby.detect,
+    which sits *above* that selection, so without this the served pair was
+    invisible here and --model-alt would have changed nothing.
+    """
     import logging
     logging.disable(logging.WARNING)
     import os
     os.environ['DRONE_MODEL'] = str(model)
+    if model_alt is not None:
+        os.environ['DRONE_MODEL_ALT'] = str(model_alt)
     import flyby
     from bench_recordings import cached_detections
     from dtos import DroneFlybyPredictRequestDto
@@ -184,12 +194,19 @@ def from_replay(run: str, model: Path, overrides):
         name, value = item.split('=', 1)
         setattr(flyby, name, type(getattr(flyby, name))(eval(value)))
 
-    cache = cached_detections(model)
+    caches = [cached_detections(model)]
+    if model_alt is not None:
+        caches.append(cached_detections(model_alt))
     current = {}
     flyby.decode_view = lambda view: None
 
     def fake_detect(image, region, frame: int = 0):
-        xyxy, probabilities = cache[current['key']]
+        if flyby.BOTH_MODELS and len(caches) > 1:
+            parts = [cache[current['key']] for cache in caches]
+            xyxy = np.concatenate([part[0] for part in parts])
+            probabilities = np.concatenate([part[1] for part in parts])
+        else:
+            xyxy, probabilities = caches[frame % len(caches)][current['key']]
         rx1, ry1, rx2, ry2 = region
         scale = np.array([(rx2 - rx1) / 960, (ry2 - ry1) / 540] * 2)
         boxes = xyxy * scale + [rx1, ry1, rx1, ry1]
@@ -216,7 +233,10 @@ def main() -> int:
     parser.add_argument('--run', default='5ace53648dd5429bbf95332494a69ac0',
                         help='Recorded run to score (default: the best v4 run).')
     parser.add_argument('--replay', action='store_true', help='Re-run flyby.predict instead of scoring stored answers.')
-    parser.add_argument('--model', type=Path, default=Path.home() / 'models' / 'drone-yolo11n-v4.pt')
+    parser.add_argument('--model', type=Path, default=ROOT / 'models' / 'drone-yolo11n-v4.pt')
+    parser.add_argument('--model-alt', type=Path, default=None,
+                        help='Second weights, alternating per frame like the served pair. '
+                             'Add --set BOTH_MODELS=1 to run both on every frame instead.')
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting override (with --replay).')
     parser.add_argument('--from-frame', type=int, default=0, help='Only score frames from here on.')
     parser.add_argument('--frames', type=int, default=249)
@@ -231,7 +251,7 @@ def main() -> int:
     objects = json.loads(OBJECTS.read_text())['objects']
     frames = [f for f in range(1, args.frames + 1) if f >= args.from_frame]
 
-    predictions = from_replay(args.run, args.model, args.set) if args.replay else from_recording(args.run)
+    predictions = from_replay(args.run, args.model, args.set, args.model_alt) if args.replay else from_recording(args.run)
     # Only the frames actually scored, or --frames makes the per-frame rate nonsense.
     total = sum(len(predictions.get(f, [])) for f in frames)
     import flyby
@@ -239,7 +259,13 @@ def main() -> int:
     samples = fit_truth_motion(objects)[1] if args.truth_motion != 'prior' else 0
     overall, by_class, instances = score(predictions, frames, objects, motion)
 
-    label = f'replay {args.model.name}' if args.replay else f'recorded answers of {args.run[:12]}'
+    if args.replay:
+        label = f'replay {args.model.name}'
+        if args.model_alt is not None:
+            mode = 'both every frame' if flyby.BOTH_MODELS else 'alternating'
+            label += f' + {args.model_alt.name} ({mode})'
+    else:
+        label = f'recorded answers of {args.run[:12]}'
     print(f'{label}')
     print(f'{len(frames)} frames, {instances} confirmed object-frames, {total} predictions '
           f'({total / max(1, len(frames)):.1f} per frame, COCO caps at 100)')
