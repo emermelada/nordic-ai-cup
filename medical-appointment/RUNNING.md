@@ -43,8 +43,8 @@ opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a prima
 "no" is never promoted. Missing, invalid or duplicate secondary answers inherit the
 primary decision rather than a retrieval veto. **Live build `543cf3e` keeps only
 primary-model evidence** (`primary_evidence_response`), while preserving that answer
-policy. Request capture is active. Platform validation is pending; its local score
-is lower than the preceding consensus build's.
+policy. Request capture is active. Platform validation scored **0.743079**, up from
+**0.717908** with consensus, despite its lower local training score.
 
 Current public prediction URL (replaced on 2026-09-18):
 `https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
@@ -89,7 +89,7 @@ Running processes keep their loaded code until restarted.
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
 | Same consensus + explicit secondary-no veto | 0.783777 | 0.717908 |
-| Primary-only evidence + same veto (live) | 0.753538 | not yet validated |
+| **Primary-only evidence + same veto (live)** | 0.753538 | **0.743079** |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -109,7 +109,31 @@ all 19 conversations without logged fallbacks; mean/worst server time was
 but full predictions and veto counters were not logged, so identical outputs are
 not established. The three corrected training answers produced no validation-score
 gain. Raw result and per-request attribution: `runs/platform-validation-12faf62f/`.
-The best documented platform result remains the single-9B build's **0.743**.
+
+Attempt `17987a1a854248c9a8aae6bf49b8255f` completed at 14:22 CEST on 2026-09-18
+against primary-evidence pipeline `543cf3e` (deployment record `a64446b`):
+**0.7430787042906362**, a **+0.025171104754520224** gain over the preceding attempt.
+This restores the historical single-9B best level; that older score is documented
+only as approximately 0.743, so a new all-time record is not established.
+
+All **19 conversations / 190 questions** completed with no platform errors, captured
+fallbacks or worker errors. Mean/worst server time was **20.72/26.75 seconds**.
+All 19 full request/trace/response captures were verified against the deployed source
+hashes and successful platform POSTs; deployment smoke tests and the pre-attempt
+request were excluded. Captures remain private and local under `runs/request-captures/`.
+
+The secondary supplied **190 valid answers but triggered zero vetoes**. Both parsed
+answer disagreements were primary-no/secondary-yes, which the policy does not promote.
+Every returned yes had evidence. Per-conversation yes counts still match the preceding
+attempt (**91/190** overall); its full predictions were not saved, so this does not
+prove historical per-question equality.
+
+Applying the old consensus selector to **this attempt's captured generations** would
+replace six spans, four with disjoint intervals, without changing answers. Together
+with the platform gain, this supports retaining primary evidence over this particular
+selector. It does not identify which individual spans scored better: no gold labels
+or accuracy/tIoU components were supplied, and a counterfactual score cannot be computed.
+Result, capture attribution and label-free comparison: `runs/platform-validation-17987a1a/`.
 
 Span consensus across models is the one lever that moved the training score materially:
 three-model consensus reached 0.774, two models plus the retrieval referee 0.770-0.775,
@@ -256,10 +280,11 @@ previous committed responses.
 | Raw score | 0.783777 | 0.753538 |
 | Zero-overlap positives | 26 | 31 |
 
-This is a **controlled validation candidate, not a measured improvement**. The reason
-to test it is the historical single-9B validation advantage despite its weaker local
-score. Do not disable the secondary model for this comparison: that also removes
-the answer veto. No deployment or platform attempt was made in this implementation pass.
+This was tested as a controlled ablation despite its local regression, motivated by
+the historical single-9B validation advantage. Subsequent platform validation improved
+from **0.717908 to 0.743079**; the local score remains lower. Both model calls and the
+answer-veto policy were preserved to isolate evidence selection. Disabling the secondary
+model would also remove the veto and is a different experiment.
 
 The deployed API captures requests that reached the worker under gitignored
 `runs/request-captures/`. Each private JSON file contains the full base64 audio request,
