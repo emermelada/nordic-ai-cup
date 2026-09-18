@@ -149,6 +149,9 @@ def hello():
         # 2 means the pair is really alternating; 1 means one model is serving
         # every frame, whatever DRONE_MODEL_ALT was set to.
         'models_loaded': len(flyby._models),
+        # One size per loaded model, in order. The served pair runs v4 at 960
+        # and v6 at 1280, so a single number here means the sizes did not apply.
+        'imgsz': [flyby.size_for(i) for i in range(max(1, len(flyby._models)))],
         'device': flyby.DEVICE,
         'model_loaded': flyby._model is not None,
         'camera': flyby.CAMERA,

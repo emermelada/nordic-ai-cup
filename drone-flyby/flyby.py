@@ -24,6 +24,9 @@ Configuration, all optional, through environment variables:
                      DRONE_SET=BOTH_MODELS=1 runs both on every frame instead
     DRONE_DEVICE  torch device               (default: cpu)
     DRONE_IMGSZ   inference size             (default: 960)
+                  one size per model, comma separated, to run the pair at two
+                  scales: DRONE_IMGSZ=960,1280. The same weights may be named
+                  twice, which makes a pair out of one model at two sizes.
     DRONE_THREADS CPU threads for inference  (default: 6)
     DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
     DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
@@ -64,7 +67,13 @@ MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-
 # A second set of weights, taking alternate frames. See detect().
 ALT_MODEL_PATH = Path(os.environ['DRONE_MODEL_ALT']) if os.environ.get('DRONE_MODEL_ALT') else None
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
-IMGSZ = int(os.environ.get('DRONE_IMGSZ', '960'))
+# One size, or one per model ("960,1280"). Input size trades big objects for
+# small ones: the same v4 weights at 1280 instead of 960 moved tank 0.043 ->
+# 0.306 and large_tower 0.001 -> 0.313 offline while hangar fell 0.743 -> 0.435,
+# so the two sizes miss different classes the same way two models do, and the
+# pair can take one of each. IMGSZ stays the scalar the tools read.
+IMGSZ_LIST = [int(v) for v in os.environ.get('DRONE_IMGSZ', '960').split(',') if v.strip()]
+IMGSZ = IMGSZ_LIST[0]
 # Measured on the i5-8350U: 6 threads 91 ms, 4 threads 110 ms, 8 threads 112 ms.
 THREADS = int(os.environ.get('DRONE_THREADS', '6'))
 # With two models loaded: 0 alternates them by frame, 1 runs both on every frame
@@ -217,13 +226,18 @@ _models = []
 _model_lock = threading.Lock()
 
 
-def _load_one(path: Path):
+def size_for(which: int) -> int:
+    """Inference size for model ``which``; the last size repeats if fewer given."""
+    return IMGSZ_LIST[min(which, len(IMGSZ_LIST) - 1)]
+
+
+def _load_one(path: Path, imgsz: int = None):
     from ultralytics import YOLO
 
     yolo = YOLO(str(path))
     # One ordinary prediction builds Ultralytics' inference wrapper, which runs
     # the network ~30 % faster on this CPU than calling the module directly.
-    yolo.predict(np.zeros((540, 960, 3), np.uint8), imgsz=IMGSZ, device=DEVICE, verbose=False)
+    yolo.predict(np.zeros((540, 960, 3), np.uint8), imgsz=imgsz or IMGSZ, device=DEVICE, verbose=False)
     order = [OBJECT_CLASSES.index(yolo.names[i]) for i in range(len(yolo.names))]
     return yolo.predictor.model, order
 
@@ -239,7 +253,7 @@ def load_model():
     import torch
 
     torch.set_num_threads(THREADS)
-    _models = [_load_one(MODEL_PATH)]
+    _models = [_load_one(MODEL_PATH, size_for(0))]
     _model = _models[0]
     # The first inference is the slow one; pay for it before the clock starts.
     for _ in range(2):
@@ -250,7 +264,7 @@ def load_model():
         if not ALT_MODEL_PATH.exists():
             logger.error('No alternate model at %s: running one model only', ALT_MODEL_PATH)
         else:
-            _models.append(_load_one(ALT_MODEL_PATH))
+            _models.append(_load_one(ALT_MODEL_PATH, size_for(1)))
             for _ in range(2):
                 raw_detections(np.zeros((540, 960, 3), np.uint8), 1)
             logger.info('Loaded alternate %s; models alternate per frame', ALT_MODEL_PATH)
@@ -267,9 +281,10 @@ def raw_detections(image: np.ndarray, which: int = 0):
     import torch
     import torchvision
 
-    net, order = _models[which % len(_models)] if _models else _model
+    index = which % len(_models) if _models else 0
+    net, order = _models[index] if _models else _model
     height, width = image.shape[:2]
-    ratio = IMGSZ / max(height, width)
+    ratio = size_for(index) / max(height, width)
     new_h, new_w = round(height * ratio), round(width * ratio)
     pad_h, pad_w = math.ceil(new_h / 32) * 32, math.ceil(new_w / 32) * 32
     top, left = (pad_h - new_h) // 2, (pad_w - new_w) // 2

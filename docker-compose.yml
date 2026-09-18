@@ -37,6 +37,9 @@ services:
       DRONE_RECORD_DIR: ${DRONE_RECORD:+/recordings}
       # full (default, best on validation), quad0, full0, dwell, top, survey
       DRONE_CAMERA: ${DRONE_CAMERA:-full}
+      # Inference size, one per model: DRONE_IMGSZ=960,1280 runs the pair at two
+      # scales. Measured offline: v6 at 1280 scores 0.350 against 0.276 at 960.
+      DRONE_IMGSZ: ${DRONE_IMGSZ:-960}
       # tracker experiments, e.g. DRONE_SET=MAX_MISSES=3,UNSEEN_DECAY=0.9
       DRONE_SET: ${DRONE_SET:-}
     volumes:
