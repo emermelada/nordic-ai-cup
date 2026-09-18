@@ -318,6 +318,50 @@ Artifacts: `runs/grounding-fixes-20260917/primary-evidence/` and
 .venv311/bin/python runs/primary-evidence-20260918/check.py api-rerun
 ```
 
+### Evidence-only extraction and nonlinear ranking (2026-09-18)
+
+Three fresh 9B evidence-only pilots kept the cached answer decisions fixed. The same
+six hash-selected development conversations (60 questions, 34 positives) were used:
+
+| Evidence policy | Pilot raw score |
+| --- | ---: |
+| Current primary evidence | 0.801846 |
+| Explicit word pointers | 0.737062 |
+| Word pointers + retrieved training examples | 0.696515 |
+| Exact quotes + retrieved training examples | 0.777716 |
+
+These configurations are not promoted. Examples came from other conversation folds;
+removing each target fold's labels left all 78 prompts unchanged across the two formats.
+Seven extractor safeguard tests pass. Full prompts, raw generations, source snapshots,
+timings and comparisons: `runs/evidence-pointer-20260918/`. No validation captures or
+labels were used in these pilots.
+
+A CPU-only histogram-boosted ranker then used the existing question/boundary features
+and word-span candidates. Its 150 shallow trees used fixed settings, equal total weight
+per positive question and within-question-centered tIoU targets. Five conversation-disjoint
+outer folds used no held-out early stopping. All **390 answer decisions remain unchanged**:
+
+| Cached public-training comparison (39 conversations) | Raw score | Mean tIoU | Zero overlap |
+| --- | ---: | ---: | ---: |
+| Current primary evidence | 0.753538 | 0.594358 | 31 |
+| Broad linear ranker, out of fold | 0.765893 | 0.614949 | 30 |
+| Broad nonlinear ranker, out of fold | 0.762057 | 0.608557 | 32 |
+| **Primary-boundary nonlinear ranker, out of fold** | **0.764041** | **0.611864** | **30** |
+
+The boundary-only version retains overlap with the primary passage and restricts both
+endpoints to within two seconds of the primary endpoints. Its **+0.010504 raw** gain
+is positive in all five folds. The descriptive paired-conversation bootstrap interval
+is approximately **[0.000003, 0.021396]**; this is a small exploratory signal on reused
+training data, not proof of hidden-validation improvement. The all-data fit scores
+0.774568 on its training data and is not the out-of-fold result.
+
+This is the next integration candidate, **not deployed or ready to submit yet**. Its
+boundary-pool gold oracle is only 0.845590 raw, so it cannot reach 0.90 without additional
+passage-selection improvements. Artifacts, fold models and the all-data model:
+`runs/span-boost-20260918/primary-boundaries/`; broad comparison: `broad/` alongside it.
+Scikit-learn and its helper dependencies were installed only under that experiment's
+`dependencies/` directory; the serving environment, API and tunnel were not changed.
+
 ### Rehearsal of the serving path (2026-09-18, consensus build)
 
 All 39 training conversations through the running server, one request at a time, as the
