@@ -19,7 +19,9 @@ LLM_HF_MODEL="${LLM_HF_MODEL:-nvidia/Qwen3.6-35B-A3B-NVFP4}"
 LLM_PORT="${LLM_PORT:-8080}"
 export LLM_BASE_URL="${LLM_BASE_URL:-http://127.0.0.1:${LLM_PORT}/v1}"
 export LLM_MODEL="${LLM_MODEL:-local}"
-TEMPLATE_URL="http://127.0.0.1:8000/v1"  # where vast's vLLM template serves
+# Where vast's vLLM template may serve: vLLM itself on the internal port, and
+# the portal's authenticating proxy in front of it on 8000.
+TEMPLATE_URLS="http://127.0.0.1:18000/v1 http://127.0.0.1:8000/v1"
 # Outside the repo, or under the git-ignored data/, so nothing here gets committed.
 APP_VENV="${APP_VENV:-$HOME/venvs/medical}"
 LLM_VENV="${LLM_VENV:-$HOME/venvs/vllm}"
@@ -55,7 +57,7 @@ PY
 
 find_llm() {  # point LLM_BASE_URL / LLM_MODEL at a server that is already answering
   local url id
-  for url in "$LLM_BASE_URL" "$TEMPLATE_URL"; do
+  for url in "$LLM_BASE_URL" $TEMPLATE_URLS; do
     id="$(served_model "$url")" || continue
     export LLM_BASE_URL="$url" LLM_MODEL="$id"
     echo "LLM server: $url (model $id)"
@@ -83,7 +85,7 @@ ensure_llm() {
   if [ -n "${VLLM_MODEL:-}" ]; then
     # The template launches its own server from VLLM_MODEL / VLLM_ARGS. Wait for
     # it rather than start a second one that would fight it for the GPU.
-    echo "Waiting for the template's vLLM ($VLLM_MODEL) on :8000; its first start downloads the model."
+    echo "Waiting for the template's vLLM ($VLLM_MODEL); its first start downloads the model."
     local waited=0
     until find_llm; do
       sleep 15
