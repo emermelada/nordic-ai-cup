@@ -120,6 +120,13 @@ class Creature:
             if not obj_list:
                 return
             
+            # DETERMINISM (local measurement fix): obj_list comes from a set of entity objects,
+            # whose iteration order depends on memory addresses, so otherwise-identical episodes
+            # diverged (same seed + same policy gave 601/626/611/678 across 4 runs). Sorting by
+            # position makes the observation order stable, which also makes the policy's float
+            # arithmetic (fruit vectors, edge repulsion sums) reproducible.
+            obj_list = sorted(obj_list, key=lambda o: (round(float(o.x), 6), round(float(o.y), 6)))
+
             # Vectorize x and y
             xs = np.fromiter((o.x for o in obj_list), float) 
             ys = np.fromiter((o.y for o in obj_list), float)
@@ -170,7 +177,7 @@ class Creature:
             process_objects(trees, "Tree")
 
         # Add visible edges
-        for (sx, sy), (ex, ey) in hit_edges:
+        for (sx, sy), (ex, ey) in sorted(hit_edges, key=lambda e: (round(float(e[0][0]), 6), round(float(e[0][1]), 6), round(float(e[1][0]), 6), round(float(e[1][1]), 6))):  # DETERMINISM: stable order from a set
             dxs, dys, dxe, dye = sx - self.x, sy - self.y, ex - self.x, ey - self.y
             rx_s, ry_s = dxs * cos_dir - dys * sin_dir, dxs * sin_dir + dys * cos_dir
             rx_e, ry_e = dxe * cos_dir - dye * sin_dir, dxe * sin_dir + dye * cos_dir

@@ -1,0 +1,8 @@
+[
+ {"tag": "S0 baseline (tree0.25 blind=explore)", "params": {}},
+ {"tag": "S1 tree1.0", "params": {"tree_weight": 1.0}},
+ {"tag": "S2 tree3.0", "params": {"tree_weight": 3.0}},
+ {"tag": "S3 tree8.0", "params": {"tree_weight": 8.0}},
+ {"tag": "S4 tree3.0 blind0.7", "params": {"tree_weight": 3.0, "blind_explore_frac": 0.7}},
+ {"tag": "S5 tree0.0 (control: ignore trees)", "params": {"tree_weight": 0.0}}
+]

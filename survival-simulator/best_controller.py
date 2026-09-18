@@ -61,6 +61,15 @@ DEFAULT_PARAMS = {
     # --- foraging efficiency (energy income; movement burn dominates the energy budget) ---
     "forage_nearest": 0.0,     # 1 = when fruit is visible, steer straight at the nearest safe fruit
     "forage_speed": 1.0,       # move-distance fraction used by the nearest-fruit override
+    # --- search behaviour when BLIND (no fruit in view) ---
+    # Measured on the deterministic harness: in the endgame the world holds 3-4x more fruit energy
+    # than the whole fleet owns, yet agents see only 0.3-0.6 fruits each and in 12-29% of ticks see
+    # none at all -> income is ACCESS-limited, not supply-limited. Trees are the fruit source in this
+    # sim (forest fruit_spawn_rate 0.08/s per 100x100), so these knobs steer the SEARCH.
+    # Both default to the pre-existing behaviour: 0.25 was the hardcoded tree weight, and None means
+    # "keep using explore_frac", so adding them cannot change any already-measured result.
+    "tree_weight": 0.25,        # attraction to Tree observations (0.25 = the original hardcoded value)
+    "blind_explore_frac": None, # move-distance fraction when NO fruit is visible (None = explore_frac)
     # --- generational relay (age-aware: survive past max_age by banking heirs) ---
     "relay_age": 0.0,          # sim seconds; spawn an heir once older than this (0 = off)
     "relay_energy_frac": 0.35, # energy gate used by the relay spawn (fraction of max_energy)
@@ -245,7 +254,7 @@ def potential_controller(state, P):
             break
         d = t["distance"]
         a = t["angle"]
-        w = 0.25 / (d + 20.0)
+        w = P.get("tree_weight", 0.25) / (d + 20.0)
         fx += math.cos(a) * w
         fy += math.sin(a) * w
 
@@ -314,7 +323,8 @@ def potential_controller(state, P):
     elif use_energy and ef < P["low_energy_frac"]:
         dist = speed * 0.4
     else:
-        dist = speed * P["walk_frac"] if (best_fruit is not None) else speed * P["explore_frac"]
+        _bf = P.get("blind_explore_frac")
+        dist = speed * P["walk_frac"] if (best_fruit is not None) else speed * (P["explore_frac"] if _bf is None else _bf)
     if use_energy and ef < P["reserve_frac"]:
         dist = min(dist, speed * 0.25)
 

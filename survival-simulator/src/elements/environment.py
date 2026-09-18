@@ -661,7 +661,10 @@ class Environment:
 
             # Handle fruit interactions
             if local_fruits:
-                local_fruits = list(local_fruits)
+                # DETERMINISM: local_fruits is a set of objects (address-dependent iteration order),
+                # so the eat order -- and therefore the energy arithmetic and who eats what first --
+                # varied between otherwise-identical episodes. Sort for a reproducible order.
+                local_fruits = sorted(local_fruits, key=lambda f: (round(float(f.x), 6), round(float(f.y), 6)))
                 for fruit in reversed(local_fruits):
                     dx = agent.x - fruit.x
                     dy = agent.y - fruit.y
