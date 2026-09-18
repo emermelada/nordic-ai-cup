@@ -8,7 +8,6 @@ import struct
 import threading
 import time
 
-from pipeline.boundary import adjust_boundaries
 from pipeline.core import (
     answer_response,
     floor_response,
@@ -280,7 +279,7 @@ class Pipeline:
             self._request_id += 1
             identity = {'generation': self._generation, 'request_id': self._request_id}
             if trace is not None:
-                trace.update(identity, evidence_policy='primary-with-secondary-veto-and-learned-boundaries')
+                trace.update(identity, evidence_policy='primary-with-secondary-veto')
             _send_frame(self._channel, {
                 **identity, 'kind': 'predict', 'audio_base64': request.audio_base64,
                 'questions': request.questions,
@@ -317,7 +316,6 @@ class Pipeline:
                     if trace is not None:
                         trace['primary'] = response.model_dump()
                         trace['referee'] = fallback.model_dump()
-                    primary, alternative = response, None
                     if message.get('second'):
                         secondary_fallback = fallback.model_copy(deep=True)
                         # Missing or invalid secondary answers cannot veto the primary.
@@ -326,20 +324,9 @@ class Pipeline:
                             message['second'], words, request.questions, duration,
                             fallback=secondary_fallback, deadline=deadline, alignment='numeric',
                         )
-                        response = primary_evidence_response(response, alternative)
-                    try:
-                        if alternative is not None:
-                            alternative = refine_evidence(alternative, words, envelope)
-                            if trace is not None:
-                                trace['secondary'] = alternative.model_dump()
-                        response = adjust_boundaries(
-                            response, words, request.questions, duration, envelope,
-                            primary, alternative, fallback, deadline=deadline, trace=trace,
-                        )
-                    except Exception as exc:
-                        logger.exception('Keeping primary evidence after boundary adjustment failure')
                         if trace is not None:
-                            trace['boundary'] = {'status': 'skipped', 'reason': f'{type(exc).__name__}: {exc}'}
+                            trace['secondary'] = refine_evidence(alternative, words, envelope).model_dump()
+                        response = primary_evidence_response(response, alternative)
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
                     # Both platform sets are exactly half yes; the rate is a label-free sanity check.

@@ -1,6 +1,5 @@
 import asyncio
 import concurrent.futures
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -48,10 +47,6 @@ class CaptureTests(unittest.TestCase):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertFalse((self.directory.parent / 'outside.mp3').exists())
         self.assertEqual(list(self.directory.glob('*.tmp')), [])
-
-    def test_fingerprints_include_boundary_code_and_weights(self):
-        for name in ('pipeline/boundary.py', 'pipeline/boundary_model.json'):
-            self.assertEqual(capture.SOURCE_HASHES[name], hashlib.sha256((capture.ROOT / name).read_bytes()).hexdigest())
 
     def test_requests_not_sent_to_worker_are_not_captured(self):
         capture.save_capture(self.request, self.response, {})

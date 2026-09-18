@@ -180,76 +180,13 @@ class RuntimeTests(unittest.TestCase):
             self.assert_valid(response, count)
             self.assertEqual(pipeline._process.pid, pid)
 
-    def test_retained_yes_keeps_primary_evidence_before_boundary_adjustment(self):
+    def test_retained_yes_keeps_primary_evidence(self):
         pipeline = self.make_pipeline()
-        with mock.patch('pipeline.runtime.adjust_boundaries', side_effect=lambda response, *a, **kw: response):
-            actual = pipeline.predict(request(questions=['Should the tablets be taken after a meal?']))
+        actual = pipeline.predict(request(questions=['Should the tablets be taken after a meal?']))
         self.assertEqual(actual.answers, [True])
         self.assertEqual(actual.evidence_start, [0.0])
         self.assertAlmostEqual(actual.evidence_end[0], 1.8)
         self.assert_valid(actual, 1)
-
-    def test_learned_boundaries_stay_near_primary_evidence(self):
-        pipeline = self.make_pipeline()
-        trace = {}
-        actual = pipeline.predict(request(questions=['Should the tablets be taken after a meal?']), trace=trace)
-        self.assertEqual(actual.answers, [True])
-        self.assertEqual(trace['boundary']['status'], 'completed')
-        start, end = actual.evidence_start[0], actual.evidence_end[0]
-        primary_start, primary_end = trace['primary']['evidence_start'][0], trace['primary']['evidence_end'][0]
-        self.assertLess(max(start, primary_start), min(end, primary_end))
-        self.assertLessEqual(abs(start - primary_start), 2.)
-        self.assertLessEqual(abs(end - primary_end), 2.)
-        self.assert_valid(actual, 1)
-
-    def test_boundary_adjustment_runs_after_veto_with_trace_independent_features(self):
-        raw = json.dumps({'results': [{'q': 1, 'answer': 'no'}]})
-        pipeline = self.make_pipeline(backend_factory=functools.partial(SecondaryAnswerBackend, raw))
-        seen = []
-
-        def adjust(response, words, questions, duration, envelope, primary, secondary, referee, **kwargs):
-            self.assertEqual(response.answers, [False, False, True])
-            self.assertEqual(primary.answers, [True, False, True])
-            seen.append([proposal.model_dump() for proposal in (primary, secondary, referee)])
-            result = response.model_copy(deep=True)
-            result.evidence_start[2] += .05
-            return result
-
-        from pipeline.evidence import refine_evidence
-        with mock.patch('pipeline.runtime.adjust_boundaries', side_effect=adjust), \
-                mock.patch('pipeline.runtime.refine_evidence', wraps=refine_evidence) as refine:
-            trace = {}
-            actual = pipeline.predict(request(), trace=trace)
-            self.assertEqual(refine.call_count, 3)
-            refine.reset_mock()
-            self.assertEqual(pipeline.predict(request()), actual)
-            self.assertEqual(refine.call_count, 3)
-        self.assertEqual(seen[0], seen[1])
-        self.assertAlmostEqual(actual.evidence_start[2], trace['primary']['evidence_start'][2] + .05)
-        self.assertIsNone(actual.evidence_start[0])
-        self.assertEqual(seen[0][1], trace['secondary'])
-        self.assert_valid(actual, 3)
-
-    def test_boundary_failure_keeps_completed_response_and_worker(self):
-        pipeline = self.make_pipeline()
-        pid = pipeline._process.pid
-        trace = {}
-        with mock.patch('pipeline.runtime.adjust_boundaries', side_effect=RuntimeError('Selector failed')), \
-                self.assertLogs('pipeline.runtime', level='ERROR'):
-            actual = pipeline.predict(request(), trace=trace)
-        self.assertEqual(actual.model_dump(), trace['primary'])
-        self.assertEqual(trace['boundary']['status'], 'skipped')
-        self.assertTrue(trace['outcome'].startswith('completed'))
-        self.assertTrue(pipeline.ready)
-        self.assertEqual(pipeline._process.pid, pid)
-        self.assertEqual(pipeline.predict(request()).answers, actual.answers)
-
-    def test_skipped_secondary_is_missing_in_boundary_features(self):
-        pipeline = self.make_pipeline(backend_factory=functools.partial(SecondaryAnswerBackend, ''))
-        with mock.patch('pipeline.runtime.adjust_boundaries', side_effect=lambda response, *a, **kw: response) as adjust:
-            actual = pipeline.predict(request())
-        self.assertIsNone(adjust.call_args.args[6])
-        self.assertEqual(actual.answers, [True, False, True])
 
     def test_trace_keeps_model_outputs_without_changing_predictions(self):
         pipeline = self.make_pipeline()

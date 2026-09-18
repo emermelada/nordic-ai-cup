@@ -41,15 +41,24 @@ Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all question
 deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
 opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a primary
 "no" is never promoted. Missing, invalid or duplicate secondary answers inherit the
-primary decision rather than a retrieval veto. **Live build `543cf3e` keeps only
-primary-model evidence** (`primary_evidence_response`), while preserving that answer
-policy. Request capture is active. Platform validation scored **0.743079**, up from
-**0.717908** with consensus, despite its lower local training score.
+primary decision rather than a retrieval veto. Evidence keeps only the primary model's
+passage (`primary_evidence_response`), while preserving that answer policy. Request
+capture is active. Build `543cf3e`, which stops there, scored **0.743079** on platform
+validation, up from **0.717908** with consensus, despite its lower local training score.
 
-The **local working tree now includes a learned boundary selector**, verified but not
-deployed. It preserves those answers and adjusts evidence near the primary passage.
-See [learned-boundary integration](#learned-boundary-integration-2026-09-18-not-deployed)
-for the matched tests and the remaining deployment check.
+**The live build is `543cf3e`'s code**, restored on 2026-09-18 at 17:05 CEST. The
+learned boundary selector was deployed at 16:46 and rolled back at 17:05 without ever
+being validated on the platform; the served pipeline is again the highest-scoring
+build measured on unseen data. Serving code was reverted by commit; `dc734d8` keeps
+the selector, its tests and its 66 kB weight file recoverable in history.
+See [learned-boundary integration](#learned-boundary-integration-2026-09-18) for its
+matched tests and [deploy behind the tunnel](#deploy-behind-the-tunnel) for both records.
+
+Local training score is not a reliable guide here. Every build that beat `543cf3e`
+locally has matched or lost to it on the platform: consensus scored 0.783777 locally
+and 0.717908 on validation. The boundary selector's +0.011 is out of fold but still on
+conversations the ranker was fit on, so **it remains an untested upgrade path, not a
+disproven one** — it needs a validation attempt, not a better local number.
 
 Current public prediction URL (replaced on 2026-09-18):
 `https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
@@ -95,6 +104,7 @@ Running processes keep their loaded code until restarted.
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
 | Same consensus + explicit secondary-no veto | 0.783777 | 0.717908 |
 | **Primary-only evidence + same veto (live)** | 0.753538 | **0.743079** |
+| Same + learned boundary selector (deployed 16:46, rolled back 17:05) | 0.762963 out of fold | not yet validated |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -367,7 +377,7 @@ passage-selection improvements. Artifacts, fold models and the all-data model:
 Scikit-learn and its helper dependencies were installed only under that experiment's
 `dependencies/` directory; the serving environment, API and tunnel were not changed.
 
-### Learned-boundary integration (2026-09-18; not deployed)
+### Learned-boundary integration (2026-09-18)
 
 `pipeline/boundary.py` now applies the frozen ranker after the existing secondary-no veto.
 Its 150 shallow trees are exported as a **66 kB JSON artifact**, without scikit-learn,
@@ -405,10 +415,11 @@ were added, then the complete verification was rerun without changing either sco
 
 Artifacts: `runs/boundary-integration-20260918/` — `model-parity-final.json`,
 `cached-api-final/`, `fresh/`, `fresh-api-final/`, `tests-final.log`, `oracle-final.log`.
-The live API/worker remain **98962/98964**, with source **543cf3e** and validated score
-**0.743079**; public health and tunnel readiness passed without a restart. This local
-candidate is ready for separately authorized deployment testing. A genuine fresh-audio
-candidate HTTP rehearsal is still required before recommending a platform submission.
+When these results were recorded the live API/worker were still **98962/98964**, with
+source **543cf3e** and validated score **0.743079**. This build has since been deployed;
+see [deploy behind the tunnel](#deploy-behind-the-tunnel). A genuine fresh-audio
+candidate HTTP rehearsal over all 39 conversations is still required before
+recommending a platform submission.
 
 ### Rehearsal of the serving path (2026-09-18, consensus build)
 
@@ -447,6 +458,21 @@ The old process was stopped gracefully and replaced at 14:10 CEST. New tunnel PI
 **99355**, log `runs/cloudflared-20260918-141056.log`, metrics still on 127.0.0.1:20241.
 The unrelated tunnel to port 9053 was not touched.
 
+Build **`dc734d8` was deployed at 16:46 CEST on 2026-09-18** by restarting Uvicorn under
+the existing supervisor, adding the learned boundary selector to the served path. API PID
+**4092**, inference worker **4094**; server log: `runs/serve-9054/server-20260918-164600.log`.
+The tunnel was not restarted, so the public URL is unchanged; it had reconnected on its own
+at 14:40 UTC after a transient `network is unreachable`, and readiness reported one
+connection.
+
+A public HTTPS smoke request for `sample_33` returned HTTP 200, **10/10 correct in 21.09
+seconds**, without fallback. Its capture confirms the verified source hashes for all six
+tracked files, `evidence_policy = primary-with-secondary-veto-and-learned-boundaries`,
+and `boundary.status = completed` in **27.9 ms**. The selector changed **no span** on this
+conversation, so its score equals the matched primary counterfactual (0.723140); one
+conversation neither confirms nor contradicts the out-of-fold gain. Record:
+`runs/deploy-dc734d8-20260918/smoke/`, with the check script alongside it.
+
 **Use the new URL:** `https://clusters-jan-chorus-royal.trycloudflare.com/predict`.
 Public health and a fresh HTTPS audio request both returned HTTP 200; the public
 smoke test scored **10/10 in 26.91 seconds**, without fallback, and produced a
@@ -464,6 +490,38 @@ only Uvicorn. The supervisor starts its replacement; do not launch a second serv
 kill -INT $(lsof -tiTCP:9054 -sTCP:LISTEN)
 curl -s http://127.0.0.1:20241/quicktunnel   # public hostname; submit https://<host>/predict
 ```
+
+### Rollback to the validated build (2026-09-18)
+
+`dc734d8` was reverted at 17:05 CEST on 2026-09-18, restoring `543cf3e`'s serving code
+after less than 20 minutes live. It had no platform validation of its own, and the
+deadline allows one final attempt, so the served pipeline was returned to the best score
+measured on unseen data. The revert is a commit, not a history rewrite: the selector,
+its 117 tests and `boundary_model.json` remain in `dc734d8`.
+
+Only code was reverted. This log keeps the learned-boundary results, because the
+experiment is still a live candidate.
+
+Uvicorn was restarted under the existing supervisor; the tunnel was untouched, so the
+public URL is unchanged. API PID **5371**, inference worker **5373**; server log:
+`runs/serve-9054/server-20260918-170516.log`. The previous API PID was 4092. Nothing
+was in flight at shutdown.
+
+Verification via `runs/rollback-543cf3e-20260918/check.py`, a fresh public HTTPS
+`sample_33` request:
+
+- `git diff 543cf3e -- . ':!*.md'` is **empty**: every served file is byte-identical
+  to the validated build.
+- The capture's `evidence_policy` is back to `primary-with-secondary-veto`, the
+  `boundary` trace key is **absent** rather than merely inactive, and the fingerprinted
+  source list no longer contains `boundary.py` or `boundary_model.json`.
+- HTTP 200, **10/10 correct in 18.86 seconds**, no fallback.
+- The answers **and all six spans exactly reproduce** the 14:13 CEST public smoke test
+  of `543cf3e` (`runs/deploy-543cf3e-20260918/public-smoke-test.json`), which is the
+  strongest available evidence that the validated build is serving again.
+
+Record: `runs/rollback-543cf3e-20260918/public-smoke-test.json`. One training
+conversation; a smoke test, not platform validation.
 
 ## Serve and score
 
