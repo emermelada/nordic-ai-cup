@@ -1,7 +1,6 @@
 [
- {"tag": "B0 deployed target12", "params": {}},
- {"tag": "T6 small-pop target6", "params": {"repro_global_target": 6, "repro_popcap": 4}},
- {"tag": "T8 small-pop target8", "params": {"repro_global_target": 8, "repro_popcap": 5}},
- {"tag": "T10 small-pop target10", "params": {"repro_global_target": 10, "repro_popcap": 5}},
- {"tag": "T16 large-pop target16", "params": {"repro_global_target": 16, "repro_popcap": 8}}
+ {"tag": "P0 target12 popcap6 (baseline)", "params": {}},
+ {"tag": "P1 target16 popcap8", "params": {"repro_global_target": 16, "repro_popcap": 8}},
+ {"tag": "P2 target20 popcap10", "params": {"repro_global_target": 20, "repro_popcap": 10}},
+ {"tag": "P3 target26 popcap13", "params": {"repro_global_target": 26, "repro_popcap": 13}}
 ]

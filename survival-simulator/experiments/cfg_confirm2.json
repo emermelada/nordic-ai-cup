@@ -1,0 +1,4 @@
+[
+ {"tag": "C1 tree0.0 (EVAL confirm)", "params": {"tree_weight": 0.0}},
+ {"tag": "C2 tree0.0 blind0.5 (EVAL explore)", "params": {"tree_weight": 0.0, "blind_explore_frac": 0.5}}
+]

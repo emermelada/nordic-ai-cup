@@ -1,0 +1,4 @@
+[
+ {"tag": "E0 baseline target12 (EVAL)", "params": {}},
+ {"tag": "E1 target26 popcap13 (EVAL confirm)", "params": {"repro_global_target": 26, "repro_popcap": 13}}
+]
