@@ -44,7 +44,8 @@ opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a prima
 primary decision rather than a retrieval veto. Where both models answer yes and cite
 different passages, retrieval picks between them (`consensus_response`). Equal
 retrieval-overlap scores prefer the earlier model span, including when retrieval has
-no evidence. Answer-veto build `d0a5391` is live; platform validation is pending.
+no evidence. Answer-veto build `d0a5391` is live; platform validation scored 0.717908,
+unchanged from the preceding two-model build and below the best validated single-9B build.
 Two answering models
 disagree about which mention to cite more often than either is outright wrong, and that
 disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
@@ -80,7 +81,7 @@ Running processes keep their loaded code until restarted.
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
-| Same consensus + explicit secondary-no veto (live) | 0.783777 | not yet validated |
+| Same consensus + explicit secondary-no veto (live) | 0.783777 | 0.717908 |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -90,6 +91,17 @@ validated single-9B build, despite its higher local score. It does not isolate t
 earlier-occurrence tie-break from the rest of the two-model build. Platform
 accuracy/tIoU components were not supplied. Raw result and attribution:
 `runs/platform-validation-c1dcda85/`.
+
+Attempt `12faf62fab674ff4a4c5ba636810ce46` completed at 08:44 CEST on 2026-09-18
+against answer-veto pipeline `d0a5391`: **0.7179075995361159**, exactly equal to the
+preceding attempt, with no platform errors. The new API/worker processes served
+all 19 conversations without logged fallbacks; mean/worst server time was
+**18.68/23.85 seconds**. Every conversation's yes count matches the preceding run
+(**91/190** overall). This is consistent with the veto having no effect on validation,
+but full predictions and veto counters were not logged, so identical outputs are
+not established. The three corrected training answers produced no validation-score
+gain. Raw result and per-request attribution: `runs/platform-validation-12faf62f/`.
+The best documented platform result remains the single-9B build's **0.743**.
 
 Span consensus across models is the one lever that moved the training score materially:
 three-model consensus reached 0.774, two models plus the retrieval referee 0.770-0.775,
