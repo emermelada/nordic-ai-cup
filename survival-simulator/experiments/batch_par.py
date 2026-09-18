@@ -12,16 +12,22 @@ import numpy as np
 from multiprocessing import Pool
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PARAMS = os.path.join(HERE, "best_controller", "params.json")
+ROOT = os.path.dirname(HERE)
+# NOTE: this used to be os.path.join(HERE, "best_controller", "params.json"), which does not exist
+# (experiments/ has no best_controller subdir). The bare `except: pass` then silently fell back to
+# DEFAULT_PARAMS, so every sweep read as "arm vs DEFAULT" while being reported as "arm vs deployed".
+# That is the same baseline trap that already corrupted the phase-test and the first wB sweep.
+# The path now points at the real deployed controller and a missing file is a hard error, never a
+# silent fallback.
+PARAMS = os.path.join(ROOT, "best_controller", "params.json")
 
 
 def deployed():
     from best_controller import DEFAULT_PARAMS
+    if not os.path.exists(PARAMS):
+        raise FileNotFoundError(f"deployed params missing: {PARAMS} - refusing to fall back to DEFAULT_PARAMS")
     P = dict(DEFAULT_PARAMS)
-    try:
-        P.update(json.load(open(PARAMS)))
-    except Exception:
-        pass
+    P.update(json.load(open(PARAMS)))
     return P
 
 
