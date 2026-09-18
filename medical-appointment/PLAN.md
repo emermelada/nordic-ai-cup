@@ -93,16 +93,23 @@ llama.cpp):
 
 1. Rent the instance:
    - on-demand, not interruptible
-   - plain CUDA ≥ 12.8 image with Python
+   - the **vLLM** template (CUDA 13, `vastai/vllm`), with these environment
+     variables:
+     - `VLLM_MODEL=nvidia/Qwen3.6-35B-A3B-NVFP4`
+     - `VLLM_ARGS=--max-model-len 16384 --max-num-seqs 16 --gpu-memory-utilization 0.90`
+
+     The template serves that model on `:8000` by itself. `gpu_setup.sh` finds
+     it and waits for it rather than starting a second server.
    - disk ≥ 100 GB
    - expose port 9054
 2. Get the code:
    `git clone https://github.com/emermelada/nordic-ai-cup && cd nordic-ai-cup && git checkout medical-appointment-exact-evidence && cd medical-appointment`
 3. Run `bash gpu_setup.sh`. It:
-   - installs two venvs
+   - installs the endpoint's venv
    - fetches the training data
    - runs the timestamp gate (expect 390/390)
-   - starts vLLM with `nvidia/Qwen3.6-35B-A3B-NVFP4`
+   - waits for the template's vLLM, or installs and starts its own on a plain
+     CUDA image
    - scores offline, writing to `data/logs/offline_score.txt`
 4. Read the offline score and the threshold sweep. If the best τ differs from
    0.22, set `YES_THRESHOLD`. Offline runs cost no attempts, so iterate here.
