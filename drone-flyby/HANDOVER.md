@@ -167,3 +167,91 @@ drop them in `drone-flyby/models/`, and point the service at them with
 * Serve from the machine with the best link, keep it awake and idle, and agree
   who is live — one URL per team.
 * Verify, then one validation run on that exact setup, then the evaluation.
+
+---
+
+## 2026-09-18: where the points actually go
+
+Measured today against the recorded runs and the labelled Helsinki scene.
+
+**The detector has memorised Helsinki.** v4 over the 25 labelled Helsinki
+frames, matched to real ground truth: median IoU **0.93**, 1 % of boxes below
+the 0.5 threshold, **100 %** correct class. On validation the same model reaches
+**31 %** per-frame recall on confirmed objects. Box regression and
+classification are not broken; the backgrounds are the gap.
+
+**Coverage is not the problem, the detector is.** Splitting the misses on the
+best v4 run by whether the camera was even looking:
+
+| | hit | miss | recall | share of object-frames |
+|---|---|---|---|---|
+| object inside the requested view | 103 | 181 | **36 %** | 31 % |
+| object outside it (memory only) | 183 | 460 | 28 % | 69 % |
+
+Even looking straight at a confirmed object we detect it 36 % of the time.
+Track memory is doing better than it gets credit for.
+
+**Per-class, the volume is in the classes that fail.** `tank` is in 225 of 249
+frames --- the most common object in the flight --- at 0.10 hit rate and 0.034
+offline AP. `mine_roller` and `small_launcher` are at 0.00. Meanwhile our two
+most-emitted classes, `medium_launcher` (436 answers) and `large_tower` (398),
+correspond to 0 and 1 real objects: high-confidence hallucinations that outrank
+real detections, and mAP is ranking-sensitive.
+
+**The unused answer budget turns out not to be worth anything.** We answer 13
+boxes per frame against COCO's cap of 100, and detections ranked below the good
+ones can only add recall --- but measured offline, it buys nothing:
+
+| setting | offline mAP | boxes/frame |
+|---|---|---|
+| defaults | 0.226 | 13.1 |
+| `RUNNER_UPS=8` / `=15` | 0.226 | 13.1 |
+| `FLOOR_ALL_CLASSES=0.02` | 0.225 | 83.6 |
+| `MAX_TRACKS=200` | 0.226 | 13.1 |
+
+`RUNNER_UPS` is already saturated: a track rarely accumulates votes for more
+than the four classes we already emit, so raising the limit adds nothing.
+Filling to 84 boxes a frame with an all-class floor moves nothing either, which
+matches the real run (0.134 against 0.143). The reason is the important part:
+**our misses are objects with no track at all, not tracks wearing the wrong
+class label.** No answer-policy setting can invent a detection. The detector is
+the only lever left.
+
+### What is new in the repo
+
+* `tools/build_scene.py` --- the validation flight is deterministic (verified:
+  1181 repeated views across runs are byte-identical), so the recorded views
+  mosaic into complete 4K frames. All 249 frames rebuild at 98.8 % mean
+  coverage, 93.7 % at Level 1 or better. Output in `data/scene/`.
+* `tools/score_offline.py` --- scores a recorded run, or replays a config
+  through `flyby.predict`, against the confirmed objects with the official COCO
+  scorer. Calibration: 0.226 where the real run scored 0.1445, so it reads high
+  (the confirmed objects were mostly found by our own models) --- use it to
+  compare configurations and to read the per-class column, not as the score.
+  Replaying the defaults reproduces the recorded answers exactly, so the harness
+  is faithful. **Do not use it to tune box geometry**: the confirmed boxes came
+  from our own detections, so it is self-referential there --- it scores
+  `BOX_SCALE=0.8` at 0.198 against 0.226, where the real run collapsed from
+  0.143 to 0.017.
+* `training/make_real_backgrounds.py` --- backgrounds cut from the flight
+  itself, with known objects and confident detections covered by clean terrain
+  copied from the same frame. The detection floor is deliberately high (0.5):
+  our models fire constantly on bushes, sheds and boats, and those are the hard
+  negatives this set exists to teach. Frames with a never-recorded gap are
+  skipped --- a gap cannot be covered from the same frame and would leave a
+  black rectangle for the model to learn as a feature. 88 clean 4K backgrounds
+  in `data/backgrounds_real/`; 44 of them as JPEG in
+  `training/backgrounds_real/` (91 MB), which is what `train_remote.sh` reads.
+* `make_dataset.py --real-backgrounds ... --real-share` and `train_remote.sh`
+  wired to use them. Helsinki paste scale back to 0.85-1.15 (v5's 0.55-1.15 came
+  from a rotation-biased measurement and v5 lost to v4).
+* `tools/review_scene.py` --- sheets, zooms and `--add` for labelling by eye.
+
+### Labelling by eye: low yield, high false-alarm risk
+
+Sampling every 20th rebuilt frame covers every object (they cross in ~33
+frames). Five sheets in, the only candidate found turned out to be farm
+machinery in the orthophoto, not a rendered asset. The flight crosses a dense
+industrial area full of cars, containers and rooftop structures that mimic the
+target classes. Do not add speculative labels --- a wrong one poisons both the
+training set and the offline scorer.

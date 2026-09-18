@@ -6,6 +6,7 @@
 #   bash training/train_remote.sh                    # yolo11m, 40 epochs
 #   MODEL=yolo11l.pt EPOCHS=50 bash training/train_remote.sh
 #   WITH_INRIA=0 bash training/train_remote.sh       # skip the 22 GB city photos
+#   REAL_SHARE=0.8 bash training/train_remote.sh     # lean harder on real terrain
 #
 # Run it from a clone of this repo. It installs what it needs, fetches the
 # background photos and the official Helsinki frames, builds the synthetic
@@ -22,13 +23,23 @@ SCENES=${SCENES:-1600}              # 6 views each: 1600 -> 9600 images
 BATCH=${BATCH:-16}                  # 32 GB VRAM at 960 px fits 32-48 for m
 IMGSZ=${IMGSZ:-960}
 WORK=${WORK:-/workspace}
-NAME=${NAME:-drone-$(basename "$MODEL" .pt)-v5}
+NAME=${NAME:-drone-$(basename "$MODEL" .pt)-v6}
+# Backgrounds cut from the recorded validation flight (training/make_real_backgrounds.py).
+# Measured on 2026-09-18: v4 scores median IoU 0.93 and 100% correct class on
+# Helsinki but 31% per-frame recall on validation, so the background domain is
+# the gap. These are the only backgrounds we have from the real thing.
+REAL_BACKGROUNDS=${REAL_BACKGROUNDS:-training/backgrounds_real}
+REAL_SHARE=${REAL_SHARE:-0.6}
 # Background variety was the single biggest gain (v1 -> v2), so both photo sets
 # are used by default; Inria is a 22 GB download.
 WITH_INRIA=${WITH_INRIA:-1}
 # Weak classes pasted more often; v4 used up to 2.5x and lost tank/jammer/
-# spacecraft, so keep it gentle.
-WEIGHTS=${WEIGHTS:-small_plane=1.5,large_tower=1.5,medium_plane=1.5,medium_launcher=1.5,jammer=1.3,large_launcher=1.3,small_launcher=1.3,ta-ta=1.3,condor=1.3}
+# spacecraft, so keep it gentle. Set from measured per-class AP on the recorded
+# flight (tools/score_offline.py): mine_roller and small_launcher score 0.000,
+# large_tower 0.001, spacecraft 0.006, tank 0.034 despite being the most common
+# object in the flight, jammer 0.050. The four classes never confirmed in
+# validation are kept up as well, since the evaluation flight is a different one.
+WEIGHTS=${WEIGHTS:-tank=1.4,mine_roller=1.5,small_launcher=1.5,large_tower=1.5,spacecraft=1.4,jammer=1.3,small_plane=1.3,medium_plane=1.3,medium_launcher=1.3,ta-ta=1.3,condor=1.3}
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$WORK"
@@ -83,9 +94,17 @@ echo "== dataset"
 cd "$FLYBY"
 export OPENCV_LOG_LEVEL=ERROR
 python training/extract_patches.py
+REAL_ARGS=()
+if [ -d "$REAL_BACKGROUNDS" ]; then
+    echo "== real backgrounds: $(ls "$REAL_BACKGROUNDS" | wc -l) frames of the flight itself"
+    REAL_ARGS=(--real-backgrounds "$REAL_BACKGROUNDS" --real-share "$REAL_SHARE")
+else
+    echo "!! $REAL_BACKGROUNDS missing - training on stock photos only, which is what v1-v5 did" >&2
+fi
 python training/make_dataset.py \
     --scenes "$SCENES" --out "$WORK/yolo" \
     --backgrounds "$WORK/backgrounds" \
+    "${REAL_ARGS[@]}" \
     --extra-patches training/patches_val \
     --helsinki-share 0.1 \
     --class-weights "$WEIGHTS"
