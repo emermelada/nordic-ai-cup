@@ -16,7 +16,13 @@ not: record your own with `DRONE_RECORD_DIR` (see below).
 | v6 | not run | real flight backgrounds; offline a wash alone, see 18 Sep evening |
 | v4+v6 alternating | 0.2365 | the two fail on opposite classes; +0.09 on v4 |
 | v4+v6, BOTH_MODELS=1 | 0.2450 | inside noise of 0.2365, as predicted; buys determinism |
-| **v4@960 + v6@1280 (served)** | **0.3048** | the resolution floor, confirmed on a real run: +0.06 |
+| **v4@960 + v6@1280 (served, BEST)** | **0.3048** | the resolution floor, confirmed on a real run: +0.06 |
+| v7@1280 alone | 0.2611* | trained at 1280; LOSES to v6@1280, see 18 Sep night |
+| v4@960 + v7@1280 | 0.2405* | v7 does not help in a pair either |
+| v4@960 + v6@1280, camera hybrid | 0.1234* | Level-2 acquisition camera: clearly worse |
+
+*Starred rows were served from a rented GPU box, which measures ~0.02 lower
+than the Mac on an identical config (control: 0.2845 against 0.3048).
 
 Best Danish team 0.36, best overall 0.46 (as of Thursday evening).
 
@@ -699,3 +705,76 @@ recorded run with `DRONE_RECORD=1`. The score of such a run is irrelevant.
 This matters more now than it did: we serve at 1280 and are about to train
 there, while most of the cut-outs teaching the model what an object looks like
 were cut from half-resolution views.
+
+---
+
+## 2026-09-18, night: four real runs, and the offline scorer is now anti-correlated
+
+Everything below is a REAL validation score. Where a config was served from the
+rented GPU box rather than the Mac it is marked; the box measures **~0.02 lower**
+on an identical config, established by a control run (0.2845 box against 0.3048
+Mac for v4@960+v6@1280). Compare within a machine only.
+
+| config (all `camera: full` unless noted) | real | machine |
+|---|---|---|
+| **v4@960 + v6@1280, BOTH_MODELS=1** | **0.3048** | Mac |
+| v4@960 + v6@1280, BOTH_MODELS=1 (control) | 0.2845 | box |
+| v7@1280 alone | 0.2611 | box |
+| v4@960 + v7@1280, BOTH_MODELS=1 | 0.2405 | box |
+| v4@960 + v6@1280, BOTH, **camera hybrid** | 0.1234 | box |
+
+### The offline scorer must not be used to choose models any more
+
+It ranked v7@1280 alone at **0.405** and v4+v6@1280 at **0.389**. Reality ranked
+them 0.2611 and 0.2845 — on the same machine, so the ordering is clean. This is
+the first time the tool has been wrong about *ordering* rather than magnitude,
+and it retires it for model selection.
+
+**Untested hypothesis for why, and it is the highest-value thing left.** The
+offline truth is 29 confirmed objects mined from our own earlier detections. A
+detection of a real-but-unconfirmed object scores as a false positive offline
+while being a true positive in reality, so the metric rewards conservative
+models. Consistent with the evidence: v7@1280 emits 2679 predictions where
+v4@960+v6@1280 emits 5774, and offline preferred the one emitting fewer.
+
+If that holds, **re-mining the ground truth with the best config restores fast
+offline iteration**, which is worth more than any single experiment — every
+decision currently costs a real run. Test it before fixing it (correlate
+boxes/frame against the offline-vs-real gap). Do not add speculative labels.
+
+### v7 (yolo11s trained at imgsz 1280) — trained, tested, does not help
+
+0.023 below v6@1280 on the same machine, which is about twice the noise floor.
+Weights are committed as `models/drone-yolo11s-v7.pt` so nobody spends another
+GPU hour rediscovering this. Training details: yolo11s, 40 epochs, imgsz 1280,
+9600 views, the 262-patch fitted harvest, `REAL_SHARE=0.6`. Synthetic validation
+was healthy (mAP50 0.567, precision 0.87 against recall 0.50) — it just does not
+transfer.
+
+Best guess at the cause, and it points at the fix: **v7 was trained at 1280 on
+cut-outs that are mostly Level-1, i.e. 2x downsampled — only 36 of 262 patches
+are native resolution.** It learned what blurry objects look like enlarged. v6,
+trained at 960 and *run* at 1280, gets the resolution boost without that
+mismatch. A v8 needs native patches first, which needs a bottom-half survey
+pattern and one recorded run, not more GPU time.
+
+### The hybrid camera is dead
+
+`DRONE_CAMERA=hybrid` scored **0.1234** against a 0.2845 control — 0.161 below,
+far outside any machine effect. Level 2 does lift the tiny classes in isolation
+(mine_roller 0.000 -> 0.180, small_launcher 0.000 -> 0.052 on the recorded survey
+run) but nowhere near enough to pay for the coverage it surrenders. The camera
+question is closed: `full` wins. Drop it rather than tune the split.
+
+### Serving from a rented GPU box: works, and is not worth it
+
+v7 on a 5090 answered in **28 ms median, 249/249 frames, zero gaps** — compute is
+irrelevant to this problem. But the box scores ~0.02 lower than the Mac and costs
+$0.73/h, and the Mac already uses only ~7% of the frame budget. Serve from the
+Mac.
+
+Two operational traps found the hard way: `pkill -f <pattern>` over ssh matches
+the ssh session's own command line and kills the shell mid-command (use
+`pkill -x`); and a service that fails to bind because the old one still holds the
+port leaves the OLD config serving while every log line looks healthy — always
+re-read `/api` after a restart.
