@@ -47,17 +47,28 @@ from utils import (  # noqa: E402
 
 VIEW_SIZE = (960, 540)
 # How many views to cut from each synthetic scene, per resolution level.
-VIEWS_PER_LEVEL = {0: 1, 1: 2, 2: 3}
+# The camera served Level 1 for 244 of 247 views in the recorded flight, so that
+# is the resolution the detector has to be good at; the old 1/2/3 split spent
+# half its views on Level 2, which we barely request. Level 0 and Level 2 stay in
+# at one view each: DRONE_INSPECT is off today but is one experiment from being
+# on, and Level 0 is what the camera falls back to when it loses the target.
+# Six views per scene either way, so dataset size and GPU cost do not move.
+VIEWS_PER_LEVEL = {0: 1, 1: 4, 2: 1}
 PASTES_PER_SCENE = (8, 30)
 UNTOUCHED_SCENE_SHARE = 0.15   # scenes left exactly as supplied
 SCALE_RANGE = (0.85, 1.15)     # cut-outs taken from the validation flight
-# Helsinki cut-outs. PLATEAU_IDEAS.md measured validation objects at 0.55-0.85x
-# their Helsinki box diagonal and v5 pasted them that small, but v5 then scored
-# 0.140 against v4's 0.143 and reported 1.2-1.5x oversized boxes. The measurement
-# was made with a rotation-biased box-ratio method, and the real check points the
-# other way: BOX_SCALE=0.8 at inference collapsed a validation run from 0.143 to
-# 0.017, so the true boxes are not small. Back to the range v4 trained on.
-HELSINKI_SCALE_RANGE = (0.85, 1.15)
+# Helsinki cut-outs, which are photographed much closer than the flight objects.
+# Every confirmed validation object measured against its Helsinki counterpart
+# (box diagonal, source pixels) came out smaller: hangar 0.98, jammer 0.89,
+# small_plane 0.83, tank 0.75, large_tower 0.73, mine_roller 0.73, helicopter
+# 0.67, small_tower 0.64, spacecraft 0.58, jet_plane 0.56, small_launcher 0.49,
+# large_launcher 0.45 - median 0.70, and only hangar inside (0.85, 1.15). Pasting
+# at the old range put every Helsinki object 1.2-1.6x too large. That matters
+# more now than it did for v5: on the real backgrounds the terrain scale is
+# exact, so paste size alone decides how big an object looks.
+# Not to be confused with BOX_SCALE, which shrinks the box we *report* at
+# inference - that one collapsed a run from 0.143 to 0.017 and stays at 1.0.
+HELSINKI_SCALE_RANGE = (0.45, 1.00)
 # Hue rotation in degrees: whole backgrounds, and pasted objects (whose colour
 # is mostly their own, so less).
 BACKGROUND_HUE = 20

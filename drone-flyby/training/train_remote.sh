@@ -34,12 +34,22 @@ REAL_SHARE=${REAL_SHARE:-0.6}
 # are used by default; Inria is a 22 GB download.
 WITH_INRIA=${WITH_INRIA:-1}
 # Weak classes pasted more often; v4 used up to 2.5x and lost tank/jammer/
-# spacecraft, so keep it gentle. Set from measured per-class AP on the recorded
-# flight (tools/score_offline.py): mine_roller and small_launcher score 0.000,
-# large_tower 0.001, spacecraft 0.006, tank 0.034 despite being the most common
-# object in the flight, jammer 0.050. The four classes never confirmed in
-# validation are kept up as well, since the evaluation flight is a different one.
-WEIGHTS=${WEIGHTS:-tank=1.4,mine_roller=1.5,small_launcher=1.5,large_tower=1.5,spacecraft=1.4,jammer=1.3,small_plane=1.3,medium_plane=1.3,medium_launcher=1.3,ta-ta=1.3,condor=1.3}
+# spacecraft, so nothing here goes above 2.0. Set from per-class AP on the
+# recorded flight (tools/score_offline.py), re-measured 18 Sep after fixing the
+# ground truth, which had been carried with the tracker's own motion:
+#   tank 0.021 and 167 of its 219 object-frames missed outright - the most
+#   common object in the flight and our single biggest loss;
+#   spacecraft 0.007 (52 of 64 missed), mine_roller 0.000, large_tower 0.001.
+#   small_launcher 0.000 but it measures 18px in the flight, ~9px at Level 1,
+#   at or below YOLO's finest stride - likely a resolution floor, so it gets a
+#   small bump rather than a big one.
+#   jammer 0.228 and helicopter 0.295 are NOT dead - weights back to 1.0.
+#   small_plane 0.071 is a box problem, not a firing problem (39 bad boxes
+#   against 31 hits), so pasting it more often will not help; the mask and
+#   paste-scale fixes are what it needs.
+# The four classes never confirmed in validation stay up, since the evaluation
+# flight is a different one and may contain them.
+WEIGHTS=${WEIGHTS:-tank=2.0,spacecraft=1.8,mine_roller=1.6,large_tower=1.6,small_launcher=1.3,condor=1.3,ta-ta=1.3,medium_plane=1.3,medium_launcher=1.3}
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$WORK"

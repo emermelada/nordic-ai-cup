@@ -14,7 +14,13 @@ recorded requests back through flyby.predict with cached detections, so tracker
 and answer-policy settings can be compared without touching the network.
 
 The ground truth is training/validation_objects.json carried to every frame by
-the ground-motion model. It is NOT the real ground truth: it holds only the
+a ground motion fitted on the flight's own objects --- NOT flyby.MOTION, which
+was fitted on Helsinki and runs ~2 px/frame short here. Carrying the truth with
+the same motion the tracker uses makes both drift together and cancels the
+error, which is how a wrong motion stays invisible offline (found by Franek on
+branch franek-drone-flyby-motion-fit; the same trap was in this tool).
+
+It is still NOT the real ground truth: it holds only the
 objects we have confirmed, and those were mostly found by our own models, so the
 absolute number reads high (0.226 against a real 0.1445 for the same run when
 this was calibrated). Use it to compare configurations, and read the per-class
@@ -40,20 +46,66 @@ OBJECTS = ROOT / 'training' / 'validation_objects.json'
 REACH = 30      # frames a confirmed sighting is carried
 
 
-def known_boxes(objects, frame: int):
-    from harvest_validation_patches import move
+MOTION_MAX_GAP = 12     # frames between two sightings that still make a sample
+
+
+def fit_truth_motion(objects):
+    """Per-frame ground motion fitted on the confirmed objects themselves.
+
+    Every object in the scene is a static prop, so the drift between two
+    sightings of the same object is the ground motion. Fits dx and dy as
+    a + b*x + c*y over both corners of each pair, the same form as flyby.MOTION.
+    """
+    import flyby
+    points, deltas = [], []
+    for obj in objects:
+        seen = sorted(obj['observations'], key=lambda o: o['frame'])
+        for first, second in zip(seen, seen[1:]):
+            gap = second['frame'] - first['frame']
+            if not 1 <= gap <= MOTION_MAX_GAP:
+                continue
+            for i in (0, 2):
+                start = np.array([first['box'][i], first['box'][i + 1]], float)
+                end = np.array([second['box'][i], second['box'][i + 1]], float)
+                points.append(start)
+                deltas.append((end - start) / gap)
+    if len(points) < 12:
+        return flyby.MOTION, 0
+    points = np.array(points)
+    deltas = np.array(deltas)
+    design = np.column_stack([np.ones(len(points)), points[:, 0], points[:, 1]])
+    (a, b, c), *_ = np.linalg.lstsq(design, deltas[:, 0], rcond=None)
+    (d, e, f), *_ = np.linalg.lstsq(design, deltas[:, 1], rcond=None)
+    return (float(a), float(b), float(c), float(d), float(e), float(f)), len(points)
+
+
+def carry(box, steps: int, motion):
+    """Move a box that many frames of ground motion, forwards or backwards."""
+    a, b, c, d, e, f = motion
+    forward = np.array([[1 + b, c], [e, 1 + f]])
+    shift = np.array([a, d])
+    points = np.array([[box[0], box[1]], [box[2], box[3]]], float)
+    for _ in range(abs(steps)):
+        points = (points @ forward.T + shift if steps > 0
+                  else (points - shift) @ np.linalg.inv(forward).T)
+    return points.reshape(-1)
+
+
+def known_boxes(objects, frame: int, motion=None):
+    import flyby
+    motion = flyby.MOTION if motion is None else motion
     out = []
     for obj in objects:
         near = min(obj['observations'], key=lambda o: abs(o['frame'] - frame))
         if abs(near['frame'] - frame) > REACH:
             continue
-        box = np.clip(move(near['box'], frame - near['frame']), 0, [3840, 2160, 3840, 2160])
+        box = np.clip(carry(near['box'], frame - near['frame'], motion), 0, [3840, 2160, 3840, 2160])
         if box[2] - box[0] > 2 and box[3] - box[1] > 2:
             out.append((obj['class'], box))
     return out
 
 
-def score(predictions, frames, objects):
+def score(predictions, frames, objects, motion=None):
     """COCO mAP@0.50, macro over the classes present, as local_evaluator does."""
     from faster_coco_eval import COCO, COCOeval_faster
     from utils import OBJECT_CLASSES
@@ -61,7 +113,7 @@ def score(predictions, frames, objects):
     categories = {name: index for index, name in enumerate(OBJECT_CLASSES, start=1)}
     annotations, present, annotation_id = [], set(), 1
     for frame in frames:
-        for name, box in known_boxes(objects, frame):
+        for name, box in known_boxes(objects, frame, motion):
             present.add(name)
             annotations.append({
                 'id': annotation_id, 'image_id': frame, 'category_id': categories[name],
@@ -168,6 +220,10 @@ def main() -> int:
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting override (with --replay).')
     parser.add_argument('--from-frame', type=int, default=0, help='Only score frames from here on.')
     parser.add_argument('--frames', type=int, default=249)
+    parser.add_argument('--truth-motion', choices=['fitted', 'prior'], default='fitted',
+                        help="'fitted' carries the truth with a motion fitted on the "
+                             "confirmed objects; 'prior' uses flyby.MOTION, which drifts "
+                             'with the tracker and hides motion error.')
     args = parser.parse_args()
 
     if not (RECORDINGS / args.run).is_dir():
@@ -177,12 +233,20 @@ def main() -> int:
 
     predictions = from_replay(args.run, args.model, args.set) if args.replay else from_recording(args.run)
     total = sum(len(v) for v in predictions.values())
-    overall, by_class, instances = score(predictions, frames, objects)
+    import flyby
+    motion = flyby.MOTION if args.truth_motion == 'prior' else fit_truth_motion(objects)[0]
+    samples = fit_truth_motion(objects)[1] if args.truth_motion != 'prior' else 0
+    overall, by_class, instances = score(predictions, frames, objects, motion)
 
     label = f'replay {args.model.name}' if args.replay else f'recorded answers of {args.run[:12]}'
     print(f'{label}')
     print(f'{len(frames)} frames, {instances} confirmed object-frames, {total} predictions '
           f'({total / max(1, len(frames)):.1f} per frame, COCO caps at 100)')
+    centre = lambda m: m[3] + m[4] * 1920 + m[5] * 1080
+    print(f'truth carried at {centre(motion):.2f} px/frame at the frame centre '
+          f'({args.truth_motion}'
+          f'{f", {samples} samples" if samples else ""}; '
+          f'flyby prior {centre(flyby.MOTION):.2f})')
     if args.set:
         print('overrides: ' + ', '.join(args.set))
     print(f'\nmAP@0.50 (confirmed objects only) = {overall:.3f}\n')

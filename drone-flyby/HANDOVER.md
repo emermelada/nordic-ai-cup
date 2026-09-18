@@ -177,26 +177,55 @@ Measured today against the recorded runs and the labelled Helsinki scene.
 **The detector has memorised Helsinki.** v4 over the 25 labelled Helsinki
 frames, matched to real ground truth: median IoU **0.93**, 1 % of boxes below
 the 0.5 threshold, **100 %** correct class. On validation the same model reaches
-**31 %** per-frame recall on confirmed objects. Box regression and
+**36 %** per-frame recall on confirmed objects. Box regression and
 classification are not broken; the backgrounds are the gap.
+
+*(Every validation figure in this section was re-measured on 18 Sep after
+adopting Franek's fix from `franek-drone-flyby-motion-fit`: the ground truth had
+been carried with `flyby.MOTION`, the same motion the tracker uses, so both
+drifted together and the error cancelled. Fitted on the flight's own objects the
+ground moves 68.84 px/frame at the frame centre against the Helsinki prior's
+66.21 — about 2.6 px/frame, which is 31 px after a 16-frame carry, more than
+enough to lose a 50 px object at IoU 0.5. The old numbers were pessimistic by
+5–11 points. The same trap was in `tools/score_offline.py`; it is fixed.)*
 
 **Coverage is not the problem, the detector is.** Splitting the misses on the
 best v4 run by whether the camera was even looking:
 
 | | hit | miss | recall | share of object-frames |
 |---|---|---|---|---|
-| object inside the requested view | 103 | 181 | **36 %** | 31 % |
-| object outside it (memory only) | 183 | 460 | 28 % | 69 % |
+| object inside the requested view | 130 | 145 | **47 %** | 30 % |
+| object outside it (memory only) | 200 | 432 | 32 % | 70 % |
 
-Even looking straight at a confirmed object we detect it 36 % of the time.
-Track memory is doing better than it gets credit for.
+Even looking straight at a confirmed object we detect it 47 % of the time.
 
-**Per-class, the volume is in the classes that fail.** `tank` is in 225 of 249
-frames --- the most common object in the flight --- at 0.10 hit rate and 0.034
-offline AP. `mine_roller` and `small_launcher` are at 0.00. Meanwhile our two
-most-emitted classes, `medium_launcher` (436 answers) and `large_tower` (398),
-correspond to 0 and 1 real objects: high-confidence hallucinations that outrank
-real detections, and mAP is ranking-sensitive.
+**Per-class, the volume is in the classes that fail.** Hit rate / bad boxes /
+offline AP on the best v4 run:
+
+| class | present | hit rate | bad box | missing | AP |
+|---|---|---|---|---|---|
+| tank | 219 | **0.11** | 27 | 167 | 0.021 |
+| helicopter | 100 | 0.50 | 31 | 19 | 0.295 |
+| small_plane | 99 | 0.31 | **39** | 29 | 0.071 |
+| jammer | 99 | 0.37 | 24 | 38 | 0.228 |
+| small_tower | 78 | 0.63 | 9 | 20 | 0.466 |
+| hangar | 70 | 0.87 | 0 | 9 | 0.871 |
+| jet_plane | 66 | 0.88 | 3 | 5 | 0.833 |
+| spacecraft | 64 | 0.11 | 4 | 52 | 0.007 |
+| mine_roller | 33 | 0.03 | 5 | 27 | 0.000 |
+| large_tower | 33 | 0.06 | 3 | 28 | 0.001 |
+| small_launcher | 33 | 0.00 | 3 | 30 | 0.000 |
+| large_launcher | 17 | 0.65 | 0 | 5 | 0.644 |
+
+`tank` is the most common object in the flight and we miss 167 of its 219
+object-frames outright. `spacecraft`, `mine_roller`, `large_tower` and
+`small_launcher` are dead. `small_plane` is different in kind: 39 bad boxes
+against 31 hits, so it is a box-quality problem, not a firing problem, and
+hard-background mining will not fix it.
+
+Meanwhile our two most-emitted classes, `medium_launcher` (436 answers) and
+`large_tower` (398), correspond to 0 and 1 real objects: high-confidence
+hallucinations that outrank real detections, and mAP is ranking-sensitive.
 
 **The unused answer budget turns out not to be worth anything.** We answer 13
 boxes per frame against COCO's cap of 100, and detections ranked below the good
@@ -225,7 +254,9 @@ the only lever left.
   coverage, 93.7 % at Level 1 or better. Output in `data/scene/`.
 * `tools/score_offline.py` --- scores a recorded run, or replays a config
   through `flyby.predict`, against the confirmed objects with the official COCO
-  scorer. Calibration: 0.226 where the real run scored 0.1445, so it reads high
+  scorer. It carries the ground truth with a motion fitted on the flight's own
+  objects (`--truth-motion prior` restores the old, drifting behaviour).
+  Calibration: 0.286 where the real run scored 0.1445, so it reads high
   (the confirmed objects were mostly found by our own models) --- use it to
   compare configurations and to read the per-class column, not as the score.
   Replaying the defaults reproduces the recorded answers exactly, so the harness
