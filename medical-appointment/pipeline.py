@@ -43,8 +43,11 @@ ANSWER_DEADLINE_SECONDS = float(os.environ.get('ANSWER_DEADLINE_SECONDS', '50'))
 
 # How a located quote becomes the span sent back: 'quote' as the model cut it,
 # 'sentences' widened to the whole sentences it touches, or 'trimmed' cut to
-# the first statement of the fact (evidence.trim_to_statement; measured best).
-EVIDENCE_POLICY = os.environ.get('EVIDENCE_POLICY', 'trimmed')
+# the first statement of the fact (evidence.trim_to_statement). 'quote' is what
+# scored 0.802 on validation (tag medical-v0.802); 'trimmed' measured +0.03
+# offline but came in at 0.777 on validation together with the first-statement
+# prompt, so it stays opt-in until a validation says otherwise.
+EVIDENCE_POLICY = os.environ.get('EVIDENCE_POLICY', 'quote')
 EVIDENCE_POLICIES = ('quote', 'sentences', 'trimmed')
 
 # The LLM by default, so a forgotten environment variable cannot ship the

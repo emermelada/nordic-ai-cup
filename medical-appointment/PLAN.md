@@ -109,6 +109,35 @@ llama.cpp):
 - **This box's timestamps drift slightly**: 217/390 boundaries exact, the rest
   ±1–2 ticks. The ceiling with perfect quotes is still tIoU 0.987 here.
 
+## Validation results and the frozen version
+
+| When (UTC) | Version | Offline | **Validation** |
+|---|---|---|---|
+| 09-18 21:13 | `medical-v0.802` (b4e4ceb): whole-sentence quotes, `EVIDENCE_POLICY=quote` | 0.778 | **0.802** |
+| 09-18 21:19 | + `LLM_QUOTE_RULE=first-statement` + `EVIDENCE_POLICY=trimmed` (283b7a4) | 0.805 | 0.777 |
+
+The live model for both was Qwen/Qwen3.5-9B on the vLLM template's defaults.
+
+**The 0.802 version is frozen**: tag `medical-v0.802` and branch
+`medical-appointment-0.802`. Never commit to that branch. The tag message
+lists the exact runtime settings. On the box it is served from its own
+checkout, `/workspace/medical-0.802`, so work in `/workspace/nordic-ai-cup`
+cannot change what is live:
+
+```
+cd /workspace/medical-0.802/medical-appointment && PORT=10100 bash gpu_setup.sh serve
+```
+
+**This branch keeps working on a copy.** Its defaults reproduce the frozen
+behavior exactly (same prompt, same examples, `quote` evidence). The changes
+since are opt-in switches, to be tried on a second endpoint and adopted only if
+a validation beats 0.802:
+- `LLM_QUOTE_RULE=first-statement`
+- `EVIDENCE_POLICY=trimmed`
+
+Offline and validation disagreed by about 0.025 in opposite directions, so a
+single offline gain of that size is not enough on its own.
+
 ## Rented 5090 runbook (vast.ai)
 
 1. Rent the instance:

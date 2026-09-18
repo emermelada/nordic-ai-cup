@@ -79,6 +79,22 @@ QUOTE: <the verbatim passage that establishes the answer, or none>
 CHECK: <one short sentence comparing the question with the transcript>
 ANSWER: <yes or no>
 
+{quote_rule}"""
+
+# How to cut the QUOTE. 'whole-sentences' is the rule that scored 0.802 on
+# validation (tag medical-v0.802). 'first-statement' also tells the model to
+# leave out the confirmations that follow a fact; it went with the 0.777
+# validation, so it is opt-in: LLM_QUOTE_RULE=first-statement.
+QUOTE_RULES = {
+    'whole-sentences': """\
+The QUOTE is copied character for character from the transcript, misspellings \
+included. Quote the whole sentence that states the fact, from its first word — \
+keep openers such as "So," or "Yes," — to its end. When the fact takes several \
+sentences — a question and its answer, a list and its confirmation, an \
+examination and its finding — quote all of them. Only when a single sentence \
+packs several separate facts, quote just the part about the fact asked: from \
+where that part starts to its last word.""",
+    'first-statement': """\
 The QUOTE is copied character for character from the transcript, misspellings \
 included. Quote where the fact is first stated: the whole sentence that states \
 it, from its first word — keep openers such as "So," or "Yes," — to its end. \
@@ -87,7 +103,10 @@ Leave out what follows it: confirmations, repetitions and summaries such as \
 not part of the quote. When the fact takes several sentences — a question and \
 its answer, a list and its confirmation — quote all of them. When a sentence \
 goes on to a different fact the question does not ask about, stop before that \
-part."""
+part.""",
+}
+QUOTE_RULE = os.environ.get('LLM_QUOTE_RULE', 'whole-sentences')
+SYSTEM_PROMPT = SYSTEM_PROMPT.replace('{quote_rule}', QUOTE_RULES[QUOTE_RULE])
 
 # (excerpt, question, reply). Verbatim base-model transcript lines, with the
 # line numbers they have in their own conversation, and the annotators' own
