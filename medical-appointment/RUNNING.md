@@ -222,6 +222,19 @@ frames through the actual `Pipeline.predict` match all **39/390** replay outputs
 `runs/answer-veto-20260918/`. The API and tunnel were not restarted. The live process
 still serves the earlier-tie build; `9222c1c` is the pre-veto fallback commit.
 
+### Rehearsal of the serving path (2026-09-18, consensus build)
+
+All 39 training conversations through the running server, one request at a time, as the
+evaluator calls it:
+
+- Score **0.779**: accuracy 0.985 (384/390), mean tIoU **0.642**.
+- **0 failed conversations, 0 timeouts, 0 fallback responses**; 2 yes answers without a span.
+- Round trip 19.3 s mean, **33.9 s worst** against the 60 s budget, so 57% used at worst.
+
+Fresh ASR scored above the cached-transcript replay (0.7696), so the replay estimate is
+if anything conservative. Rerun with
+`.venv311/bin/python local_evaluator.py --url http://127.0.0.1:9054/predict`.
+
 ### Deploy behind the tunnel
 
 The cloudflared quick tunnel forwards to 127.0.0.1:9054; restarting cloudflared
