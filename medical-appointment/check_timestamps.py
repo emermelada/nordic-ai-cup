@@ -25,6 +25,9 @@ right words, so a mismatch costs a little, not everything.
 
 import argparse
 import collections
+import hashlib
+import os
+import platform
 import sys
 import time
 
@@ -35,6 +38,48 @@ from utils import AUDIO_DIRECTORY, gold_evidence, group_questions_by_conversatio
 # Timestamps are sums of 20 ms steps; anything this close is the same float
 # arithmetic, anything further is a different word boundary.
 TOLERANCE_SECONDS = 1e-9
+
+# What the machine that reproduces the labels 390/390 (Windows, AMD Zen 5,
+# ctranslate2 picking AVX2 + DNNL, no MKL) computes for sample_4. When a box
+# misses, --fingerprint shows which layer differs: decoding, features or model.
+REFERENCE = {
+    'audio': 'e5d385d6663ce4ff',
+    'features': 'f572bf91ad736a1f',
+    'libavcodec': (62, 28, 102),
+    'Let': (28.520000000000003, 29.12),
+}
+
+
+def fingerprint() -> int:
+    """Print each layer's result for sample_4 next to the reference."""
+    import av
+    import ctranslate2
+    import faster_whisper
+    import numpy as np
+    from faster_whisper.audio import decode_audio
+    from faster_whisper.feature_extractor import FeatureExtractor
+
+    def show(name, value, reference):
+        print(f'  {name:<10} {"same" if value == reference else "DIFFERENT":<9} {value}  (reference {reference})')
+
+    path = str(AUDIO_DIRECTORY / 'conversation_sample_4.mp3')
+    audio = decode_audio(path, sampling_rate=16000)
+    features = FeatureExtractor()(audio)
+
+    print(f'faster-whisper {faster_whisper.__version__}, ctranslate2 {ctranslate2.__version__}, '
+          f'av {av.__version__}, numpy {np.__version__}, {platform.system()} {platform.machine()}')
+    show('libavcodec', tuple(av.library_versions.get('libavcodec', ())), REFERENCE['libavcodec'])
+    show('audio', hashlib.sha256(audio.tobytes()).hexdigest()[:16], REFERENCE['audio'])
+    show('features', hashlib.sha256(np.ascontiguousarray(features).tobytes()).hexdigest()[:16],
+         REFERENCE['features'])
+
+    # CT2_VERBOSE makes ctranslate2 log the ISA and GEMM backends it picked.
+    os.environ['CT2_VERBOSE'] = '1'
+    model = WhisperModel('base', device='cpu', compute_type='int8')
+    segments, _ = model.transcribe(path, language='en', word_timestamps=True)
+    lets = [(w.start, w.end) for s in segments for w in s.words if w.word.strip() == 'Let']
+    show('"Let"', lets[0] if lets else None, REFERENCE['Let'])
+    return 0
 
 
 def word_boundaries(model: WhisperModel, audio_filename: str):
@@ -57,7 +102,13 @@ def main() -> int:
                         help='CPU threads, 0 for the library default.')
     parser.add_argument('--limit', type=int, default=0,
                         help='Only check the first N conversations.')
+    parser.add_argument('--fingerprint', action='store_true',
+                        help='Compare decoding, features and model output on sample_4 '
+                             'with the machine that reproduces the labels.')
     args = parser.parse_args()
+
+    if args.fingerprint:
+        return fingerprint()
 
     model = WhisperModel(
         args.model,
