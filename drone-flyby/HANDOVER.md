@@ -1,4 +1,4 @@
-# Drone Flyby — where the work stands (2026-09-17, evening)
+# Drone Flyby — where the work stands (2026-09-18, evening)
 
 Everything needed to continue on another machine is in this repo, including the
 served weights (`models/`) and the cut-outs mined from the validation flight
@@ -12,7 +12,9 @@ not: record your own with `DRONE_RECORD_DIR` (see below).
 | v1 | 0.011–0.035 | objects pasted only on the 25 Helsinki frames |
 | v2 | 0.097 | pasted on ~400 real aerial photos (Inria, LandCover.ai) |
 | v3 | 0.132, 0.119 | + cut-outs of real validation objects, light/shadow variation |
-| **v4 (served)** | **0.1445, 0.1425** | + Poisson-blended pasting, more objects, weak classes weighted |
+| v4 | 0.1445, 0.1425 | + Poisson-blended pasting, more objects, weak classes weighted |
+| v6 | not run | real flight backgrounds; offline a wash alone, see 18 Sep evening |
+| **v4+v6 alternating (served)** | **not run yet** | the two fail on opposite classes; offline ~0.30–0.35 against ~0.277 |
 
 Best Danish team 0.36, best overall 0.46 (as of Thursday evening).
 
@@ -58,17 +60,43 @@ docker compose up -d --build drone-flyby      # weights mounted from ~/models
 cloudflared tunnel --url http://localhost:8002
 ```
 
-**macOS with the Apple GPU — do not use Docker**, it cannot reach Metal:
+**macOS with the Apple GPU — do not use Docker**, it cannot reach Metal.
+This is the served configuration as of 18 Sep evening: v4 and v6 alternating
+(see "v6 and the v4+v6 pair" below). Both weights are committed, so a pull is
+enough:
 
 ```bash
 cd drone-flyby
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-DRONE_MODEL=models/drone-yolo11n-v4.pt DRONE_DEVICE=mps .venv/bin/python api.py   # port 9053
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt \
+DRONE_DEVICE=mps .venv/bin/python api.py   # port 9053
 ```
 
-`DRONE_DEVICE=mps` has not been tested yet: check that it starts, then measure
-`python local_evaluator.py --realtime` (needs `src/helsinki/` from the official
-repo) and read "round trip ms" and "frames skipped".
+**Check it is really serving the pair before anything else:**
+
+```bash
+curl -s localhost:9053/api
+# "models_loaded": 2   <- the pair is alternating
+# "models_loaded": 1   <- one model on every frame, whatever you asked for
+```
+
+`models_loaded` is the number that matters; `model_loaded: true` is also true
+when only one of the two loaded. Asking for an alternate that is not there now
+refuses to start rather than quietly serving one model (see the bug below).
+
+`DRONE_DEVICE=mps` still has not been run. The code is device-clean (the input
+goes `.to(DEVICE)` and results come back through `.cpu()`), but the likely
+failure is `torchvision.ops.nms` not being implemented for MPS. If it raises,
+start it with `PYTORCH_ENABLE_MPS_FALLBACK=1` in the environment, which runs
+that one op on the CPU. Test this *before* the day, not on it.
+
+Then measure `python local_evaluator.py --realtime --url http://localhost:9053/predict`
+(needs `src/helsinki/`) and read "round trip ms" and "frames skipped" — not the
+Helsinki score, which the detector has memorised. The budget is 333 ms per
+frame. Measured on the Linux i5 box for reference: v4 alone 197 ms mean and
+7 of 25 frames skipped, the pair 359 ms mean and 12 of 25 skipped. The pair
+needs the M4; on that laptop it costs half the frames.
 
 The submitted URL is used verbatim, so it must end in `/predict`.
 
@@ -360,3 +388,82 @@ divided all predictions by the scored subset, so `--frames 40` reported 83.5
 boxes per frame instead of 13.4. Both fixed. The first is the same shape as the
 missing-model bug that cost us an attempt: a wrong answer that looks like a
 working one.
+
+---
+
+## 2026-09-18, evening: v6 and the v4+v6 pair
+
+v6 is `yolo11s`, 40 epochs, 9600 views, the first model trained on backgrounds
+cut from the real validation flight (`training/backgrounds_real/`), with the
+corrected Helsinki paste scale (0.45–1.00) and re-cut cut-out masks.
+
+**v6 on its own is a wash**, and was never served. Offline replay of the best
+v4 run (`tools/score_offline.py --replay`, same run, same truth motion):
+
+| class | v4 | v6 | **v4+v6 alternating** |
+|---|---|---|---|
+| jet_plane | 0.716 | 0.914 | **0.980** |
+| hangar | 0.743 | 0.509 | **0.871** |
+| large_tower | 0.001 | 0.504 | **0.557** |
+| small_tower | 0.516 | 0.385 | 0.489 |
+| large_launcher | 0.644 | 0.133 | 0.381 |
+| tank | 0.043 | 0.319 | 0.328 |
+| helicopter | 0.284 | 0.302 | 0.269 |
+| small_plane | 0.133 | 0.183 | 0.188 |
+| jammer | 0.239 | 0.002 | 0.045 |
+| mine_roller | 0.000 | 0.064 | 0.043 |
+| spacecraft | 0.007 | 0.000 | 0.002 |
+| small_launcher | 0.000 | 0.000 | 0.000 |
+| **total** | **0.277** | **0.276** | **0.346** |
+
+The v6 recipe did what it was aimed at — tank 0.043 → 0.319, large_tower
+0.001 → 0.504 — and paid for it on hangar, large_launcher and jammer. The
+totals are a coincidence: the per-class column is completely redistributed.
+
+**The two models fail on opposite classes, so alternating them wins**, the same
+mechanism already measured for v4+v5. Both parity orders beat either model
+alone, but the order matters more than it should: v4 on even frames scores
+0.346, v6 on even frames 0.303. A 0.043 swing from an arbitrary choice is four
+times the run-to-run noise floor, so read the pair as **~0.30–0.35, clearly
+above either alone at ~0.277**, and do not quote 0.346 as a measurement.
+
+This is not just "more boxes": the pair emits 20.8 per frame against v4's 13.4,
+but flooding to 83.6 with `FLOOR_ALL_CLASSES` was already measured to move
+nothing (0.225 against 0.226). The gain is the union of what each model finds.
+
+`spacecraft` and `small_launcher` are still dead. `small_launcher` is
+resolution-limited (~7 px in a Level-1 view), so no amount of data fixes it.
+v6's jammer collapse (0.239 → 0.002) is unexplained and worth a look: the final
+evaluation is a different flight, and we do not know which classes dominate it.
+The pair hedges that risk, which is a second reason to prefer it to either
+model alone.
+
+Offline comparison of an alternating pair is not in `score_offline.py`; it was
+measured with a scratch harness that selects between two cached detection sets
+on `frame % 2`, matching `flyby.raw_detections`'s `_models[which % len(_models)]`.
+
+### The bug: the served container was three weeks of work out of date
+
+The running container had been built on 17 Sep at 21:02 and never rebuilt.
+Its `/app/flyby.py` had **no `ALT_MODEL_PATH` at all**, so `DRONE_MODEL_ALT`
+was silently ignored — and it was also **missing Franek's online motion fit**,
+merged that same morning at 12:50. Any validation run started that day would
+have quietly scored pre-merge code, with no error anywhere: healthy container,
+200s, plausible answers.
+
+`docker compose up -d` does **not** rebuild. Use `up -d --build` after any pull
+or code change, and confirm what is actually running rather than what you asked
+for.
+
+Two guards were added, in the spirit of the existing "refuse to start without a
+model" check:
+
+* `/api` now reports `model_alt`, `device`, and **`models_loaded`** — 2 means
+  the pair is really alternating. `model_loaded: true` is true when only one of
+  the two loaded, so it cannot answer this question.
+* asking for a `DRONE_MODEL_ALT` that is not there now **refuses to start**
+  instead of logging an error and serving one model.
+
+Both are the same lesson as the `fake_detect` signature bug and the missing-model
+bug that cost an attempt: the dangerous failures here are the ones that look
+like success.

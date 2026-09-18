@@ -22,6 +22,9 @@ services:
     ports: ["8002:8000"]
     environment:
       DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v4.pt}
+      # Second weights taking alternate frames; both feed one object memory,
+      # so a run sees the union of what each can find. Unset = one model.
+      DRONE_MODEL_ALT: ${DRONE_MODEL_ALT_FILE:+/models/${DRONE_MODEL_ALT_FILE}}
       # Recording is a per-run decision: several GB of PNG written during a
       # scored attempt costs answered frames. DRONE_RECORD=1 turns it on.
       DRONE_RECORD_DIR: ${DRONE_RECORD:+/recordings}
