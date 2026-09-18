@@ -70,6 +70,21 @@ DEFAULT_PARAMS = {
     # "keep using explore_frac", so adding them cannot change any already-measured result.
     "tree_weight": 0.25,        # attraction to Tree observations (0.25 = the original hardcoded value)
     "blind_explore_frac": None, # move-distance fraction when NO fruit is visible (None = explore_frac)
+    # --- PHASE-AWARE boom/famine policy (phase_mode 0 = OFF, i.e. exactly the previous behaviour) ---
+    # Why this exists: fruit production decays 0.5^(t/300) at the POPULATION level -- a global property
+    # no local observation can see -- while income is ALSO biome-dependent (forest 0.08/s per 100x100,
+    # desert 0.05, river 0). So the schedule is TIME-primary with an adaptive food-availability guard.
+    # Reaching ~18k ticks needs agents that ARRIVE at the famine FULL: metabolism alone (0.1/tick)
+    # drains ~1,200 energy over 12,000 ticks, and max_energy caps the bank at 500 (mutated: up to 1000).
+    "phase_mode": 0.0,          # 0 = off; scales the whole phase effect (1 = fully active)
+    "famine_tick_lo": 4000.0,   # simulated tick at which the famine ramp STARTS
+    "famine_tick_hi": 7500.0,   # tick at which it is FULLY in effect
+    "famine_vis_guard": 0.0,    # >0: visible food DELAYS the famine (0 = pure time; try 0.4-0.7)
+    "famine_move_frac": 0.2,    # movement scale in full famine when food IS visible
+    "famine_blind_stop": 1.0,   # how completely to stop moving in famine when NO fruit is visible
+    "famine_pop_target": 3.0,   # max estimated population allowed to spawn during famine
+    "famine_bank_frac": 0.9,    # energy fraction required to spawn during famine (bank first)
+    "famine_min_cap": 0.0,      # >0: spawn only from agents whose max_energy >= this (lineage cap)
     # --- generational relay (age-aware: survive past max_age by banking heirs) ---
     "relay_age": 0.0,          # sim seconds; spawn an heir once older than this (0 = off)
     "relay_energy_frac": 0.35, # energy gate used by the relay spawn (fraction of max_energy)
@@ -87,6 +102,11 @@ DEFAULT_PARAMS = {
 # Persists across ticks inside one episode (fresh process), keyed by agent_id.
 _MEM = {}
 _EPOCH = 0
+# --- simulated-time reconstruction: `age` is in sim-seconds and every agent is called exactly once
+# per tick, so time can be recovered exactly through generations (the state carries NO clock). ---
+_SEEN = {}        # agent_id -> [birth_tick, calls_since_birth]
+_SIM_TICK = 0     # best estimate of the current simulated tick
+_BLIND_EMA = 0.0  # fleet-level EMA of the share of calls that saw NO fruit (adaptive guard)
 _GC = {}  # agent_id -> last-seen epoch (pruned via TTL -> cheap cooperative population estimate)
 _AGE = {}  # agent_id -> last age (monotonic within an episode; a drop => new episode => reset memory)
 
@@ -116,6 +136,10 @@ def reset_memory():
     _MEM.clear()
     _GC.clear()
     _AGE.clear()
+    _SEEN.clear()
+    global _SIM_TICK, _BLIND_EMA
+    _SIM_TICK = 0
+    _BLIND_EMA = 0.0
     _EPOCH = 0
 
 
@@ -165,6 +189,39 @@ def potential_controller(state, P):
     preds = [x for x in o if x.get("type") == "Predator"]
     agents = [x for x in o if x.get("type") == "Agent"]
     edges = [x for x in o if x.get("type") == "Edge"]
+
+    # ---- reconstruct SIMULATED TIME (the state carries no clock, no score, no episode index) ----
+    # A pre-existing agent's `age` IS elapsed sim time (sim-seconds; 1 tick = 0.1 s), and every agent
+    # is called exactly once per tick, so a newborn is simply born at the current estimate and each
+    # agent's call count advances time by 1. sim_tick = max(birth + calls) over all agents seen.
+    global _SIM_TICK, _BLIND_EMA
+    _age = float(state.get("age", 0.0) or 0.0)
+    _rec = _SEEN.get(aid)
+    if _rec is None:
+        _rec = [0, int(round(_age * 10.0))] if _age >= 0.5 else [_SIM_TICK, 0]
+        _SEEN[aid] = _rec
+    else:
+        _rec[1] += 1
+    if _rec[0] + _rec[1] > _SIM_TICK:
+        _SIM_TICK = _rec[0] + _rec[1]
+
+    # ---- PHASE (boom -> famine): TIME-primary, with an optional adaptive food-availability guard.
+    # The decay of fruit production is global (invisible to any single agent), but INCOME is also
+    # biome-dependent, so a guard term lets visible food delay the switch. ----
+    _BLIND_EMA = 0.99 * _BLIND_EMA + 0.01 * (0.0 if fruits else 1.0)
+    phase = 0.0
+    _pm = float(P.get("phase_mode", 0.0) or 0.0)
+    if _pm > 0.0:
+        _lo = float(P.get("famine_tick_lo", 4000.0) or 0.0)
+        _hi = float(P.get("famine_tick_hi", 7500.0) or 0.0)
+        if _hi <= _lo:
+            _hi = _lo + 1.0
+        _ph = (_SIM_TICK - _lo) / (_hi - _lo)
+        _ph = 0.0 if _ph < 0.0 else (1.0 if _ph > 1.0 else _ph)
+        _guard = float(P.get("famine_vis_guard", 0.0) or 0.0)
+        if _guard > 0.0:
+            _ph *= max(0.0, 1.0 - min(1.0, (1.0 - _BLIND_EMA) / _guard))
+        phase = _ph * _pm
 
     # --- descend spawn clock ---
     if m["spawn_clock"] > 0:
@@ -328,6 +385,16 @@ def potential_controller(state, P):
     if use_energy and ef < P["reserve_frac"]:
         dist = min(dist, speed * 0.25)
 
+    # ---- PHASE policy on movement: in famine, travel energy is unaffordable. With food visible we
+    # still approach it (at a reduced rate -- finding food is the whole income), but with NOTHING
+    # visible we stop dead rather than wander: walking is 0.05/unit per tick against 0.1/tick
+    # metabolism, so aimless travel burns the bank 2-5x faster than simply existing. ----
+    if phase > 0.0:
+        _keep = 1.0 - phase * (1.0 - float(P.get("famine_move_frac", 0.2) or 0.0))
+        if not fruits:
+            _keep *= max(0.0, 1.0 - phase * float(P.get("famine_blind_stop", 1.0) or 0.0))
+        dist = dist * _keep
+
     # ---- age-based role scaling (audit C2): every agent is called separately and knows only its
     # own age, so roles need no coordination at all. The young are the future -> forage hard; the
     # old are a dying investment (max_age 60-120 s) -> stop burning energy on movement and put it
@@ -392,6 +459,20 @@ def potential_controller(state, P):
         if safe:
             spawn = 1.0
             m["spawn_clock"] = cd
+
+    # ---- PHASE policy on reproduction: during the famine, BANK instead of breeding. A spawn costs
+    # the parent 100 energy (the child starts at 75) and every extra agent adds 0.1/tick metabolism
+    # forever, for zero score benefit (score is +0.1/tick regardless of population). So in famine we
+    # only spawn to keep a small insurance population, and only from agents that are nearly full --
+    # optionally only from high-capacity lineages, since max_energy is heritable (mutates +/-50%,
+    # capped at 1000) and it is what sets how long a survivor can outlast the food. ----
+    if spawn and phase > 0.0:
+        _tgt = float(P.get("famine_pop_target", 3.0) or 0.0)
+        _bank = float(P.get("famine_bank_frac", 0.9) or 0.0)
+        _mincap = float(P.get("famine_min_cap", 0.0) or 0.0)
+        _own_cap = float(state.get("max_energy", 500.0) or 500.0)
+        if not (gpop <= _tgt and ef >= _bank and _own_cap >= _mincap):
+            spawn = 0.0
 
     return [float(dist), float(steer), 0.0, float(spawn)]
 

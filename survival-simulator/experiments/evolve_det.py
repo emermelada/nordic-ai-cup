@@ -177,7 +177,10 @@ def main():
         scale = max(0.25, 1.0 - 0.06 * gen)        # anneal the step size
         cands = [dict(incumbent)] + [mutate(incumbent, rng, scale) for _ in range(a.pop - 1)]
         t0 = time.time()
-        scored = sorted(score_candidates(cands, seeds), key=lambda z: -z[0])
+        # Rank on survival ticks, with FRUIT EATEN as a tie-breaker: when the horizon cap is hit the
+        # tick count saturates and capped candidates become indistinguishable, but they still differ
+        # in how much they ate -- which is the income that actually drives survival.
+        scored = sorted(score_candidates(cands, seeds), key=lambda z: -(z[0] + 0.001 * z[2]))
         gen_best_ticks, gen_best_per, gen_best_fruit = scored[0][0], scored[0][1], scored[0][2]
         elapsed = time.time() - t0
         improved = gen_best_ticks > best_ticks
