@@ -114,7 +114,14 @@ case "${1:-setup}" in
     ;;
   serve)
     ensure_llm
-    step "Endpoint on :9054. Submit http://<public ip>:<port mapped to 9054>/predict"
+    # vast forwards only the ports picked at creation, as VAST_TCP_PORT_<n>.
+    export PORT="${PORT:-9054}"
+    public_var="VAST_TCP_PORT_${PORT}"
+    if [ -n "${PUBLIC_IPADDR:-}" ] && [ -n "${!public_var:-}" ]; then
+      step "Endpoint on :$PORT. Submit http://${PUBLIC_IPADDR}:${!public_var}/predict"
+    else
+      step "Endpoint on :$PORT, which this box does not forward publicly: pick a forwarded port with PORT=..., or tunnel it"
+    fi
     ANSWERER=llm:answer exec "$APP_VENV/bin/python" api.py
     ;;
   *)

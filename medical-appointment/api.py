@@ -11,6 +11,7 @@ rather than just the host.
 
 import datetime
 import logging
+import os
 import time
 
 import uvicorn
@@ -21,7 +22,9 @@ from pipeline import predict
 from utils import validate_response
 
 HOST = '0.0.0.0'
-PORT = 9054
+# Overridable because a rented box only forwards the ports chosen when it was
+# created (gpu_setup.sh serve picks one).
+PORT = int(os.environ.get('PORT', '9054'))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
