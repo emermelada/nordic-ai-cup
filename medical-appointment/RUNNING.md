@@ -14,7 +14,7 @@ These model snapshots must already be complete in the local Hugging Face cache:
 
 - `mlx-community/whisper-large-v3-turbo` (fp16 serving ASR)
 - `mlx-community/Qwen3.5-9B-4bit` (primary answers and evidence)
-- `mlx-community/Qwen3-8B-4bit` (secondary evidence)
+- `mlx-community/Qwen3-8B-4bit` (secondary answer veto and diagnostic evidence)
 
 For the optional 8-bit ASR experiment, mlx-whisper loads `weights.safetensors`, but
 that repo ships `model.safetensors`. Stage it into the gitignored `models/`
@@ -41,16 +41,19 @@ Whisper-large-v3-turbo supplies word timestamps. Qwen3.5-9B answers all question
 deterministic call with thinking disabled, and Qwen3-8B answers them again as a second
 opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a primary
 "no" is never promoted. Missing, invalid or duplicate secondary answers inherit the
-primary decision rather than a retrieval veto. Where both models answer yes and cite
-different passages, retrieval picks between them (`consensus_response`). Equal
-retrieval-overlap scores prefer the earlier model span, including when retrieval has
-no evidence. Answer-veto build `d0a5391` is live; platform validation scored 0.717908,
-unchanged from the preceding two-model build and below the best validated single-9B build.
-Two answering models
-disagree about which mention to cite more often than either is outright wrong, and that
-disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
-both models resident in 9.9 GB and 14-20 s of generation. A reasoning channel, if a model
-emits one, is stripped before parsing. `SECOND_LLM_MODEL = None` disables the second pass,
+primary decision rather than a retrieval veto. **The checked-out candidate keeps only
+primary-model evidence** (`primary_evidence_response`), while preserving that answer
+policy. It is not deployed or platform-validated yet; its local score is lower.
+
+**The live process still runs `d0a5391`:** retrieval chooses between the two models'
+spans, with equal overlap scores preferring the earlier occurrence, even when
+retrieval has no evidence. Its platform score is 0.717908, unchanged from the preceding
+two-model build and below the best validated single-9B build. The candidate isolates
+this span selector without changing models, prompts or answer decisions.
+
+Both answering models remain resident in 9.9 GB, with 14-20 s of generation in prior
+runs. A reasoning channel, if emitted, is stripped before parsing.
+`SECOND_LLM_MODEL = None` disables the second pass,
 which is also skipped automatically when the first generation exceeds 25 s. The `compact` prompt
 keeps the original answering rules but asks for one-line JSON with unit ids and a
 quote per yes, about a third of the original output tokens. Decimal-aware alignment
@@ -63,7 +66,7 @@ apply to every yes:
   word, because Whisper often starts a word inside the preceding pause while the
   annotations start at speech. A quiet first word is never trimmed away.
 
-The model and prompt are `QWEN_MODEL` and `DEFAULT_PROMPT` in
+The model and prompt are `LLM_MODEL` and `DEFAULT_PROMPT` in
 `pipeline/mlx_backend.py` (`legacy`, `focused` and `compact` are available).
 Running processes keep their loaded code until restarted.
 
@@ -82,6 +85,7 @@ Running processes keep their loaded code until restarted.
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
 | Same consensus + explicit secondary-no veto (live) | 0.783777 | 0.717908 |
+| Primary-only evidence + same veto (candidate, not live) | 0.753538 | not yet validated |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -233,6 +237,57 @@ frames through the actual `Pipeline.predict` match all **39/390** replay outputs
 `runs/grounding-fixes-20260917/secondary-veto/`; answer audit and runtime-parity check:
 `runs/answer-veto-20260918/`. The API and tunnel were not restarted during that
 implementation pass; `9222c1c` is the pre-veto fallback commit.
+
+### Primary-evidence ablation and request capture (2026-09-18)
+
+The candidate preserves both model calls and the valid-secondary-no veto, but retained
+yes answers keep the primary's evidence. It changes **26 spans and no answers** across
+all 390 cached questions. The extracted consensus control exactly reproduces the
+previous committed responses.
+
+| Cached public-training replay | Consensus + veto | Primary evidence + veto |
+| --- | ---: | ---: |
+| Correct answers | 387/390 | 387/390 |
+| Mean tIoU | 0.644756 | 0.594358 |
+| Raw score | 0.783777 | 0.753538 |
+| Zero-overlap positives | 26 | 31 |
+
+This is a **controlled validation candidate, not a measured improvement**. The reason
+to test it is the historical single-9B validation advantage despite its weaker local
+score. Do not disable the secondary model for this comparison: that also removes
+the answer veto. No deployment or platform attempt was made in this implementation pass.
+
+After deployment, the API captures requests that reached the worker under gitignored
+`runs/request-captures/`. Each private JSON file contains the full base64 audio request,
+ordered questions, transcript/word timings, both raw generations when available,
+parsed primary/secondary/referee outputs, final response, outcome, process identity
+and source hashes frozen at import. These are received inputs, **not hidden gold labels**;
+failed inference can leave a partial trace. Requests rejected before dispatch are not saved.
+
+Writes run after the HTTP response, publish complete files without overwriting existing
+ones, and log storage failures without changing the response. New directories/files
+use permissions 0700/0600. Capture stops at **512 MiB**; old files are not deleted.
+Capture is enabled by default in this candidate; set `MEDICAL_CAPTURE_REQUESTS=0`
+when launching the supervisor or server to disable it. Nothing is uploaded. The project
+README's rules require local inference and do not prohibit local diagnostic logging.
+Once validation inputs are inspected or used for tuning, treat them as development
+information, not an untouched holdout.
+
+**98 tests pass**, including capture failure, storage bounds, request isolation,
+post-response ordering and worker recovery. The scoring oracle remains 1.000. All
+39 real training request bodies also passed through FastAPI's ASGI path with cached
+worker frames: exact replay predictions and 39 verified complete captures, totaling
+106,008,309 bytes. Capture work after the response averaged 7.0 ms, worst 12.1 ms in
+that run. This is not fresh inference or a network-latency benchmark.
+
+Artifacts: `runs/grounding-fixes-20260917/primary-evidence/` and
+`consensus-control-after-extraction/` in the same directory; API/capture verification:
+`runs/primary-evidence-20260918/cached-api-and-capture/`. Reproduce with unused output names:
+
+```bash
+.venv311/bin/python runs/grounding-fixes-20260917/replay.py primary-rerun primary
+.venv311/bin/python runs/primary-evidence-20260918/check.py api-rerun
+```
 
 ### Rehearsal of the serving path (2026-09-18, consensus build)
 

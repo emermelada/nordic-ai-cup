@@ -10,14 +10,16 @@ rather than just the host.
 
 import datetime
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 
 from dtos import ASRQuestionRequestDto, ASRQuestionResponseDto
 from example import predict, start, stop
+from pipeline.capture import save_capture
 from utils import validate_response
 
 HOST = '0.0.0.0'
@@ -40,13 +42,16 @@ start_time = time.time()
 
 
 @app.post('/predict', response_model=ASRQuestionResponseDto)
-def predict_endpoint(request: ASRQuestionRequestDto):
+def predict_endpoint(request: ASRQuestionRequestDto, background_tasks: BackgroundTasks):
     """Answer every question about one conversation."""
-    response = predict(request)
+    trace = {} if os.environ.get('MEDICAL_CAPTURE_REQUESTS', '1') == '1' else None
+    response = predict(request, trace=trace)
 
     # Fail here, loudly, rather than having the evaluator silently score every
     # question about this conversation wrong.
     validate_response(response, expected_count=len(request.questions))
+    if trace is not None:
+        background_tasks.add_task(save_capture, request, response, trace)
 
     return response
 

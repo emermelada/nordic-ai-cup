@@ -60,7 +60,7 @@ class FakeBackend:
         ]})
 
     def complete_second(self, words, questions):
-        # A different span for the same answers; the retrieval span picks between them.
+        # A different span for the same answers.
         return json.dumps({'results': [
             {'q': index + 1, 'answer': 'yes' if index % 2 == 0 else 'no',
              'units': [0], 'quote': 'You should take it after a meal.'}
@@ -180,6 +180,34 @@ class RuntimeTests(unittest.TestCase):
             self.assert_valid(response, count)
             self.assertEqual(pipeline._process.pid, pid)
 
+    def test_retained_yes_keeps_primary_evidence(self):
+        pipeline = self.make_pipeline()
+        actual = pipeline.predict(request(questions=['Should the tablets be taken after a meal?']))
+        self.assertEqual(actual.answers, [True])
+        self.assertEqual(actual.evidence_start, [0.0])
+        self.assertAlmostEqual(actual.evidence_end[0], 1.8)
+        self.assert_valid(actual, 1)
+
+    def test_trace_keeps_model_outputs_without_changing_predictions(self):
+        pipeline = self.make_pipeline()
+        trace = {}
+        actual = pipeline.predict(request(), trace=trace)
+        saved = json.loads(json.dumps(trace))
+        self.assertEqual(trace['transcript'], transcript())
+        self.assertEqual(trace['primary']['answers'], actual.answers)
+        self.assertEqual(trace['secondary']['answers'], actual.answers)
+        self.assertNotEqual(trace['primary']['evidence_start'], trace['secondary']['evidence_start'])
+        self.assertIn('raw', trace['result'])
+        self.assertIn('second', trace['result'])
+        self.assertEqual(trace['result']['request_id'], trace['request_id'])
+        self.assertTrue(trace['outcome'].startswith('completed'))
+        self.assertGreater(trace['total_seconds'], 0)
+        self.assertEqual(pipeline.predict(request()), actual)
+        other_trace = {}
+        pipeline.predict(request(questions=['Dose?']), trace=other_trace)
+        self.assertNotEqual(trace['request_id'], other_trace['request_id'])
+        self.assertEqual(trace, saved)
+
     def test_secondary_veto_requires_a_valid_answer_for_that_question(self):
         raw = json.dumps({'results': [
             {'q': 1, 'answer': 'no'}, {'q': 2, 'answer': 'yes'},
@@ -231,9 +259,14 @@ class RuntimeTests(unittest.TestCase):
         self.assertNotEqual(expected.answers, [True] * 3)
         pid = pipeline._process.pid
         started = time.monotonic()
-        response = pipeline.predict(request(questions=questions))
+        trace = {}
+        response = pipeline.predict(request(questions=questions), trace=trace)
         self.assertLess(time.monotonic() - started, 1.5)
         self.assertEqual(response, expected)
+        self.assertEqual(trace['transcript'], data)
+        self.assertEqual(trace['outcome'], 'fallback')
+        self.assertIn('TimeoutError', trace['error'])
+        self.assertNotIn('result', trace)
         self.assert_valid(response, 3)
         self.wait_for_recovery(pipeline, pid)
 

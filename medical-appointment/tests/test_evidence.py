@@ -4,7 +4,7 @@ from unittest.mock import patch
 from pipeline.core import answer_response, build_messages, floor_response
 from pipeline.evidence import (
     align_quote, build_compact_messages, build_focused_messages, consensus_response,
-    energy_envelope, refine_evidence,
+    energy_envelope, primary_evidence_response, refine_evidence,
 )
 from tests.test_core import make_words, raw_results, response
 from tools.compare_evidence import split_conversations
@@ -96,6 +96,20 @@ class EvidenceTests(unittest.TestCase):
         repaired = answer_response('```json\n{"results":[{"q":1,"answer":"no"},]}\n```',
                                    words, ['a', 'b'], 20, fallback, alignment='numeric')
         self.assertEqual(repaired, fallback)
+
+    def test_primary_evidence_keeps_spans_and_only_allows_secondary_veto(self):
+        primary = response([True, True, True, True, False, False],
+                           [10.0, 30.0, None, None, None, None],
+                           [12.0, 32.0, None, None, None, None])
+        secondary = response([True, False, True, False, True, False],
+                             [5.0, None, 50.0, None, 60.0, None],
+                             [7.0, None, 52.0, None, 62.0, None])
+        before = [item.model_copy(deep=True) for item in (primary, secondary)]
+        actual = primary_evidence_response(primary, secondary)
+        self.assertEqual(actual, response([True, False, True, False, False, False],
+                                          [10.0, None, None, None, None, None],
+                                          [12.0, None, None, None, None, None]))
+        self.assertEqual([primary, secondary], before)
 
     def test_consensus_takes_the_span_the_referee_agrees_with(self):
         primary = response([True, True, False], [10.0, 30.0, None], [12.0, 32.0, None])

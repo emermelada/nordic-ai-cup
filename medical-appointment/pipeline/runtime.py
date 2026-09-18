@@ -15,7 +15,7 @@ from pipeline.core import (
     sanitize_response,
     words_from_transcript,
 )
-from pipeline.evidence import consensus_response, refine_evidence
+from pipeline.evidence import primary_evidence_response, refine_evidence
 from utils import decode_audio, validate_response
 
 logger = logging.getLogger(__name__)
@@ -256,7 +256,7 @@ class Pipeline:
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=self.cleanup_timeout)
 
-    def predict(self, request):
+    def predict(self, request, *, trace=None):
         started = time.monotonic()
         deadline = started + self.request_timeout
         fallback = floor_response(len(request.questions))
@@ -278,6 +278,8 @@ class Pipeline:
                 return fallback
             self._request_id += 1
             identity = {'generation': self._generation, 'request_id': self._request_id}
+            if trace is not None:
+                trace.update(identity, evidence_policy='primary-with-secondary-veto')
             _send_frame(self._channel, {
                 **identity, 'kind': 'predict', 'audio_base64': request.audio_base64,
                 'questions': request.questions,
@@ -291,6 +293,8 @@ class Pipeline:
                 kind = message.get('kind')
                 if kind == 'transcript':
                     transcript = message['transcript']
+                    if trace is not None:
+                        trace['transcript'] = transcript
                     words = words_from_transcript(transcript)
                     if len(words) > 10000:
                         raise ValueError('Transcript exceeds inference limit')
@@ -301,12 +305,17 @@ class Pipeline:
                         retrieval_response(words, request.questions, duration), words, envelope,
                     )
                 elif kind == 'result':
+                    if trace is not None:
+                        trace['result'] = message
                     generation_seconds = message.get('generation_seconds')
                     response = answer_response(
                         message['raw'], words, request.questions, duration,
                         fallback=fallback, deadline=deadline, alignment='numeric',
                     )
                     response = refine_evidence(response, words, envelope)
+                    if trace is not None:
+                        trace['primary'] = response.model_dump()
+                        trace['referee'] = fallback.model_dump()
                     if message.get('second'):
                         secondary_fallback = fallback.model_copy(deep=True)
                         # Missing or invalid secondary answers cannot veto the primary.
@@ -315,26 +324,32 @@ class Pipeline:
                             message['second'], words, request.questions, duration,
                             fallback=secondary_fallback, deadline=deadline, alignment='numeric',
                         )
-                        response = consensus_response(
-                            response, refine_evidence(alternative, words, envelope), fallback,
-                        )
+                        if trace is not None:
+                            trace['secondary'] = refine_evidence(alternative, words, envelope).model_dump()
+                        response = primary_evidence_response(response, alternative)
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
                     # Both platform sets are exactly half yes; the rate is a label-free sanity check.
                     outcome = f'completed, yes={sum(response.answers)}/{len(response.answers)}'
                     return response
                 elif kind == 'error':
+                    if trace is not None:
+                        trace['error'] = message.get('error')
                     logger.warning('Worker request error: %s', message.get('error'))
                     return fallback
                 else:
                     raise ValueError('Unexpected worker response')
-        except Exception:
+        except Exception as exc:
+            if trace is not None:
+                trace['error'] = f'{type(exc).__name__}: {exc}'
             logger.exception('Falling back after inference failure')
             self._retire_locked(time.monotonic() + self.cleanup_timeout)
             self._schedule_recovery_locked()
             return fallback
         finally:
             self._lock.release()
+            if trace is not None:
+                trace.update(outcome=outcome, total_seconds=time.monotonic() - started)
             logger.info(
                 '%s: %.2fs total, ASR=%s, generation=%s, %s',
                 request.audio_filename, time.monotonic() - started,

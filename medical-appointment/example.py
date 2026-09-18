@@ -19,9 +19,9 @@ def stop():
     _pipeline.close()
 
 
-def predict(request: ASRQuestionRequestDto) -> ASRQuestionResponseDto:
+def predict(request: ASRQuestionRequestDto, *, trace=None) -> ASRQuestionResponseDto:
     try:
-        response = _pipeline.predict(request)
+        response = _pipeline.predict(request, trace=trace)
         validate_response(response, expected_count=len(request.questions))
         return response
     except Exception:
