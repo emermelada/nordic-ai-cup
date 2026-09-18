@@ -43,7 +43,7 @@ def views():
         meta = json.loads(meta_path.read_text())
         view = meta['view']
         out.append({
-            'key': str(meta_path.with_suffix('.png').relative_to(RECORDINGS)),
+            'key': meta_path.with_suffix('.png').relative_to(RECORDINGS).as_posix(),
             'png': meta_path.with_suffix('.png'),
             'frame': meta['frame'],
             'level': view['resolution_level'],

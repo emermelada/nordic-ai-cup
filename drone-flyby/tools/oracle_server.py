@@ -22,7 +22,7 @@ MIN_VIEW_PIXELS = {0: 8, 1: 6, 2: 4}
 _current = {}
 
 
-def fake_detect(image, region):
+def fake_detect(image, region, frame=0):
     frame = _current['frame']
     level = _current['level']
     rx1, ry1, rx2, ry2 = region

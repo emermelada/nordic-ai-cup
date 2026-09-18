@@ -42,27 +42,80 @@ def cached_detections(model_path: Path):
     path = CACHE / f'{key}.pkl'
     out = pickle.loads(path.read_bytes()) if path.exists() else {}
     # New recordings since the cache was written are filled in.
-    missing = [png for png in sorted(RECORDINGS.glob('*/*.png')) if str(png.relative_to(RECORDINGS)) not in out]
+    # as_posix: the lookup key is built with '/', which is not what str() gives
+    # on Windows, and a mismatch silently reads as "no detections at all".
+    missing = [png for png in sorted(RECORDINGS.glob('*/*.png'))
+               if png.relative_to(RECORDINGS).as_posix() not in out]
     if missing:
         flyby.load_model()
         for png in missing:
             image = cv2.imread(str(png))
             with flyby._model_lock:
-                out[str(png.relative_to(RECORDINGS))] = flyby.raw_detections(image)
+                out[png.relative_to(RECORDINGS).as_posix()] = flyby.raw_detections(image)
         CACHE.mkdir(parents=True, exist_ok=True)
         path.write_bytes(pickle.dumps(out))
     return out
 
 
-def known_boxes(objects, frame):
-    from harvest_validation_patches import move
+# Objects that cannot move, so any drift they show is the ground motion model
+# being wrong rather than the object going somewhere.
+STATIC_CLASSES = ('large_tower', 'small_tower', 'hangar')
 
+
+def truth_motion(objects):
+    """Ground motion fitted on this flight's static objects.
+
+    Carrying the ground truth with the same MOTION the tracker uses makes both
+    drift together and cancels the error, which is exactly how a wrong motion
+    model stayed invisible here: the bench reported carried boxes as fine while
+    they no longer overlapped anything real. The truth gets its own fit.
+    """
+    samples = []
+    for obj in objects:
+        if obj['class'] not in STATIC_CLASSES:
+            continue
+        obs = sorted(obj['observations'], key=lambda o: o['frame'])
+        for before, after in zip(obs, obs[1:]):
+            gap = after['frame'] - before['frame']
+            if not (0 < gap <= 20):
+                continue
+            p, q = np.array(before['box'], float), np.array(after['box'], float)
+            samples.append(((p[0]+p[2])/2, (p[1]+p[3])/2,
+                            ((q[0]+q[2])-(p[0]+p[2]))/2/gap,
+                            ((q[1]+q[3])-(p[1]+p[3]))/2/gap))
+    import flyby
+    if len(samples) < 6:
+        return flyby.MOTION
+    data = np.array(samples)
+    design = np.column_stack([np.ones(len(data)), data[:, 0], data[:, 1]])
+    dx = np.linalg.lstsq(design, data[:, 2], rcond=None)[0]
+    dy = np.linalg.lstsq(design, data[:, 3], rcond=None)[0]
+    return (*dx, *dy)
+
+
+def carry(box, steps, motion):
+    """Move a box ``steps`` frames of ground motion, forwards or backwards."""
+    a, b, c, d, e, f = motion
+    forward = np.array([[1 + b, c], [e, 1 + f]])
+    shift = np.array([a, d])
+    step = (lambda p: p @ forward.T + shift) if steps > 0 else (
+        lambda p, back=np.linalg.inv(forward): (p - shift) @ back.T)
+    points = np.array([[box[0], box[1]], [box[2], box[3]]], float)
+    for _ in range(abs(steps)):
+        points = step(points)
+    return points.reshape(-1)
+
+
+def known_boxes(objects, frame, motion=None):
+    import flyby
+
+    motion = flyby.MOTION if motion is None else motion
     out = []
     for obj in objects:
         near = min(obj['observations'], key=lambda o: abs(o['frame'] - frame))
         if abs(near['frame'] - frame) > REACH:
             continue
-        box = move(near['box'], frame - near['frame'])
+        box = carry(np.array(near['box'], float), frame - near['frame'], motion)
         box = np.clip(box, 0, [3840, 2160, 3840, 2160])
         if box[2] - box[0] > 2 and box[3] - box[1] > 2:
             out.append((obj['id'], obj['class'], box))
@@ -92,12 +145,15 @@ def main() -> int:
 
     detections = cached_detections(args.model)
     objects = json.loads((ROOT / 'training' / 'validation_objects.json').read_text())['objects']
+    gt_motion = truth_motion(objects)
+    print(f'ground truth carried at {flyby.drift_at_centre(gt_motion):.2f} px/frame '
+          f'(flyby prior: {flyby.drift_at_centre(flyby.MOTION):.2f})')
     sequences = args.sequences or sorted(p.name for p in RECORDINGS.iterdir() if len(list(p.glob('*.json'))) > 50)
 
     current = {}
     flyby.decode_view = lambda view: None
 
-    def fake_detect(image, region):
+    def fake_detect(image, region, frame=0):
         xyxy, probabilities = detections[current['key']]
         rx1, ry1, rx2, ry2 = region
         scale = np.array([(rx2 - rx1) / 960, (ry2 - ry1) / 540] * 2)
@@ -123,7 +179,7 @@ def main() -> int:
             reported.append(len(answers))
             if meta['frame'] < args.from_frame:
                 continue
-            for oid, cls, box in known_boxes(objects, meta['frame']):
+            for oid, cls, box in known_boxes(objects, meta['frame'], gt_motion):
                 totals['present'] += 1
                 right = [c for n, c, b in answers if n == cls and flyby.iou(b, box) >= 0.5]
                 best = max((flyby.iou(b, box) for _, _, b in answers), default=0.0)
