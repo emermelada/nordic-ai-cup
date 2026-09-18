@@ -44,7 +44,7 @@ opinion. An explicit secondary-model "no" rejects a primary-model "yes"; a prima
 primary decision rather than a retrieval veto. Where both models answer yes and cite
 different passages, retrieval picks between them (`consensus_response`). Equal
 retrieval-overlap scores prefer the earlier model span, including when retrieval has
-no evidence. This answer-veto candidate is not yet deployed or validated.
+no evidence. Answer-veto build `d0a5391` is live; platform validation is pending.
 Two answering models
 disagree about which mention to cite more often than either is outright wrong, and that
 disagreement is what the referee resolves: 0.7505 to 0.7696 on the training set, with
@@ -80,7 +80,7 @@ Running processes keep their loaded code until restarted.
 | Qwen3.6-35B-A3B REAP-19B, compact + span rules | 0.756 | 0.732 |
 | Qwen3.5-9B + Qwen3-8B consensus, compact | 0.770 | not yet validated |
 | Same consensus, earlier-occurrence tie-break + grounding guards | 0.781 | 0.717908 |
-| Same consensus + explicit secondary-no veto (candidate) | 0.783777 | not yet validated |
+| Same consensus + explicit secondary-no veto (live) | 0.783777 | not yet validated |
 
 Validation attempt `c1dcda85c624436c85c667de8e68ffc7` completed on 2026-09-18
 00:33 CEST against pipeline `aa50c41` (deployment `00ac739`): **0.7179075995**,
@@ -219,8 +219,8 @@ All **86 CPU tests** pass. The official scoring oracle remains **1.000**. Cached
 frames through the actual `Pipeline.predict` match all **39/390** replay outputs
 (IPC mocked; no fresh ASR/LLM inference or HTTP benchmark). Replay and code snapshots:
 `runs/grounding-fixes-20260917/secondary-veto/`; answer audit and runtime-parity check:
-`runs/answer-veto-20260918/`. The API and tunnel were not restarted. The live process
-still serves the earlier-tie build; `9222c1c` is the pre-veto fallback commit.
+`runs/answer-veto-20260918/`. The API and tunnel were not restarted during that
+implementation pass; `9222c1c` is the pre-veto fallback commit.
 
 ### Rehearsal of the serving path (2026-09-18, consensus build)
 
@@ -237,14 +237,22 @@ if anything conservative. Rerun with
 
 ### Deploy behind the tunnel
 
+Build `d0a5391` was deployed on 2026-09-18 at 08:30 CEST by restarting only Uvicorn.
+The existing supervisor started API PID 96371 and inference worker 96374. Public
+health passed at the unchanged URL:
+`https://computed-frequencies-lamp-carolina.trycloudflare.com/predict`.
+A fresh local HTTP test of `sample_33` completed without fallback in **17.01 seconds**,
+with **10/10 answers correct**, including the answer-veto regression case. This is
+a smoke test, not platform validation. Record: `runs/deploy-d0a5391-20260918/smoke-test.json`;
+server log: `runs/serve-9054/server-20260918-083032.log`.
+
 The cloudflared quick tunnel forwards to 127.0.0.1:9054; restarting cloudflared
-changes the public hostname. To deploy, check the latest `runs/serve-9054/` log for
-in-flight platform requests, then restart only uvicorn:
+changes the public hostname. With `tools/serve.sh` running, check the latest
+`runs/serve-9054/` log and active connections for in-flight requests, then restart
+only Uvicorn. The supervisor starts its replacement; do not launch a second server.
 
 ```bash
 kill -INT $(lsof -tiTCP:9054 -sTCP:LISTEN)
-nohup .venv311/bin/python -m uvicorn api:app --host 127.0.0.1 --port 9054 --workers 1 \
-  > runs/serve-9054/server-$(date +%Y%m%d-%H%M%S).log 2>&1 < /dev/null & disown
 curl -s http://127.0.0.1:20241/quicktunnel   # public hostname; submit https://<host>/predict
 ```
 
