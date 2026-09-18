@@ -8,6 +8,71 @@
 #   WITH_INRIA=0 bash training/train_remote.sh       # skip the 22 GB city photos
 #   REAL_SHARE=0.8 bash training/train_remote.sh     # lean harder on real terrain
 #
+# ---------------------------------------------------------------------------
+# v8 RECIPE (19 Sep) - the one to run next. Read this before the v6 notes below.
+#
+#   MODEL=yolo11m.pt IMGSZ=1280 NAME=drone-yolo11m-v8 BATCH=12 \
+#   WEIGHTS=tank=2.0,helicopter=1.8,small_plane=1.6,jammer=1.8,spacecraft=1.5,mine_roller=1.3,condor=1.2,ta-ta=1.2,medium_plane=1.2,medium_launcher=1.2,small_launcher=0.9,small_tower=0.7,large_launcher=0.7,large_tower=0.5,jet_plane=0.5,hangar=0.4 \
+#   bash training/train_remote.sh
+#
+# v8 is the STRONG HALF OF THE PAIR, meant to replace v6@1280 beside v4@960.
+# Judge it that way - paired, not alone - with:
+#
+#   python tools/score_offline.py --replay \
+#       --model models/drone-yolo11n-v4.pt:960 --model-alt models/drone-yolo11m-v8.pt:1280 \
+#       --set BOTH_MODELS=1
+#
+#   The served pair scores 0.455 on that command as of 19 Sep. Beat it there
+#   before spending a validation attempt; the offline scorer now ranks six
+#   real-scored configurations at Spearman +0.94, so it can be trusted for this.
+#
+# WHY THESE WEIGHTS. They come from per-class AP of the served pair under the
+# corrected scorer (19 Sep), read together with how many scored object-frames
+# each class actually has - which is the part the old weights ignored:
+#
+#   class            AP     object-frames    share
+#   tank            0.354       219          24 %   <- biggest single loss
+#   helicopter      0.249       100          11 %
+#   small_plane     0.225        99          11 %
+#   jammer          0.201        99          11 %
+#   spacecraft      0.003        64           7 %   <- dead, but 12.2 px at L1
+#   small_tower     0.756        78
+#   hangar          0.871        70
+#   jet_plane       0.958        66
+#   mine_roller     0.082        33
+#   large_tower     0.831        33
+#   small_launcher  0.000        33                 <- 6.4 px at L1: hopeless
+#   large_launcher  0.682        17
+#
+# The four mid-scoring, high-volume classes - tank, helicopter, small_plane,
+# jammer - are 57 % of everything scored and all sit at 0.20-0.35. That is where
+# the points are. This is a CHANGE OF TARGET from v6, which was aimed at the
+# tiny dead classes on the old scorer's reading that they were 42 % of the
+# score; corrected, the genuinely dead classes (spacecraft, small_launcher) are
+# 11 %, and large_tower turned out to be 0.831 rather than 0.001.
+#
+# small_launcher stays under 1.0 deliberately: 6.4 px at Level 1 against YOLO's
+# 8 px stride. No amount of pasting fixes a resolution floor.
+# small_plane is held at 1.6 rather than 1.8 because its failure was measured as
+# box quality, not firing rate - pasting it more often is not the fix.
+# Nothing exceeds 2.0: v4 used 2.5x and lost tank, jammer and spacecraft.
+#
+# WHY yolo11m. Untested on this recipe. Against it: v5 IS yolo11m and scores
+# 0.322 against the served pair's 0.455, and v7 (yolo11s at 1280) came out 0.023
+# worse than v6. For it: v5 predates both the real-flight backgrounds that made
+# v6 work and the corrected Helsinki paste scale. If v8 disappoints, re-run this
+# exact recipe with MODEL=yolo11s.pt before concluding the data is at fault -
+# that isolates backbone from recipe.
+#
+# WHY IMGSZ=1280 AND NOT MORE. Measured 19 Sep: v6 alone scores 0.288 at 960,
+# 0.398 at 1280, 0.370 at 1600. 1280 is the peak, not a floor still being
+# climbed. Do not raise it.
+#
+# The cut-outs in training/patches_val were re-harvested on 19 Sep after three
+# mined objects were promoted into validation_objects.json: large_tower 7 -> 22
+# patches, mine_roller 10 -> 19, 263 -> 288 total.
+# ---------------------------------------------------------------------------
+#
 # TWO WAYS TO TRAIN v6. The default below is a STANDALONE v6 meant to replace
 # v4. The alternative is a v6 trained to COMPLEMENT v4 as a pair (DRONE_MODEL_ALT
 # in flyby.py: two models take alternate frames and meet in the object memory, so

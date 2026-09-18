@@ -43,6 +43,7 @@ sys.path.insert(0, str(HERE))
 
 RECORDINGS = ROOT / 'data' / 'recordings'
 OBJECTS = ROOT / 'training' / 'validation_objects.json'
+IGNORE = ROOT / 'training' / 'validation_ignore.json'
 REACH = 30      # frames a confirmed sighting is carried
 
 
@@ -105,7 +106,43 @@ def known_boxes(objects, frame: int, motion=None):
     return out
 
 
-def score(predictions, frames, objects, motion=None):
+def ignore_regions(verdicts=('confirmed',)):
+    """Regions that are real objects we never labelled, as COCO ignore boxes.
+
+    The confirmed object list holds 29 objects mined by v2, but the flight has
+    more: cross-model mining found a second large_launcher, a second and third
+    large_tower, a second mine_roller and another jet_plane, all seen by two
+    independently trained models over 18-26 recorded runs, several at Level 2.
+    Scoring counted every detection of those as a false positive, which is a
+    precision penalty that falls hardest on whichever config emits the most
+    boxes --- and with a 12-class macro average resting on single objects for
+    four of those classes, one missing object moves the total enough to invert
+    a model choice. Measured: with these regions ignored, the offline ranking of
+    six configurations with real validation scores goes from Spearman +0.77 to
+    +0.94, and v4@960+v6@1280 correctly overtakes v7@1280.
+
+    An ignore region is not a label. It says only "do not score anything here",
+    so a wrong one costs a little precision signal and cannot poison training.
+    """
+    if not IGNORE.exists():
+        return []
+    data = json.loads(IGNORE.read_text())
+    return [r for r in data['regions'] if r['verdict'] in verdicts]
+
+
+def ignore_boxes(regions, frame: int, motion):
+    out = []
+    for region in regions:
+        near = min(region['observations'], key=lambda o: abs(o['frame'] - frame))
+        if abs(near['frame'] - frame) > 20:
+            continue
+        box = np.clip(carry(near['box'], frame - near['frame'], motion), 0, [3840, 2160, 3840, 2160])
+        if box[2] - box[0] > 2 and box[3] - box[1] > 2:
+            out.append(box)
+    return out
+
+
+def score(predictions, frames, objects, motion=None, regions=()):
     """COCO mAP@0.50, macro over the classes present, as local_evaluator does."""
     from faster_coco_eval import COCO, COCOeval_faster
     from utils import OBJECT_CLASSES
@@ -120,6 +157,16 @@ def score(predictions, frames, objects, motion=None):
                 'bbox': [box[0], box[1], box[2] - box[0], box[3] - box[1]],
                 'area': float((box[2] - box[0]) * (box[3] - box[1])), 'iscrowd': 0})
             annotation_id += 1
+        # iscrowd=1 in every class: we do not know what is here, so a detection
+        # landing on it is neither a true nor a false positive. COCO matches
+        # real annotations first, so a confirmed object nearby still scores.
+        for box in ignore_boxes(regions, frame, motion):
+            for name in categories:
+                annotations.append({
+                    'id': annotation_id, 'image_id': frame, 'category_id': categories[name],
+                    'bbox': [box[0], box[1], box[2] - box[0], box[3] - box[1]],
+                    'area': float((box[2] - box[0]) * (box[3] - box[1])), 'iscrowd': 1})
+                annotation_id += 1
     evaluated = tuple(name for name in OBJECT_CLASSES if name in present)
     if not evaluated:
         raise SystemExit('no confirmed objects in these frames')
@@ -255,6 +302,12 @@ def main() -> int:
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting override (with --replay).')
     parser.add_argument('--from-frame', type=int, default=0, help='Only score frames from here on.')
     parser.add_argument('--frames', type=int, default=249)
+    parser.add_argument('--no-ignore', action='store_true',
+                        help='Score unlabelled-object regions as false positives, the old '
+                             'behaviour. Anti-correlated with real scores; see ignore_regions().')
+    parser.add_argument('--ignore-verdicts', default='confirmed',
+                        help="Which validation_ignore.json verdicts to honour "
+                             "(comma-separated; default 'confirmed').")
     parser.add_argument('--truth-motion', choices=['fitted', 'prior'], default='fitted',
                         help="'fitted' carries the truth with a motion fitted on the "
                              "confirmed objects; 'prior' uses flyby.MOTION, which drifts "
@@ -286,7 +339,8 @@ def main() -> int:
     import flyby
     motion = flyby.MOTION if args.truth_motion == 'prior' else fit_truth_motion(objects)[0]
     samples = fit_truth_motion(objects)[1] if args.truth_motion != 'prior' else 0
-    overall, by_class, instances = score(predictions, frames, objects, motion)
+    regions = () if args.no_ignore else ignore_regions(tuple(args.ignore_verdicts.split(',')))
+    overall, by_class, instances = score(predictions, frames, objects, motion, regions)
 
     if args.replay:
         label = f'replay {model.name}' + (f'@{imgsz}' if imgsz else '')
@@ -305,6 +359,8 @@ def main() -> int:
           f'flyby prior {centre(flyby.MOTION):.2f})')
     if args.set:
         print('overrides: ' + ', '.join(args.set))
+    print(f'{len(regions)} unlabelled-object regions ignored'
+          if regions else 'no ignore regions (--no-ignore): unlabelled objects score as false positives')
     print(f'\nmAP@0.50 (confirmed objects only) = {overall:.3f}\n')
     for name, value in sorted(by_class.items(), key=lambda item: -item[1]):
         print(f'   {name:18s} {value:.3f}')

@@ -778,3 +778,134 @@ the ssh session's own command line and kills the shell mid-command (use
 `pkill -x`); and a service that fails to bind because the old one still holds the
 port leaves the OLD config serving while every log line looks healthy — always
 re-read `/api` after a restart.
+
+---
+
+## 2026-09-19: the offline scorer was inverted by one unlabelled object
+
+**`tools/score_offline.py` can now be trusted to choose between models.** Six
+configurations have both a real validation score and a replayable recording.
+Ranked by the old scorer they correlate with reality at Spearman **+0.77**, with
+one inversion — and it is the one that mattered: offline preferred `v7@1280`
+over the served `v4@960+v6@1280`, reality preferred the opposite. With the fix
+below it is **+0.94**, and the only remaining inversion is the v4+v6 parity pair
+already known to be a coin flip (0.0085 apart, inside the noise floor).
+
+### The cause was not "too many boxes"
+
+`training/validation_objects.json` held 29 objects **mined by v2**, a model that
+scored 0.097. The macro average runs over 12 classes and **four of them rested
+on a single object**. The flight actually contains two `large_launcher` sites,
+three `large_tower`s and two `mine_roller`s.
+
+Every detection of an unlabelled real object scored as a false positive, and
+that penalty falls hardest on whichever configuration emits the most boxes. On
+`large_launcher` the effect was worth **+0.413 of AP** to v7 — three times the
+whole 0.016 gap between the two candidates — while **recall on it was identical
+(0.941 both)**. Neither model missed the confirmed launcher; the served pair was
+punished for also finding the unlabelled one.
+
+**One object is load-bearing.** Drop the second `large_launcher` from the
+correction and keep the other four and the scorer reverts to +0.77 with the
+ranking inverted again; keep only that one and it is +0.94 and correct. It is
+necessary as well as sufficient.
+
+### What changed
+
+* `training/validation_ignore.json` — regions that are real objects the truth
+  never listed, mined by cross-model agreement (v3/v4/v6) over all 28 recorded
+  runs, then checked by eye against Level-2 crops. **Ignore regions, not
+  labels**: a wrong one costs a little precision signal and cannot poison the
+  training set.
+* `tools/score_offline.py` — honours them as class-agnostic `iscrowd=1`
+  annotations. `--no-ignore` restores the old behaviour for an A/B.
+* `training/promote_candidates.py` — promotes a reviewed region to a real object.
+  It refuses to act on the verdict alone: you name each candidate and its class,
+  because the class in the file is the detector's vote. It deduplicates
+  observations by frame (candidates are mined across 28 runs, and duplicates
+  would bias `fit_truth_motion`), and marks the region `promoted` so it stops
+  being an ignore region too.
+* Three were promoted (2 × `large_tower`, 1 × `mine_roller`), taking the truth
+  to **32 objects**. The second `large_launcher` deliberately stays an ignore
+  region: at native resolution it is **two vehicles** — a transporter and a
+  launcher with four outriggers deployed — so one box over it would be bad
+  geometry and would teach the harvester to cut a two-vehicle patch.
+* `training/patches_val` re-harvested: `large_tower` 7 → 22, `mine_roller`
+  10 → 19, 263 → 288 cut-outs.
+
+### The target list is different from what this document said
+
+Under the corrected scorer, per class for the served pair:
+
+| class | AP | object-frames | | class | AP | object-frames |
+|---|---|---|---|---|---|---|
+| jet_plane | 0.958 | 66 | | tank | **0.354** | **219** |
+| hangar | 0.871 | 70 | | helicopter | **0.249** | **100** |
+| large_tower | **0.831** | 33 | | small_plane | **0.225** | **99** |
+| small_tower | 0.756 | 78 | | jammer | **0.201** | **99** |
+| large_launcher | 0.682 | 17 | | mine_roller | 0.082 | 33 |
+| | | | | spacecraft | 0.003 | 64 |
+| | | | | small_launcher | 0.000 | 33 |
+
+**Only `spacecraft` and `small_launcher` are dead — 11 % of scored
+object-frames, not the 42 % the five-dead-class table above implies.**
+`large_tower` is 0.831, not 0.001. The points are in four mid-scoring,
+high-volume classes — tank, helicopter, small_plane, jammer — which are **57 %
+of everything scored** and all sit at 0.20–0.35. `training/train_remote.sh` now
+carries a v8 recipe aimed there.
+
+### Measured dead, on the corrected scorer — do not spend runs on these
+
+* `UNSEEN_DECAY=1.0` — the +0.012 that made it an open item is **+0.004**
+  corrected. Inside noise.
+* **v5 in any pairing** — 0.322 alone, 0.361 with v4, 0.384 with v6; added as a
+  third model it *lowers* the served pair from 0.435 to 0.412.
+* **Detection fusion** — weighted box fusion +0.004 over the current
+  concatenation, NMS across models −0.009, averaging class probabilities
+  catastrophic (0.125). The pair should keep concatenating.
+* **Resolution past 1280** — v6 alone: 0.288 at 960, 0.398 at 1280, **0.370 at
+  1600**. 1280 is the peak, not a floor still being climbed.
+* **Rotation TTA** (0/90/180/270, NMS-fused) — helps only the weakest model on
+  its own (v4@960 +0.044). It *costs* 0.025 applied to v4 in the pair and
+  **0.087** applied to v6, the worst result measured. TTA and pairing buy the
+  same thing — more chances for a faint object to fire — and do not stack. Do
+  not ship it. Note also that training-time rotation is already covered:
+  `make_dataset.py` rotates every pasted cut-out and `flipud=0.5` is set, so
+  `degrees=0.0` is deliberate.
+
+### `LEVEL_WEIGHT` is read, and it was set wrong
+
+This document said `LEVEL_WEIGHT` is "structurally never read". **It is read**,
+at `flyby.py:508`, where it weights a detection's class votes by the resolution
+level it was seen at. It never touches a track's confidence, so scaling all
+three levels together cancels (measured: −0.001); the lever is the ratio.
+
+Level 0 was 0.4. Raising it to **1.0** helps in every run tested, most where
+there is most evidence: `5ace5364` (3 L0 views) +0.010, `8a1d65ee` (130) +0.040,
+`a1c00d7c` (90) +0.039, `81bf6bd3` (3) +0.009, `04bef8d0` (2) +0.005. Weight 2.0
+was rejected — it scores higher on the three-view runs than on the well-sampled
+ones, which is noise, not effect. **Now the default.**
+
+Temper it: the served `full` camera takes only 3 Level-0 views, so expect the
++0.010 row, at the real noise floor — not +0.04. **It has not been confirmed on
+a real run.** `DRONE_SET=LEVEL_WEIGHT={0:0.4,1:0.8,2:1.0}` restores the old
+value. And do not read this as "take more Level-0 views": that is a camera
+change, and the last one scored 0.1234 against a 0.2845 control.
+
+### One more silent failure fixed
+
+`annotations_for` divided by `top_vote` without guarding zero. A track holding
+only zero-weight votes raised `ZeroDivisionError` inside the caller's `try`,
+which discards **the whole frame's annotations and its camera command** — a
+total loss that looks like a quiet frame. Not reachable in the served config,
+but it is the same shape as every other expensive failure here.
+
+### Mining is exhausted
+
+Two further passes found nothing: relaxing cross-model agreement (14 candidates)
+and relaxing confidence to 0.25 with agreement kept (19). Tier 2 was tree
+canopy, rooftops and a pond; tier 3's apparent finds were re-detections, and the
+one striking candidate turned out to be the lower section of the confirmed
+`large_tower`, split into its own cluster. **Cross-model agreement was doing all
+the work** — loosening it only adds false alarms. Review sheets are in
+`data/mining/` (gitignored).

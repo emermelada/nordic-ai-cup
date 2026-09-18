@@ -126,8 +126,27 @@ MOTION_TRIM = 0.75              # share of samples kept: vehicles move on their 
 MOTION_PRIOR_STRENGTH = 12.0    # samples needed to outweigh the prior
 MOTION_MAX_CORRECTION = 15.0    # px/frame at the frame centre; beyond this, distrust
 
-# How much a detection at each level is trusted, for class votes and boxes.
-LEVEL_WEIGHT = {0: 0.4, 1: 0.8, 2: 1.0}
+# How much a detection at each level is trusted. It scales class votes only
+# (add_votes), never a track's confidence, so scaling all three together
+# cancels out -- what matters is the ratio between levels.
+#
+# Level 0 was at 0.4 on the intuition that a coarse whole-frame view is less
+# reliable. Measured on five recorded runs (19 Sep), raising it to 1.0 helps in
+# every one, and helps most where there is most evidence to judge on:
+#
+#   run        L0 views   0.4      0.8      1.0
+#   5ace5364          3   0.288   +0.004   +0.010
+#   8a1d65ee        130   0.333   +0.034   +0.040
+#   a1c00d7c         90   0.366   +0.030   +0.039
+#   81bf6bd3          3   0.282   +0.002   +0.009
+#   04bef8d0          2   0.287   +0.001   +0.005
+#
+# The served `full` camera takes only 3 Level-0 views, so expect the top row
+# (+0.010 offline, inside the real run-to-run noise of +/-0.01), not the +0.04.
+# 2.0 was tried and rejected: it scores higher on the three-view runs than on
+# the well-sampled ones, which is noise, not effect.
+# DRONE_SET=LEVEL_WEIGHT={0:0.4,1:0.8,2:1.0} restores the old value for an A/B.
+LEVEL_WEIGHT = {0: 1.0, 1: 0.8, 2: 1.0}
 MATCH_IOU = 0.2
 # A track the camera looked at without finding it this many times is dropped.
 MAX_MISSES = 6
@@ -631,7 +650,12 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         base *= UNSEEN_DECAY ** max(0, frame - track.last_seen)
         if track.truncated:
             base *= TRUNCATED_WEIGHT
-        top_vote = ranked[0][1]
+        # A track can hold only zero-weight votes (LEVEL_WEIGHT of 0 for the
+        # level it was seen at), and dividing by that raised ZeroDivisionError
+        # inside the caller's try, which discards the WHOLE frame's annotations
+        # and its camera command -- a silent, total loss that looks like a
+        # quiet frame. Fall back to equal shares instead.
+        top_vote = ranked[0][1] or 1.0
         named = set()
         for rank, (name, vote) in enumerate(ranked[:1 + RUNNER_UPS]):
             share = vote / top_vote
