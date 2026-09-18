@@ -39,6 +39,8 @@ import requests
 
 from answering import Answer
 from asr import Transcript
+from evidence import locate
+from utils import temporal_iou
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,15 @@ MODEL = os.environ.get('LLM_MODEL', 'local')
 THINKING = os.environ.get('LLM_THINKING', '0')
 PARALLEL = int(os.environ.get('LLM_PARALLEL', '10'))
 MAX_TOKENS = int(os.environ.get('LLM_MAX_TOKENS', '2048' if THINKING == '1' else '300'))
+
+# Consensus spans, opt-in: besides the greedy reply, draw this many sampled
+# replies per likely-yes question and cite the one whose span overlaps the
+# others most — under an IoU score, the most typical span is the best single
+# bet. The yes/no call stays the greedy one. 0 is the 0.802 behaviour.
+SAMPLES = int(os.environ.get('LLM_SAMPLES', '0'))
+SAMPLE_TEMPERATURE = float(os.environ.get('LLM_SAMPLE_TEMPERATURE', '0.7'))
+# Below this P(yes) the span will not be sent, so it is not worth sampling for.
+SAMPLE_FROM_P_YES = 0.1
 
 # Conversations the worked examples below are taken from.
 FEW_SHOT_SOURCES = (
@@ -281,7 +292,7 @@ def _messages(transcript_text: str, question: str) -> List[Dict[str, str]]:
     return messages
 
 
-def _payload(messages: List[Dict[str, str]]) -> dict:
+def _payload(messages: List[Dict[str, str]], samples: int = 0) -> dict:
     payload = {
         'model': MODEL,
         'messages': messages,
@@ -290,6 +301,9 @@ def _payload(messages: List[Dict[str, str]]) -> dict:
         'logprobs': True,
         'top_logprobs': 5,
     }
+    if samples:
+        payload.update(temperature=SAMPLE_TEMPERATURE, n=samples, logprobs=False)
+        del payload['top_logprobs']
     if THINKING in ('0', '1'):
         payload['chat_template_kwargs'] = {'enable_thinking': THINKING == '1'}
     return payload
@@ -354,7 +368,50 @@ def _p_yes(choice: dict) -> Optional[float]:
     return yes / (yes + no) if yes + no > 0 else None
 
 
-def _answer_one(transcript_text: str, question: str, timeout: float) -> Optional[Answer]:
+def _consensus(
+    transcript: Transcript,
+    question: str,
+    greedy: Answer,
+    transcript_text: str,
+    timeout: float,
+) -> Answer:
+    """The greedy answer, citing whichever yes-reply's span overlaps the rest most."""
+    try:
+        response = requests.post(
+            f'{BASE_URL}/chat/completions',
+            json=_payload(_messages(transcript_text, question), samples=SAMPLES),
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        choices = response.json()['choices']
+    except Exception as exc:
+        logger.warning('Sampling failed for %r, keeping the greedy quote: %s', question, exc)
+        return greedy
+
+    # The greedy citation first, so it wins ties.
+    candidates = [(greedy.lines, greedy.quote)]
+    for choice in choices:
+        parsed = _parse(choice.get('message', {}).get('content') or '')
+        if parsed and parsed[2] and (parsed[0] or parsed[1]):
+            candidates.append((parsed[0], parsed[1]))
+
+    spans = [locate(transcript, quote, lines).span for lines, quote in candidates]
+    usable = [n for n, span in enumerate(spans) if span]
+    if len(usable) < 3:
+        return greedy
+
+    best = max(usable, key=lambda n: sum(temporal_iou(spans[n], spans[m]) for m in usable))
+    lines, quote = candidates[best]
+    return Answer(p_yes=greedy.p_yes, lines=lines, quote=quote)
+
+
+def _answer_one(
+    transcript_text: str,
+    question: str,
+    timeout: float,
+    transcript: Optional[Transcript] = None,
+) -> Optional[Answer]:
+    started = time.monotonic()
     try:
         response = requests.post(
             f'{BASE_URL}/chat/completions',
@@ -374,11 +431,16 @@ def _answer_one(transcript_text: str, question: str, timeout: float) -> Optional
 
     lines, quote, said_yes = parsed
     p_yes = _p_yes(choice)
-    return Answer(
+    greedy = Answer(
         p_yes=float(said_yes) if p_yes is None else p_yes,
         lines=lines,
         quote=quote,
     )
+
+    remaining = timeout - (time.monotonic() - started)
+    if SAMPLES and transcript is not None and greedy.p_yes >= SAMPLE_FROM_P_YES and remaining > 1.0:
+        return _consensus(transcript, question, greedy, transcript_text, remaining)
+    return greedy
 
 
 def answer(transcript: Transcript, questions: List[str], deadline: float) -> List[Optional[Answer]]:
@@ -386,7 +448,7 @@ def answer(transcript: Transcript, questions: List[str], deadline: float) -> Lis
     transcript_text = transcript.render()
     timeout = max(deadline - time.monotonic() - 0.5, 1.0)
 
-    futures = [_pool.submit(_answer_one, transcript_text, q, timeout) for q in questions]
+    futures = [_pool.submit(_answer_one, transcript_text, q, timeout, transcript) for q in questions]
     done, _ = concurrent.futures.wait(futures, timeout=max(deadline - time.monotonic(), 0.0))
     return [future.result() if future in done else None for future in futures]
 
