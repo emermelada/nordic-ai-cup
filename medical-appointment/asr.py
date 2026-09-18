@@ -32,9 +32,12 @@ COMPUTE_TYPE = 'int8'
 MODEL_REVISION = 'ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66'
 # Thread count does not change the output (checked at 4 and 12), only the
 # speed: the library default was ~1.6x slower than 12 threads on the dev laptop.
-# Capped because inside a rented container os.cpu_count() reports every core of
-# the host, not the share the container may use, and oversubscribing is slow.
-CPU_THREADS = int(os.environ.get('ASR_CPU_THREADS', min(os.cpu_count() or 4, 16)))
+# Counted from the CPUs this process may run on, not os.cpu_count(): a rented
+# container sees every core of the host (448 on one vast box) but may use 6.
+_USABLE_CPUS = (
+    len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else os.cpu_count()
+) or 4
+CPU_THREADS = int(os.environ.get('ASR_CPU_THREADS', min(_USABLE_CPUS, 16)))
 
 # A word ending in one of these closes a sentence, unless it is a title that
 # only looks like it ("Dr. Thorson").
