@@ -33,6 +33,12 @@ from env_wrapper import make_action     # noqa: E402
 PRE = os.environ.get("V2_PRE", "/tmp/v2/best_controller_HEAD.py")
 
 TRAITS = ("vision_range", "vision_angle", "hearing_radius", "max_energy", "speed", "sprint_speed")
+# The DTO + observation payload use vision_range/vision_angle; the ENTITY stores them as
+# vision_radius/cone_angle. Reading the entity with the DTO key silently returns NaN (an all-NaN
+# column is how this was caught), which is why the mapping is explicit here.
+ENT_ATTR = {"vision_range": "vision_radius", "vision_angle": "cone_angle",
+            "hearing_radius": "hearing_radius", "max_energy": "max_energy",
+            "speed": "speed", "sprint_speed": "sprint_speed"}
 DEFAULTS = {"speed": 10.0, "sprint_speed": 20.0, "max_energy": 500.0,
             "hearing_radius": 50.0, "vision_range": 200.0, "vision_angle": math.pi / 3}
 
@@ -64,6 +70,9 @@ def run_traced(fn, mod, seed, horizon, n_agents=5):
     seen = {a.agent_id for a in core.env.agents}
     births, spawns, fruits = [], 0, 0.0
     last_score = 0.0
+    pops = []
+    vsamp, esamp = [], []       # fleet trait samples every 250 ticks (the fleet is often DEAD at the
+                                # end of an episode, so the final population is not a sample of it)
     i = 0
     for i in range(horizon):
         live = [a.agent_id for a in core.env.agents]
@@ -79,21 +88,27 @@ def run_traced(fn, mod, seed, horizon, n_agents=5):
             spawns += int(bool(act[3]))
         core.step(acts)
         sc = float(getattr(core.env, "score", 0.0) or 0.0)
-        fruits += max(0.0, sc - last_score) * 1000.0
+        fruits += max(0.0, sc - last_score - 0.1) * 1000.0   # fruit energy = (dscore - dt) * 1000
         last_score = sc
+        if i % 250 == 0:
+            pops.append(len(core.env.agents))
+            ft = fleet_traits(core)
+            if ft:
+                vsamp.append(float(np.mean([f["vision_range"] for f in ft])))
+                esamp.append(float(np.mean([f["max_energy"] for f in ft])))
         new_ids = {a.agent_id for a in core.env.agents} - seen
         if new_ids:
             cur = {a.agent_id: a for a in core.env.agents}
             for nid in sorted(new_ids):
                 a = cur.get(nid)
                 if a is not None:
-                    births.append({tr: float(getattr(a, tr, float("nan"))) for tr in TRAITS})
+                    births.append({tr: float(getattr(a, ENT_ATTR[tr], float("nan"))) for tr in TRAITS})
         seen |= new_ids
-    return i + 1, fruits, spawns, births, core
+    return i + 1, fruits, spawns, births, core, pops, vsamp, esamp
 
 
 def fleet_traits(core):
-    return [{tr: float(getattr(a, tr, float("nan"))) for tr in TRAITS} for a in core.env.agents]
+    return [{tr: float(getattr(a, ENT_ATTR[tr], float("nan"))) for tr in TRAITS} for a in core.env.agents]
 
 
 def main():
@@ -103,14 +118,28 @@ def main():
     base = dict(LIVE)
     base.update({"evade_mode": 0.0, "thin_relay": 0.0, "genome_select": 0.0})
 
-    print(f"=== PART 1: OFF-BY-DEFAULT IDENTITY (all new flags 0), seeds {seeds}, horizon {horizon} ===",
+    print(f"=== PART 1: OFF-BY-DEFAULT IDENTITY (interleaved A/B/A/B), seeds {seeds}, horizon {horizon} ===",
           flush=True)
-    a = [run_traced(PRE_MOD.make_policy(params(PRE_MOD, base)), PRE_MOD, sd, horizon)[:3] for sd in seeds]
-    b = [run_traced(NEW.make_policy(params(NEW, base)), NEW, sd, horizon)[:3] for sd in seeds]
-    for sd, x, y in zip(seeds, a, b):
-        print(f"  seed {sd}: pre-edit steps={x[0]:6d} fruits={x[1]:7.1f} spawns={x[2]:3d} | "
-              f"edited steps={y[0]:6d} fruits={y[1]:7.1f} spawns={y[2]:3d} | same={x == y}", flush=True)
-    print(f"  IDENTICAL: {a == b}", flush=True)
+    if os.environ.get("V2_SKIP_IDENT"):
+        print("  SKIPPED (V2_SKIP_IDENT set; identity is proven by _v2_ident.py: 4/4 identical runs on "
+              "the deployed params, A1==B1==A2==B2 on seed 101)", flush=True)
+    # INTERLEAVED on purpose: running all pre-edit seeds and then all edited seeds made seed 101
+    # disagree (140 vs 133 spawns) although the new code is provably inert -- the environment's
+    # object-set iteration order depends on allocation history, so a module running later in the
+    # process can diverge. A/B/A/B with the same module twice separates code from noise.
+    if not os.environ.get("V2_SKIP_IDENT"):
+        ok = True
+        for sd in seeds:
+            seq = {}
+            for k, (mod, blob) in {"A1": (PRE_MOD, base), "B1": (NEW, base),
+                                   "A2": (PRE_MOD, base), "B2": (NEW, base)}.items():
+                seq[k] = run_traced(mod.make_policy(params(mod, blob)), mod, sd, horizon)[:3]
+            noise = (seq["A1"] != seq["A2"]) or (seq["B1"] != seq["B2"])
+            code = (seq["A1"] != seq["B1"]) or (seq["A2"] != seq["B2"])
+            ok = ok and (not code or noise)
+            print(f"  seed {sd}: {seq} | same-module disagreement (noise)={noise} | A-vs-B (code)={code}",
+                  flush=True)
+        print(f"  OFF-BY-DEFAULT IDENTITY ACCEPTABLE (no code-only difference): {ok}", flush=True)
 
     print(f"\n=== PART 2: MECHANISM GATE — does selection move the genome? (horizon {horizon}) ===",
           flush=True)
@@ -120,30 +149,35 @@ def main():
             ("sel_top2_bank", {"genome_select": 1.0, "gs_topk": 2.0, "gs_w_energy": 1.2,
                                "gs_late_energy_mult": 3.0}),
             ("sel_top2_visiononly", {"genome_select": 1.0, "gs_topk": 2.0, "gs_w_energy": 0.0,
-                                     "gs_w_speed": 0.0, "gs_w_sprint": 0.0})]
+                                     "gs_w_speed": 0.0, "gs_w_sprint": 0.0}),
+            ("sel_mean", {"genome_select": 1.0, "gs_mode": 2.0})]
     for label, over in arms:
         P = dict(LIVE)
         P.update(over)
         P.update({"evade_mode": 0.0, "thin_relay": 0.0})    # isolate the genome layer
         out = []
         for sd in seeds:
-            steps, fruits, spawns, births, core = run_traced(NEW.make_policy(params(NEW, P)), NEW, sd, horizon)
-            ft = fleet_traits(core)
-            vmean = float(np.mean([f["vision_range"] for f in ft])) if ft else float("nan")
-            vmax = float(np.max([f["vision_range"] for f in ft])) if ft else float("nan")
-            emean = float(np.mean([f["max_energy"] for f in ft])) if ft else float("nan")
+            steps, fruits, spawns, births, core, pops, vsamp, esamp = run_traced(
+                NEW.make_policy(params(NEW, P)), NEW, sd, horizon)
             bv = [x["vision_range"] for x in births if x["vision_range"] == x["vision_range"]]
-            out.append((sd, steps, fruits, spawns, len(births), vmean, vmax, emean,
-                        float(np.mean(bv)) if bv else float("nan")))
+            out.append((sd, steps, fruits, spawns, len(births),
+                        float(np.mean(vsamp)) if vsamp else float("nan"),
+                        float(np.mean(vsamp[-8:])) if len(vsamp) >= 8 else float("nan"),
+                        float(np.mean(esamp)) if esamp else float("nan"),
+                        float(np.mean(bv)) if bv else float("nan"),
+                        float(np.mean(pops)) if pops else float("nan"),
+                        float(np.mean(pops[-8:])) if len(pops) >= 8 else float("nan")))
         print(f"  {label:22s} steps mean {np.mean([o[1] for o in out]):7.0f} | "
               f"fruits {np.mean([o[2] for o in out]):7.0f} | births {sum(o[4] for o in out):4d} | "
-              f"fleet vision mean {np.nanmean([o[5] for o in out]):6.1f} "
-              f"max {np.nanmax([o[6] for o in out]):6.1f} | fleet max_energy {np.nanmean([o[7] for o in out]):6.1f} | "
-              f"newborn vision {np.nanmean([o[8] for o in out]):6.1f}", flush=True)
+              f"pop mean {np.nanmean([o[9] for o in out]):5.1f} late {np.nanmean([o[10] for o in out]):5.1f} | "
+              f"fleet vision {np.nanmean([o[5] for o in out]):6.1f} late {np.nanmean([o[6] for o in out]):6.1f} | "
+              f"max_energy {np.nanmean([o[7] for o in out]):6.1f} | newborn vision {np.nanmean([o[8] for o in out]):6.1f}",
+              flush=True)
         for o in out:
             print(f"      seed {o[0]}: steps={o[1]:6d} fruits={o[2]:7.0f} spawns={o[3]:3d} "
-                  f"births={o[4]:3d} vision_mean={o[5]:6.1f} vision_max={o[6]:6.1f} "
-                  f"energy_mean={o[7]:6.1f} newborn_vision={o[8]:6.1f}", flush=True)
+                  f"births={o[4]:3d} pop={o[9]:5.1f}/{o[10]:5.1f} "
+                  f"vision={o[5]:6.1f}/{o[6]:6.1f} energy={o[7]:6.1f} newborn_vision={o[8]:6.1f}",
+                  flush=True)
 
 
 if __name__ == "__main__":

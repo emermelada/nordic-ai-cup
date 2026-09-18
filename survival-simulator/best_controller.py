@@ -230,6 +230,11 @@ DEFAULT_PARAMS = {
     "gs_w_speed": 0.2,
     "gs_w_sprint": 0.2,
     "gs_topk": 2.0,             # spawn only if own U ranks within the fleet's top-k (1 = best)
+    "gs_mode": 1.0,             # 1 = rank gate (top-k only). 2 = IMPROVING gate: any agent whose U
+                                #     is above the LIVING FLEET's mean U may breed -- weaker
+                                #     selection pressure but ~half the fleet still breeds, so the
+                                #     ratchet gets far more draws per 1,000 ticks. Which matters more
+                                #     (pressure vs number of draws) is a measurement, not an opinion.
     "gs_min_known": 3.0,        # need at least this many tracked genomes before gating at all
     "gs_rescue_pop": 1.0,       # gpop <= this => never gate (age mortality makes births load-bearing)
     "gs_phase_tick": 6000.0,    # after this sim tick the objective shifts toward the BANK
@@ -417,9 +422,18 @@ def potential_controller(state, P):
         _GS_LAST = (own_u, _rank, len(_alive))
         _min_known = float(P.get("gs_min_known", 3.0) or 0.0)
         _rescue_pop = float(P.get("gs_rescue_pop", 1.0) or 0.0)
+        _mode = float(P.get("gs_mode", 1.0) or 1.0)
+        if _mode >= 2.0:
+            # IMPROVING gate: breed only from agents above the fleet's own mean genome utility. No
+            # population target is implied (roughly half the fleet qualifies at any time), so the
+            # ratchet gets many more draws per 1,000 ticks than top-k does.
+            _mu = sum(_genome_u(v, _w) for _, v in _alive) / float(len(_alive)) if _alive else 0.0
+            _select_ok = own_u > _mu
+        else:
+            _select_ok = _rank <= float(P.get("gs_topk", 2.0) or 2.0)
         # never gate the relay: below the rescue population the lineage must continue whatever the
         # genome, and with too few known genomes the ranking is not informative yet.
-        gs_ok = (len(_alive) < _min_known) or (gpop <= _rescue_pop) or (_rank <= float(P.get("gs_topk", 2.0) or 2.0))
+        gs_ok = (len(_alive) < _min_known) or (gpop <= _rescue_pop) or _select_ok
 
     fruits = [x for x in o if x.get("type") == "Fruit"]
     preds = [x for x in o if x.get("type") == "Predator"]
