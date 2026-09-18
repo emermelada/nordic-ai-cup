@@ -12,11 +12,14 @@
  "explore_frac": 0.35,
  "repro_frac": 0.35,
  "repro_frac_min": 0.22,
- "repro_urgency": 1.0,
- "repro_global_target": 12,
- "repro_popcap": 6,
- "spawn_cooldown": 120,
+ "repro_urgency": 0.8474693138402785,
+ "repro_global_target": 17.557353773148733,
+ "repro_popcap": 4.0,
+ "spawn_cooldown": 30.0,
  "repro_safe_radius": 253.47550193496397,
  "forage_nearest": 1.0,
- "forage_speed": 1.0
+ "forage_speed": 1.0,
+ "repro_energy_abs": 34.24306268361759,
+ "spawn_cap": 14,
+ "repro_unlimited": 0.0
 }
