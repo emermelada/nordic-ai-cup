@@ -559,3 +559,106 @@ silently measuring one model.
   resolution-limited at ~7 px.
 * v6's `jammer` collapse (0.239 → 0.002 alone) is still unexplained. Both models
   every frame recovers it to 0.241, which is a second reason to try it.
+
+---
+
+## 2026-09-18, night: the resolution floor, and a camera that can reach past it
+
+**The per-class scores are predicted by one number: how many pixels the object
+has in the transmitted view.** Every scoring camera we have ever run works at
+Level 1, which halves the source. Median object size, and what we score:
+
+| class | source px | at Level 1 | our AP (v4) | object-frames |
+|---|---|---|---|---|
+| small_launcher | 12.9 | **6.4** | 0.000 | 33 |
+| spacecraft | 24.5 | **12.2** | 0.007 | 64 |
+| mine_roller | 26.8 | **13.4** | 0.000 | 33 |
+| large_tower | 29.5 | **14.8** | 0.001 | 33 |
+| jammer | 31.0 | 15.5 | 0.239 | 99 |
+| tank | 34.3 | 17.2 | 0.043 | **219** |
+| jet_plane | 46.4 | 23.2 | 0.716 | 66 |
+| hangar | 108.8 | 54.4 | 0.743 | 70 |
+
+YOLO's finest stride is 8 px, so an object under ~15 px at Level 1 spans one or
+two grid cells and sits below the detection floor. The five classes at the top
+of that table are **382 of 911 scored object-frames -- 42 % of everything --
+and all of them are at ~0.00 in every configuration ever measured here.** That
+is not a training problem; the information is gone before the detector sees it.
+
+This also explains why `imgsz=1280` is worth so much: it does not recover
+detail, it gives YOLO more grid cells per object. It is a workaround for the
+downsample, and Level 2 is the actual fix.
+
+**Level 2 is reachable and has never been used for scoring.** The transitions
+are `{0: (0,1), 1: (0,1,2), 2: (1,2)}` -- `allowed_resolution_levels` reads
+`[0,1]` only when you are at Level 0, because levels change one step at a time.
+From Level 1 it is `(0,1,2)`, which is 4681 of our recorded requests. Every
+pattern in `SWEEPS` is Level 0/1 only; `survey` is Level 2 and is labelled a
+data-collection pattern.
+
+**Measured, replaying the recorded survey run through v4** (`--run c0c70bce...`):
+
+| class | `full` (all L1) | `survey` (99 % L2) |
+|---|---|---|
+| mine_roller | 0.000 | **0.180** |
+| small_launcher | 0.000 | **0.052** |
+| tank | 0.043 | **0.084** |
+| jet_plane | 0.716 | 0.000 |
+| hangar | 0.743 | 0.230 |
+| **total** | **0.277** | **0.080** |
+
+`mine_roller` and `small_launcher` had never been non-zero in any configuration.
+Native resolution makes them real. But pure survey works the top half only and
+abandons the large classes, so it loses far more than it gains as a whole.
+
+### `DRONE_CAMERA=hybrid`
+
+Alternates Level-2 acquisition passes over the survey rows with Level-1
+coverage. The shape follows the flight: the ground scrolls ~69 px/frame, so
+every object enters at the top edge and crosses in ~31 frames. Catch it once
+near the top at native resolution and memory carries it down; the Level-1 phase
+stops those tracks drifting out of IoU and picks up what L2's narrow view walks
+past. `HYBRID_ACQUIRE` (9) and `HYBRID_COVER` (3) are `DRONE_SET`-tunable.
+
+Simulated over a whole flight against the evaluator's own three checks
+(`DRONE_CAMERA=hybrid python tools/camsim.py`): **187 of 249 frames at
+Level 2, 61 at Level 1, zero illegal or refused commands**, full horizontal
+coverage of the top band. `full` and `survey` are unchanged, 0 refusals each.
+
+**It has no offline number and cannot get one.** A replay feeds back the
+*recorded* views, so a camera that would have looked elsewhere has nothing to
+replay. `survey` at 0.080 and `full` at 0.277 bracket it; the split has to be
+tuned on real runs. If a run disappoints, tune down
+(`DRONE_SET=HYBRID_ACQUIRE=6,HYBRID_COVER=6`) before abandoning it -- but note
+that below ~50 % the L2 snake sweeps slower than objects cross the band, which
+buys the cost without the acquisition.
+
+`DRONE_INSPECT` is not a cheaper version of this: it only zooms on tracks that
+already exist, and our dead classes never produce a track at all.
+
+### One model at two scales is a pair
+
+`DRONE_IMGSZ=960,1280` with the same weights named twice. On a machine that
+cannot afford v6, this is the whole gain of pairing without a second model:
+
+| configuration | offline | detector cost (i5) |
+|---|---|---|
+| v4@960 | 0.277 | 112 ms |
+| v4@1280 | 0.318 | ~200 ms |
+| **v4@960 + v4@1280 alternating** | **0.333** | **~156 ms avg** |
+| v4@960 + v4@1280 both every frame | 0.349 | ~312 ms |
+
+Alternating beats 1280-alone on score *and* costs less on average. Both-every-
+frame scores highest but leaves 21 ms of a 333 ms budget on the i5.
+
+### `tools/score_offline.py` takes `PATH:SIZE`
+
+`--model models/drone-yolo11n-v4.pt:960 --model-alt models/drone-yolo11n-v4.pt:1280`
+scores a two-scale pair, so every configuration that can be served can now be
+scored by a committed tool. Verified to reproduce 0.277 / 0.318 / 0.333 / 0.349
+and the v4+v6 pair's 0.346 exactly.
+
+It sets **both** `flyby.IMGSZ` (the cache key) and `flyby.IMGSZ_LIST` (what
+`raw_detections` actually resizes with). Setting only the first names a cache
+file 1280 while computing at 960 -- a poisoned cache that reads as a working
+one, and it already cost another session four silently wrong runs.

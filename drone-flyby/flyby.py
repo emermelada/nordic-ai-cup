@@ -30,7 +30,7 @@ Configuration, all optional, through environment variables:
     DRONE_THREADS CPU threads for inference  (default: 6)
     DRONE_DET_CONF    lowest detection reported at all       (default: 0.01)
     DRONE_TRACK_CONF  lowest detection remembered as a track (default: 0.25)
-    DRONE_CAMERA      sweep pattern: full, top, mixed, or survey
+    DRONE_CAMERA      sweep pattern: full, top, mixed, hybrid or survey
                       quad0, full0, dwell or survey (data)    (default: full)
     DRONE_SET         NAME=value,... overrides any setting below, for experiments
                       DRONE_SET=MOTION_MIN_SAMPLES=999999 pins the ground motion
@@ -50,6 +50,7 @@ import cv2
 import numpy as np
 
 from dtos import (
+    ALLOWED_RESOLUTION_LEVELS,
     FULL_FRAME_CENTER,
     IMAGE_HEIGHT,
     IMAGE_WIDTH,
@@ -59,7 +60,12 @@ from dtos import (
     DroneFlybyPredictResponseDto,
     RequestedViewDto,
 )
-from utils import clip_bbox_to_frame, decode_view, describe_camera_rejection
+from utils import (
+    center_bounds_for_level,
+    clip_bbox_to_frame,
+    decode_view,
+    describe_camera_rejection,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +204,33 @@ SWEEP = [p if len(p) == 3 else (1, *p) for p in SWEEPS.get(CAMERA, FULL_SWEEP)]
 SURVEY_ROW_TOP = [(x, 270) for x in (480, 1030, 1580, 2130, 2680, 3230, 3360)]
 SURVEY_ROW_LOW = [(x, 810) for x in (3360, 2810, 2260, 1710, 1160, 610, 480)]
 SURVEY = SURVEY_ROW_TOP + SURVEY_ROW_LOW
+
+# 'hybrid': acquire small objects at native resolution, keep Level-1 coverage.
+#
+# Why it exists. Every scored object has a fixed size in source pixels, and at
+# Level 1 the transmitted view halves it: small_launcher 6.4 px, spacecraft
+# 12.2, mine_roller 13.4, large_tower 14.8, tank 17.2. YOLO's finest stride is
+# 8 px, so those five sit at or under the detection floor -- and they are 382 of
+# 911 scored object-frames, all of them at ~0.00 AP in every configuration ever
+# measured here. Level 2 is 1:1 and doubles every one of them.
+#
+# Measured, on the recorded survey run replayed through v4: mine_roller
+# 0.000 -> 0.180 and small_launcher 0.000 -> 0.052, the first non-zero either
+# class has ever scored, and tank 0.043 -> 0.084. But pure survey totals 0.080
+# against 0.277, because it works the top half only and abandons jet_plane and
+# large_tower entirely. Hence a hybrid rather than a switch.
+#
+# The shape follows the flight: the ground scrolls down ~69 px/frame, so every
+# object enters at the top edge and crosses the whole frame in ~31 frames. An
+# object needs to be caught once, near the top, while it is over the L2 rows;
+# memory carries it down. The Level-1 phase is what stops those tracks drifting
+# out of IoU and picks up the large classes L2's narrow view walks past.
+#
+# Both phase lengths are DRONE_SET-tunable, because the split between acquiring
+# and covering cannot be measured offline -- a camera that would have looked
+# somewhere else has no recorded view to replay -- so it has to be tuned on runs.
+HYBRID_ACQUIRE = 9     # frames per Level-2 acquisition pass
+HYBRID_COVER = 3       # frames per Level-1 coverage pass
 
 # Level-2 inspection: a small object whose class is still unsure gets one
 # close look, then the sweep resumes.
@@ -450,6 +483,7 @@ class Sequence:
     # The last view we asked for: (level, x, y).
     pending: Optional[Tuple[int, int, int]] = None
     answers_since_inspection: int = 0
+    hybrid_step: int = 0
     # This flight's ground motion, re-fitted as re-detections come in.
     motion: Tuple[float, ...] = MOTION
     motion_samples: List[Tuple[float, float, float, float]] = field(default_factory=list)
@@ -654,6 +688,65 @@ def inspection_target(state: Sequence, base, frame: int) -> Optional[Tuple[int, 
     return best[1]
 
 
+def step_towards(base, level: int, x: int, y: int) -> Optional[Tuple[int, int, int]]:
+    """A legal move from ``base`` towards (level, x, y), shortened if too far.
+
+    The evaluator checks three things in order -- the level transition, the
+    centre bounds for the requested level, then the distance against the limit
+    for the level you are *currently* at (L0 2203, L1 1102, L2 551). A move that
+    fails any of them is refused and the camera idles, so this shortens the step
+    until it passes rather than asking for something that cannot be granted.
+    """
+    if level not in ALLOWED_RESOLUTION_LEVELS.get(base[0], ()):
+        # Levels change one step at a time; 1 is reachable from both 0 and 2.
+        level = 1
+    if level == 0:
+        return (0, *FULL_FRAME_CENTER)
+    low_x, high_x, low_y, high_y = center_bounds_for_level(level)
+    x = int(min(max(x, low_x), high_x))
+    y = int(min(max(y, low_y), high_y))
+    if legal(base, level, x, y):
+        return (level, x, y)
+    # Too far: walk in from the target until the step fits. Clipping to bounds
+    # can itself lengthen the move, so this checks rather than computes a ratio.
+    dx, dy = x - base[1], y - base[2]
+    for ratio in (0.9, 0.75, 0.6, 0.45, 0.3, 0.15):
+        near_x = int(min(max(base[1] + dx * ratio, low_x), high_x))
+        near_y = int(min(max(base[2] + dy * ratio, low_y), high_y))
+        if legal(base, level, near_x, near_y):
+            return (level, near_x, near_y)
+    return None
+
+
+def hybrid_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
+    """Alternate Level-2 acquisition over the top rows with Level-1 coverage."""
+    state.hybrid_step += 1
+    cycle = max(1, HYBRID_ACQUIRE + HYBRID_COVER)
+    acquiring = (state.hybrid_step % cycle) < HYBRID_ACQUIRE
+
+    if acquiring:
+        # Advance along the L2 snake only once the camera has actually arrived,
+        # so a shortened step resumes towards the same point instead of skipping it.
+        point = SURVEY[state.sweep_index % len(SURVEY)]
+        if base[0] == 2 and (base[1], base[2]) == point:
+            state.sweep_index = (state.sweep_index + 1) % len(SURVEY)
+            point = SURVEY[state.sweep_index % len(SURVEY)]
+        target = step_towards(base, 2, *point)
+    else:
+        # Coverage: the nearest Level-1 sweep point, so leaving L2 costs one move.
+        reachable = [p for p in SWEEP if p[0] == 1 and legal(base, *p)]
+        if reachable:
+            target = min(reachable, key=lambda p: (p[1] - base[1]) ** 2 + (p[2] - base[2]) ** 2)
+        else:
+            target = step_towards(base, 1, base[1], base[2])
+
+    if target is not None and legal(base, *target):
+        state.pending = target
+        return RequestedViewDto(resolution_level=target[0], center_x=target[1], center_y=target[2])
+    state.pending = None
+    return None
+
+
 def survey_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
     if base[0] == 2 and (base[1], base[2]) == SURVEY[state.sweep_index % len(SURVEY)]:
         state.sweep_index = (state.sweep_index + 1) % len(SURVEY)
@@ -694,6 +787,8 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
 
     if CAMERA == 'survey':
         return survey_next_view(base, state)
+    if CAMERA == 'hybrid':
+        return hybrid_next_view(base, state)
 
     target = None
     state.answers_since_inspection += 1

@@ -170,7 +170,8 @@ def from_recording(run: str):
     return predictions
 
 
-def from_replay(run: str, model: Path, overrides, model_alt: Path = None):
+def from_replay(run: str, model: Path, overrides, model_alt: Path = None,
+                imgsz=None, imgsz_alt=None):
     """Replay the recorded requests through flyby.predict with cached detections.
 
     With ``model_alt``, this mirrors what the service actually does with two sets
@@ -194,9 +195,21 @@ def from_replay(run: str, model: Path, overrides, model_alt: Path = None):
         name, value = item.split('=', 1)
         setattr(flyby, name, type(getattr(flyby, name))(eval(value)))
 
-    caches = [cached_detections(model)]
+    def cache_at(path: Path, size):
+        """Detections for ``path`` at ``size``, computing them only if needed.
+
+        Both globals get set. flyby.IMGSZ is what cached_detections keys the
+        cache file on; flyby.IMGSZ_LIST is what raw_detections actually resizes
+        with. Setting only the first names the file 1280 while computing at 960,
+        which is a poisoned cache that reads as a working one.
+        """
+        if size is not None:
+            flyby.IMGSZ, flyby.IMGSZ_LIST = size, [size]
+        return cached_detections(path)
+
+    caches = [cache_at(model, imgsz)]
     if model_alt is not None:
-        caches.append(cached_detections(model_alt))
+        caches.append(cache_at(model_alt, imgsz_alt))
     current = {}
     flyby.decode_view = lambda view: None
 
@@ -236,6 +249,8 @@ def main() -> int:
     parser.add_argument('--model', type=Path, default=ROOT / 'models' / 'drone-yolo11n-v4.pt')
     parser.add_argument('--model-alt', type=Path, default=None,
                         help='Second weights, alternating per frame like the served pair. '
+                             'Either model may carry an inference size as PATH:SIZE, so '
+                             'one model at two scales is a pair too. '
                              'Add --set BOTH_MODELS=1 to run both on every frame instead.')
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting override (with --replay).')
     parser.add_argument('--from-frame', type=int, default=0, help='Only score frames from here on.')
@@ -246,12 +261,26 @@ def main() -> int:
                              'with the tracker and hides motion error.')
     args = parser.parse_args()
 
+    def split_size(value):
+        """'weights.pt:1280' -> (Path, 1280); a bare path -> (Path, None)."""
+        if value is None:
+            return None, None
+        text = str(value)
+        base, sep, size = text.rpartition(':')
+        if sep and size.isdigit():
+            return Path(base), int(size)
+        return Path(text), None
+
+    model, imgsz = split_size(args.model)
+    model_alt, imgsz_alt = split_size(args.model_alt)
+
     if not (RECORDINGS / args.run).is_dir():
         raise SystemExit(f'no recording {args.run}')
     objects = json.loads(OBJECTS.read_text())['objects']
     frames = [f for f in range(1, args.frames + 1) if f >= args.from_frame]
 
-    predictions = from_replay(args.run, args.model, args.set, args.model_alt) if args.replay else from_recording(args.run)
+    predictions = (from_replay(args.run, model, args.set, model_alt, imgsz, imgsz_alt)
+                   if args.replay else from_recording(args.run))
     # Only the frames actually scored, or --frames makes the per-frame rate nonsense.
     total = sum(len(predictions.get(f, [])) for f in frames)
     import flyby
@@ -260,10 +289,10 @@ def main() -> int:
     overall, by_class, instances = score(predictions, frames, objects, motion)
 
     if args.replay:
-        label = f'replay {args.model.name}'
-        if args.model_alt is not None:
+        label = f'replay {model.name}' + (f'@{imgsz}' if imgsz else '')
+        if model_alt is not None:
             mode = 'both every frame' if flyby.BOTH_MODELS else 'alternating'
-            label += f' + {args.model_alt.name} ({mode})'
+            label += f' + {model_alt.name}' + (f'@{imgsz_alt}' if imgsz_alt else '') + f' ({mode})'
     else:
         label = f'recorded answers of {args.run[:12]}'
     print(f'{label}')
