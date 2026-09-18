@@ -55,6 +55,20 @@ SPACE = {
     "spawn_cooldown":      (30.0, 500.0, 0.25),
     "repro_safe_radius":   (120.0, 420.0, 0.15),
     "repro_energy_abs":    (0.0, 300.0, 0.25),   # 0 = fractional gate; >=105 = absolute
+    # --- ENDGAME CONSOLIDATION / BANKING (phase_mode 0 = off = exactly the old behaviour) ---
+    # Why: every run ends by starvation as fruit production decays (0.5^(t/300)), and the first
+    # attempt at this failed for TWO measurable reasons, both now fixed -- it fired mid-boom
+    # (4,000-7,500) and its spawn gate silently forbade ALL breeding (gpop <= 3 while the fleet held
+    # 10-16 agents), killing the relay. Arithmetic for the 1,800 target: metabolism alone is
+    # ~0.1/tick, so one agent holding ~600 energy at zero/low movement survives ~6,000 extra ticks.
+    # Rather than hand-set the switch points, expose them here and let the search choose.
+    "phase_mode":          (0.0, 1.0, 0.50),     # 0 = off; scales the whole endgame effect
+    "famine_tick_lo":      (6000.0, 16000.0, 0.30),
+    "famine_tick_hi":      (8000.0, 20000.0, 0.30),
+    "famine_move_frac":    (0.2, 1.0, 0.25),     # 1.0 = movement untouched in the endgame
+    "famine_bank_frac":    (0.4, 1.0, 0.25),     # energy fraction needed to breed while banking
+    "famine_min_pop":      (1.0, 6.0, 0.30),     # relay rescue threshold (never stop breeding)
+    "famine_min_cap":      (0.0, 800.0, 0.30),   # 0 = any lineage; >0 = high-capacity lineages only
 }
 
 PARAMS_FILE = os.path.join(REPO, "best_controller", "params.json")

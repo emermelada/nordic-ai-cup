@@ -77,14 +77,19 @@ DEFAULT_PARAMS = {
     # Reaching ~18k ticks needs agents that ARRIVE at the famine FULL: metabolism alone (0.1/tick)
     # drains ~1,200 energy over 12,000 ticks, and max_energy caps the bank at 500 (mutated: up to 1000).
     "phase_mode": 0.0,          # 0 = off; scales the whole phase effect (1 = fully active)
-    "famine_tick_lo": 4000.0,   # simulated tick at which the famine ramp STARTS
-    "famine_tick_hi": 7500.0,   # tick at which it is FULLY in effect
+    "famine_tick_lo": 10000.0,  # tick at which consolidation STARTS (must NOT be mid-boom: the
+    "famine_tick_hi": 14000.0,  #   first attempt fired at 4,000-7,500 and killed income+relay)
     "famine_vis_guard": 0.0,    # >0: visible food DELAYS the famine (0 = pure time; try 0.4-0.7)
-    "famine_move_frac": 0.2,    # movement scale in full famine when food IS visible
-    "famine_blind_stop": 1.0,   # how completely to stop moving in famine when NO fruit is visible
-    "famine_pop_target": 3.0,   # max estimated population allowed to spawn during famine
-    "famine_bank_frac": 0.9,    # energy fraction required to spawn during famine (bank first)
-    "famine_min_cap": 0.0,      # >0: spawn only from agents whose max_energy >= this (lineage cap)
+    "famine_move_frac": 0.6,    # movement scale deep in the endgame: do NOT stop dead, movement
+                                #   is the INCOME mechanism (stopping was a measured failure)
+    "famine_blind_stop": 0.0,   # extra stop when famine AND no fruit visible (0 = don't)
+    "famine_pop_target": 3.0,   # legacy gate (superseded by the rescue/invest rule below)
+    "famine_min_pop": 2.0,      # RELAY RESCUE: below this population, spawn regardless of banking
+                                #   (fixes the ablation's fatal flaw: a fleet that stops breeding
+                                #   under age mortality simply dies)
+    "famine_bank_frac": 0.9,    # INVEST: otherwise, spawn only from a nearly-full agent...
+    "famine_min_cap": 0.0,      # >0: ...whose max_energy >= this (heritable lineage cap; the cap
+                                #   is what sets how much energy a survivor can bank for the endgame)
     # --- generational relay (age-aware: survive past max_age by banking heirs) ---
     "relay_age": 0.0,          # sim seconds; spawn an heir once older than this (0 = off)
     "relay_energy_frac": 0.35, # energy gate used by the relay spawn (fraction of max_energy)
@@ -467,11 +472,16 @@ def potential_controller(state, P):
     # optionally only from high-capacity lineages, since max_energy is heritable (mutates +/-50%,
     # capped at 1000) and it is what sets how long a survivor can outlast the food. ----
     if spawn and phase > 0.0:
-        _tgt = float(P.get("famine_pop_target", 3.0) or 0.0)
-        _bank = float(P.get("famine_bank_frac", 0.9) or 0.0)
+        _minpop = float(P.get("famine_min_pop", 2.0))
+        _bank = float(P.get("famine_bank_frac", 0.9))
         _mincap = float(P.get("famine_min_cap", 0.0) or 0.0)
         _own_cap = float(state.get("max_energy", 500.0) or 500.0)
-        if not (gpop <= _tgt and ef >= _bank and _own_cap >= _mincap):
+        # RELAY RESCUE first: a fleet that stops breeding under age mortality just dies, which is
+        # exactly how the first version of this policy failed (measured 4,719 vs 7,816 ticks).
+        _rescue = gpop < _minpop
+        # otherwise INVEST: only a nearly-full, high-capacity parent is worth 100 energy
+        _invest = (ef >= _bank) and (_own_cap >= _mincap)
+        if not (_rescue or _invest):
             spawn = 0.0
 
     return [float(dist), float(steer), 0.0, float(spawn)]
