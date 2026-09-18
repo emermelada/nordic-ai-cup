@@ -80,12 +80,14 @@ CHECK: <one short sentence comparing the question with the transcript>
 ANSWER: <yes or no>
 
 The QUOTE is copied character for character from the transcript, misspellings \
-included. Quote the whole sentence that states the fact, from its first word — \
-keep openers such as "So," or "Yes," — to its end. When the fact takes several \
-sentences — a question and its answer, a list and its confirmation, an \
-examination and its finding — quote all of them. Only when a single sentence \
-packs several separate facts, quote just the part about the fact asked: from \
-where that part starts to its last word."""
+included. Quote where the fact is first stated: the whole sentence that states \
+it, from its first word — keep openers such as "So," or "Yes," — to its end. \
+Leave out what follows it: confirmations, repetitions and summaries such as \
+"Correct.", "No complications." or "Right, a scar and an infection risk." are \
+not part of the quote. When the fact takes several sentences — a question and \
+its answer, a list and its confirmation — quote all of them. When a sentence \
+goes on to a different fact the question does not ask about, stop before that \
+part."""
 
 # (excerpt, question, reply). Verbatim base-model transcript lines, with the
 # line numbers they have in their own conversation, and the annotators' own

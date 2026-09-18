@@ -28,7 +28,7 @@ import numpy as np
 import asr
 from answering import Answer, Answerer, load, lexical
 from dtos import ASRQuestionRequestDto, ASRQuestionResponseDto
-from evidence import Evidence, locate, widen_to_sentences
+from evidence import Evidence, locate, trim_to_statement, widen_to_sentences
 from utils import Span, decode_audio
 
 logger = logging.getLogger(__name__)
@@ -42,9 +42,10 @@ YES_THRESHOLD = float(os.environ.get('YES_THRESHOLD', '0.22'))
 ANSWER_DEADLINE_SECONDS = float(os.environ.get('ANSWER_DEADLINE_SECONDS', '50'))
 
 # How a located quote becomes the span sent back: 'quote' as the model cut it,
-# or 'sentences', widened to the whole sentences it touches.
-EVIDENCE_POLICY = os.environ.get('EVIDENCE_POLICY', 'quote')
-EVIDENCE_POLICIES = ('quote', 'sentences')
+# 'sentences' widened to the whole sentences it touches, or 'trimmed' cut to
+# the first statement of the fact (evidence.trim_to_statement; measured best).
+EVIDENCE_POLICY = os.environ.get('EVIDENCE_POLICY', 'trimmed')
+EVIDENCE_POLICIES = ('quote', 'sentences', 'trimmed')
 
 # The LLM by default, so a forgotten environment variable cannot ship the
 # no-model floor. With no LLM server running it degrades to lexical per question.
@@ -69,8 +70,11 @@ def evidence_for(
     answers; pick with EVIDENCE_POLICY.
     """
     evidence = locate(transcript, answer.quote, answer.lines, question)
-    if (policy or EVIDENCE_POLICY) == 'sentences':
+    policy = policy or EVIDENCE_POLICY
+    if policy == 'sentences':
         evidence = widen_to_sentences(transcript, evidence)
+    elif policy == 'trimmed':
+        evidence = trim_to_statement(transcript, evidence, question)
     return evidence
 
 

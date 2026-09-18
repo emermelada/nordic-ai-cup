@@ -231,6 +231,88 @@ def widen_to_sentences(transcript: Transcript, evidence: Evidence) -> Evidence:
     return Evidence(transcript.span(first, last), evidence.method, first, last)
 
 
+def _related(a: str, b: str) -> bool:
+    """Same word up to its ending: scar/scarring, sinus/sinuses, treat/treatment."""
+    short, long_ = sorted((a, b), key=len)
+    return (len(short) >= 4 and long_.startswith(short)) or (
+        len(a) >= 5 and len(b) >= 5 and a[:5] == b[:5]
+    )
+
+
+def _hits(question_words: set, text: str) -> set:
+    """The question's content words that this text mentions."""
+    words = content_words(text)
+    return {q for q in question_words if any(_related(q, w) for w in words)}
+
+
+def _text(transcript: Transcript, first: int, last: int) -> str:
+    return ''.join(word.text for word in transcript.words[first:last + 1]).strip()
+
+
+_CONNECTIVE = re.compile(r'^(and|but|so|which|while|because|although)$', re.IGNORECASE)
+
+
+def trim_to_statement(transcript: Transcript, evidence: Evidence, question: str) -> Evidence:
+    """Cut a located quote down to the way the annotators quoted.
+
+    Models quote the fact and then the confirmations and repetitions that follow
+    it; the annotators quoted where the fact is first stated, and only as far as
+    the fact goes. On the 9B model's quotes (156 positives, box timings) this took
+    tIoU from 0.637 to 0.688, the same gain on both halves of the conversations:
+
+    1. Keep the earliest run of sentences that covers every question word the
+       quote covers, plus the next sentence if that run ends on a question —
+       the answer to it.
+    2. Stop at ", and ..." / ", but ..." after the last word the question needs.
+    3. Drop a leading "And" from a statement (not from a question).
+    """
+    if evidence.first_word is None or evidence.last_word is None:
+        return evidence
+
+    wanted_words = content_words(question)
+    first, last = evidence.first_word, evidence.last_word
+
+    # 1. First statement.
+    pieces = [
+        (max(s.first_word, first), min(s.last_word, last))
+        for s in transcript.sentences
+        if max(s.first_word, first) <= min(s.last_word, last)
+    ]
+    wanted = _hits(wanted_words, _text(transcript, first, last))
+    if wanted and len(pieces) > 1:
+        start = next(
+            (n for n, piece in enumerate(pieces) if _hits(wanted_words, _text(transcript, *piece))), 0
+        )
+        end, covered = len(pieces) - 1, set()
+        for n in range(start, len(pieces)):
+            covered |= _hits(wanted_words, _text(transcript, *pieces[n]))
+            if covered >= wanted:
+                end = n
+                break
+        if _text(transcript, *pieces[end]).endswith('?') and end + 1 < len(pieces):
+            end += 1
+        first, last = pieces[start][0], pieces[end][1]
+
+    # 2. Clause end.
+    last_hit = None
+    for index in range(first, last + 1):
+        if _hits(wanted_words, transcript.words[index].text):
+            last_hit = index
+    if last_hit is not None:
+        for index in range(last_hit, last):
+            if (transcript.words[index].text.strip().endswith(',')
+                    and _CONNECTIVE.match(transcript.words[index + 1].text.strip())):
+                last = index
+                break
+
+    # 3. Leading "And".
+    if (first < last and transcript.words[first].text.strip().lower() == 'and'
+            and not _text(transcript, first, last).endswith('?')):
+        first += 1
+
+    return Evidence(transcript.span(first, last), evidence.method, first, last)
+
+
 def words_in_span(transcript: Transcript, span: Span) -> List[int]:
     """Indices of the words whose midpoint falls inside ``span``."""
     start, end = span
