@@ -8,27 +8,36 @@
 #   WITH_INRIA=0 bash training/train_remote.sh       # skip the 22 GB city photos
 #   REAL_SHARE=0.8 bash training/train_remote.sh     # lean harder on real terrain
 #
-# v6, trained to COMPLEMENT v4 rather than to beat it (see DRONE_MODEL_ALT in
-# flyby.py: two models take alternate frames and meet in the object memory, so
+# TWO WAYS TO TRAIN v6. The default below is a STANDALONE v6 meant to replace
+# v4. The alternative is a v6 trained to COMPLEMENT v4 as a pair (DRONE_MODEL_ALT
+# in flyby.py: two models take alternate frames and meet in the object memory, so
 # what matters is what the pair covers, not what either scores alone):
 #
 #   MODEL=yolo11s.pt IMGSZ=1280 NAME=drone-yolo11s-v6 \
 #   WEIGHTS=spacecraft=3,small_launcher=3,tank=2.5,small_plane=2,mine_roller=1.5,jammer=1.5,condor=1.3,ta-ta=1.3,medium_plane=1.3,medium_launcher=1.3,helicopter=0.7,small_tower=0.8,large_launcher=0.8,jet_plane=0.5,hangar=0.4,large_tower=0.4 \
 #   bash training/train_remote.sh
 #
-# Why those numbers, measured on the recorded flight with the v4+v5 pair:
-# spacecraft 5 %, small_launcher 6 %, tank 25 %, small_plane 35 % are what the
-# pair still misses, while hangar 89 %, large_tower 88 % and jet_plane 64 % are
-# already covered by v4 - so v6 buys nothing by learning them again and the
-# paste budget is better spent elsewhere. They stay in the mix at a low weight
-# rather than being dropped, so v6 still learns not to call a hangar a tank.
-# IMGSZ=1280 because running v4 at 1280 instead of 960 moved tank 10 % -> 27 %
-# and mine_roller 3 % -> 28 % with no retraining at all; training there also
-# fixes the box regression, which is what got worse when only inference was
-# upscaled (bad boxes 12 % -> 17 %).
+#   Serve the pair with:  DRONE_MODEL=models/drone-yolo11n-v4.pt \
+#                         DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt
 #
-# Serve the pair with:  DRONE_MODEL=models/drone-yolo11n-v4.pt \
-#                       DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt
+# Pick that one ONLY if you are certain you will serve both models. It holds
+# hangar at 0.4, jet_plane at 0.5 and large_tower at 0.4 on the grounds that v4
+# already covers them - which is true of the pair and false of v6 alone. Those
+# are three of our best classes (AP 0.871, 0.833, and large_tower is the one v4
+# does badly at 0.001), so a v6 trained this way and then served on its own
+# would regress them. The pair itself is so far measured only offline.
+#
+# Its other two ideas are worth taking either way. IMGSZ=1280: running v4 at 1280
+# instead of 960 moved tank 10 % -> 27 % and mine_roller 3 % -> 28 % with no
+# retraining at all, and training there also fixes the box regression that
+# appeared when only inference was upscaled (bad boxes 12 % -> 17 %). Decide it
+# by measuring latency on the machine that will actually serve. And a low weight
+# rather than zero on the strong classes, so v6 still learns not to call a hangar
+# a tank.
+#
+# Note the per-class figures quoted in that recipe (spacecraft 5 %, tank 25 %,
+# hangar 89 %) predate the ground-truth motion fix in this same branch; see the
+# WEIGHTS comment below for the corrected table.
 #
 # Run it from a clone of this repo. It installs what it needs, fetches the
 # background photos and the official Helsinki frames, builds the synthetic
