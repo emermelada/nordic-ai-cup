@@ -1,0 +1,45 @@
+{
+ "horizon": 16000,
+ "seeds": [
+  100,
+  200,
+  300,
+  400,
+  500,
+  600,
+  700,
+  800
+ ],
+ "out": "robust2_n8.jsonl",
+ "shapes": [
+  {
+   "name": "n8",
+   "w": 1600,
+   "h": 1200,
+   "n": 8
+  }
+ ],
+ "configs": [
+  {
+   "tag": "ROB2-E200cd8",
+   "params": {
+    "repro_energy_abs": 200,
+    "spawn_cooldown": 8
+   }
+  },
+  {
+   "tag": "ROB2-E200cd15",
+   "params": {
+    "repro_energy_abs": 200,
+    "spawn_cooldown": 15
+   }
+  },
+  {
+   "tag": "ROB2-E200cd30",
+   "params": {
+    "repro_energy_abs": 200,
+    "spawn_cooldown": 30
+   }
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+PART A capture: seed=100 calls=60788 (fresh process)
+PART A capture: seed=200 calls=77558 (fresh process)
+PART A capture: seed=300 calls=85534 (fresh process)
+
+--- PART A: fast replayed over the SHIPPED episode's exact state sequence ---
+seed=100  calls_compared=60788   mismatches=0 EXACT
+seed=200  calls_compared=77558   mismatches=0 EXACT
+seed=300  calls_compared=85534   mismatches=0 EXACT
+PART A RESULT: every action bit-identical over 3 full-length episodes
+
+--- PART B: fresh-process action digests of the SAME policy (harness noise control) ---
+  seed=100  shipped  digests=['8a453d8c', '8a453d8c', '8a453d8c']  ticks=[5846, 5846, 5846]  -> ONE digest (reproducible)
+  seed=100  fast     digests=['8a453d8c', '8a453d8c', '8496cfb0']  ticks=[5846, 5846, 5846]  -> 2 DIFFERENT digests -> harness is not action-reproducible
+IF_EXIT=143

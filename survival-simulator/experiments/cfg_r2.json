@@ -1,0 +1,8 @@
+[
+ {"tag": "R2-E150cd60", "params": {"repro_energy_abs": 150, "spawn_cooldown": 60}},
+ {"tag": "R2-E175cd60", "params": {"repro_energy_abs": 175, "spawn_cooldown": 60}},
+ {"tag": "R2-E200cd60", "params": {"repro_energy_abs": 200, "spawn_cooldown": 60}},
+ {"tag": "R2-E200cd30", "params": {"repro_energy_abs": 200, "spawn_cooldown": 30}},
+ {"tag": "R2-E200cd60-safe150", "params": {"repro_energy_abs": 200, "spawn_cooldown": 60, "repro_safe_radius": 150}},
+ {"tag": "R2-E200cd60-t8p4", "params": {"repro_energy_abs": 200, "spawn_cooldown": 60, "repro_global_target": 8, "repro_popcap": 4}}
+]

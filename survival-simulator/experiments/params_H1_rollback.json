@@ -37,10 +37,5 @@
  "young_age": 25.0,
  "old_age": 60.0,
  "young_speed_frac": 1.0,
- "old_speed_frac": 0.5,
- "evade_mode": 1.0,
- "evade_dist": 140.0,
- "evade_disengage": 240.0,
- "evade_speed_frac": 1.0,
- "evade_energy_abs": 200.0
+ "old_speed_frac": 0.5
 }

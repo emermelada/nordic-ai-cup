@@ -42,5 +42,6 @@
  "evade_dist": 140.0,
  "evade_disengage": 240.0,
  "evade_speed_frac": 1.0,
- "evade_energy_abs": 200.0
+ "evade_energy_abs": 200.0,
+ "genome_select": 0.0
 }

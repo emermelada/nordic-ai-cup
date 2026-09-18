@@ -1,0 +1,11 @@
+PAIRED TEST: 10 held-out seeds, horizon 18000
+A1_mem                   MEAN   4803.2 ticks | fruits   671.0 | seeds [4076, 7482, 640, 5465, 5513, 8388, 1725, 3479, 9411, 1853]
+A2_follow                MEAN   4337.1 ticks | fruits   456.9 | seeds [3476, 5239, 722, 8786, 5326, 7811, 2386, 691, 7878, 1056]
+A3_ars                   MEAN   5063.2 ticks | fruits   707.1 | seeds [7207, 6794, 646, 7071, 5500, 6212, 2316, 4815, 4502, 5569]
+LIVE (deployed)          MEAN   8639.8 ticks | fruits  1232.3 | seeds [5766, 12785, 10115, 10113, 8486, 6980, 6651, 8864, 9817, 6821]
+
+=== SUMMARY (paired on identical seeds) ===
+  LIVE                       8639.8 ticks   1232.3 fruits   vs LIVE     +0.0 ( +0.0%)
+  A3_ars                     5063.2 ticks    707.1 fruits   vs LIVE  -3576.6 (-41.4%)
+  A1_mem                     4803.2 ticks    671.0 fruits   vs LIVE  -3836.6 (-44.4%)
+  A2_follow                  4337.1 ticks    456.9 fruits   vs LIVE  -4302.7 (-49.8%)

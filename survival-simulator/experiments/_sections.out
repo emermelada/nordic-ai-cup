@@ -1,0 +1,17 @@
+corpus: 65809 policy calls (seed=100, horizon=6000)
+
+section             us/call % of total
+bookkeeping           0.870     9.5%
+obs_filter            1.816    19.8%
+pred_repel            0.142     1.5%
+pred_facing           0.134     1.5%
+fruit_loop            0.187     2.0%
+tree_loop             0.198     2.2%
+disperse_loop         0.078     0.9%
+edge_loop             3.788    41.4%
+combine_hyst          0.609     6.6%
+dist_repro            0.469     5.1%
+(perf_counter tax)      0.869     9.5%
+instrumented tot      9.159
+
+uninstrumented best-of-3: shipped=0.0080 ms/call (8.04 us) | fast=0.0075 ms/call (7.46 us) -> 1.08x (7.2% less)

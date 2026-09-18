@@ -1,0 +1,48 @@
+[
+ {
+  "tag": "R3-E180cd30",
+  "params": {
+   "repro_energy_abs": 180,
+   "spawn_cooldown": 30
+  }
+ },
+ {
+  "tag": "R3-E220cd30",
+  "params": {
+   "repro_energy_abs": 220,
+   "spawn_cooldown": 30
+  }
+ },
+ {
+  "tag": "R3-E200cd15",
+  "params": {
+   "repro_energy_abs": 200,
+   "spawn_cooldown": 15
+  }
+ },
+ {
+  "tag": "R3-F024cd30",
+  "params": {
+   "repro_frac": 0.24,
+   "repro_frac_min": 0.22,
+   "spawn_cooldown": 30
+  }
+ },
+ {
+  "tag": "R3-E200cd30-t16p8",
+  "params": {
+   "repro_energy_abs": 200,
+   "spawn_cooldown": 30,
+   "repro_global_target": 16,
+   "repro_popcap": 8
+  }
+ },
+ {
+  "tag": "R3-E200cd30-unl",
+  "params": {
+   "repro_energy_abs": 200,
+   "spawn_cooldown": 30,
+   "repro_unlimited": 1.0
+  }
+ }
+]

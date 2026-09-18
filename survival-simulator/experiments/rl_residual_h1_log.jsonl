@@ -1,0 +1,17 @@
+{"it": 1, "steps": 144792, "collect_s": 70.7, "train_s": 1.1, "loss": 0.0381, "income_1000s": 352.62, "env_min": 1.2, "eval_ticks": 9355.0, "eval_per_seed": [9140, 9014, 9911], "eval_fruits": 1656.3, "base_ref": [7377, 4055, 10107], "saved": true}
+{"it": 2, "steps": 132233, "collect_s": 61.1, "train_s": 1.0, "loss": 0.0328, "income_1000s": 305.69, "env_min": 4.76}
+{"it": 3, "steps": 201794, "collect_s": 81.8, "train_s": 1.5, "loss": 0.0254, "income_1000s": 331.1, "env_min": 6.15}
+{"it": 4, "steps": 310928, "collect_s": 85.2, "train_s": 2.1, "loss": 0.0406, "income_1000s": 425.49, "env_min": 7.6, "eval_ticks": 7133.7, "eval_per_seed": [6688, 5743, 8970], "eval_fruits": 1230.7, "base_ref": [7377, 4055, 10107]}
+{"it": 5, "steps": 194781, "collect_s": 83.2, "train_s": 1.5, "loss": 0.0522, "income_1000s": 353.85, "env_min": 11.05}
+{"it": 6, "steps": 170025, "collect_s": 92.9, "train_s": 1.2, "loss": 0.0694, "income_1000s": 355.16, "env_min": 12.62}
+{"it": 7, "steps": 229756, "collect_s": 86.3, "train_s": 1.3, "loss": 0.0717, "income_1000s": 431.0, "env_min": 14.08}
+{"it": 8, "steps": 245993, "collect_s": 77.6, "train_s": 1.4, "loss": 0.0852, "income_1000s": 453.72, "env_min": 15.4, "eval_ticks": 9666.7, "eval_per_seed": [11555, 9158, 8287], "eval_fruits": 1612.3, "base_ref": [7377, 4055, 10107], "saved": true}
+{"it": 9, "steps": 170089, "collect_s": 60.0, "train_s": 1.2, "loss": 0.075, "income_1000s": 321.83, "env_min": 19.07}
+{"it": 10, "steps": 132010, "collect_s": 65.9, "train_s": 0.9, "loss": 0.1134, "income_1000s": 306.69, "env_min": 20.18}
+{"it": 11, "steps": 232121, "collect_s": 86.8, "train_s": 1.6, "loss": 0.1027, "income_1000s": 426.95, "env_min": 21.66}
+{"it": 12, "steps": 186007, "collect_s": 64.5, "train_s": 1.0, "loss": 0.1099, "income_1000s": 359.03, "env_min": 22.75, "eval_ticks": 7907.0, "eval_per_seed": [7299, 8222, 8200], "eval_fruits": 1469.0, "base_ref": [7377, 4055, 10107]}
+{"it": 13, "steps": 229608, "collect_s": 63.9, "train_s": 1.3, "loss": 0.1048, "income_1000s": 371.25, "env_min": 26.19}
+{"it": 14, "steps": 246260, "collect_s": 72.4, "train_s": 1.4, "loss": 0.1057, "income_1000s": 364.08, "env_min": 27.42}
+{"it": 15, "steps": 252987, "collect_s": 74.4, "train_s": 1.4, "loss": 0.1258, "income_1000s": 387.15, "env_min": 28.68}
+{"it": 16, "steps": 150377, "collect_s": 64.7, "train_s": 0.9, "loss": 0.1457, "income_1000s": 343.12, "env_min": 29.77, "eval_ticks": 7388.7, "eval_per_seed": [8341, 6849, 6976], "eval_fruits": 1323.3, "base_ref": [7377, 4055, 10107]}
+{"it": 17, "steps": 210545, "collect_s": 79.7, "train_s": 1.6, "loss": 0.1296, "income_1000s": 307.21, "env_min": 33.21}

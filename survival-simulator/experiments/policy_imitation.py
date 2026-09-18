@@ -29,10 +29,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 from env_wrapper import build_obs, OBS_DIM
+from imitation_obs import AugObs, N_AUG
 
 SPAWN_THRESHOLD = 0.5
+SPAWN_COOLDOWN = 120   # matches the expert's own spawn_cooldown in best_controller/params.json
 DIST_SCALE = 20.0
 DIR_SCALE = math.pi
+AUG_OBS_DIM = OBS_DIM + N_AUG   # 34: build_obs + private state (see imitation_obs.py)
 
 
 class MLPPolicy(nn.Module):
@@ -61,27 +64,47 @@ class MLPPolicy(nn.Module):
 class ImitationPolicy:
     """Deployable wrapper: raw state dict in, expert-contract action out."""
 
-    def __init__(self, path, spawn_cooldown=120, device=None, spawn_threshold=SPAWN_THRESHOLD,
+    _INSTANCES = []     # so the module-level reset_memory() also clears instance-private state
+
+    def __init__(self, path, spawn_cooldown=None, device=None, spawn_threshold=None,
                  cooldown_enabled=True, dist_cap=None):
         ckpt = torch.load(path, map_location="cpu", weights_only=False)
         self.cfg = ckpt.get("config", {})
-        self.net = MLPPolicy(self.cfg.get("obs_dim", OBS_DIM), tuple(self.cfg.get("hidden", (256, 128))))
+        self.obs_dim = int(self.cfg.get("obs_dim", OBS_DIM))
+        self.net = MLPPolicy(self.obs_dim, tuple(self.cfg.get("hidden", (256, 128))))
         self.net.load_state_dict(ckpt["state_dict"])
         self.net.eval()
         self.device = torch.device(device or ("mps" if torch.backends.mps.is_available() else "cpu"))
         self.net.to(self.device)
+        if self.device.type == "cpu":
+            # DETERMINISM: multi-threaded CPU reductions reorder float additions, so the same seed gave
+            # slightly different episode scores (e.g. 312.2 vs 312.0) although ticks/spawns matched.
+            # One thread makes inference bit-reproducible (and is faster: batches are 1x34).
+            torch.set_num_threads(1)
         self.obs_mean = np.asarray(ckpt["obs_mean"], dtype=np.float32)
         self.obs_std = np.asarray(ckpt["obs_std"], dtype=np.float32)
-        self.spawn_cooldown = int(spawn_cooldown)
-        self.spawn_threshold = float(spawn_threshold)
+        self.spawn_cooldown = int(spawn_cooldown if spawn_cooldown is not None
+                                  else ckpt.get("spawn_cooldown", SPAWN_COOLDOWN))
+        # threshold calibrated at training time (spawn rate matched to the expert's); explicit arg wins
+        self.spawn_threshold = float(spawn_threshold if spawn_threshold is not None
+                                     else ckpt.get("spawn_threshold", SPAWN_THRESHOLD))
         self.cooldown_enabled = bool(cooldown_enabled)
         self.dist_cap = dist_cap
         self._clock = {}
+        self._aug = AugObs() if self.obs_dim > OBS_DIM else None   # private state, per episode
         self.path = path
+        ImitationPolicy._INSTANCES.append(self)
 
     # ---- memory ----
     def reset(self):
         self._clock = {}
+        if self._aug is not None:
+            self._aug.reset()
+
+    # ---- observation (31-dim encoder + own private state, identical to training labels) ----
+    def obs(self, state):
+        o = build_obs(state)
+        return np.concatenate([o, self._aug.features(state)]) if self._aug is not None else o
 
     # ---- inference ----
     def raw_forward(self, obs_np):
@@ -92,7 +115,7 @@ class ImitationPolicy:
             return cont[0].cpu().numpy(), float(sp[0].cpu().numpy())
 
     def __call__(self, state):
-        z = build_obs(state)  # SAME encoder as the collector / server
+        z = self.obs(state)  # SAME encoder + private state as the collector
         cont, logit = self.raw_forward(z)
         dist = DIST_SCALE * (1.0 / (1.0 + math.exp(-float(cont[0]))))
         if self.dist_cap is not None:
@@ -107,6 +130,8 @@ class ImitationPolicy:
             spawn = 1.0
             if self.cooldown_enabled:
                 self._clock[aid] = self.spawn_cooldown
+        if self._aug is not None:                     # update AFTER deciding, exactly like the collector
+            self._aug.update(state, spawn > 0.5)
         return [float(dist), float(direction), 0.0, spawn]
 
 
@@ -129,10 +154,14 @@ def policy_fn(state):
 
 
 def reset_memory():
-    """Reset BOTH this policy's memory and the expert module state -> order-invariant episodes."""
+    """Reset this policy's memory (module-level AND live instances) and the expert's -> order-invariant
+    episodes.  NB: pass the instance's own `.reset` as reset_fn when evaluating an instance directly;
+    this function covers module-level use (`policy_fn`) and remains safe either way."""
     global _POLICY
     if _POLICY is not None:
         _POLICY.reset()
+    for p in ImitationPolicy._INSTANCES:
+        p.reset()
     try:
         import best_controller as bc
         bc.reset_memory()

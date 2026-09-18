@@ -1,0 +1,242 @@
+{
+ "data_aug": "/Users/zaitzev/Life/Projects/nordic-ai-cup/survival-simulator/experiments/traj_train_im_aug.npz",
+ "data_obs31": "/Users/zaitzev/Life/Projects/nordic-ai-cup/survival-simulator/experiments/traj_train_im.npz",
+ "val_seeds": [
+  700,
+  800
+ ],
+ "train_seeds": [
+  100,
+  200,
+  300,
+  400,
+  500,
+  600,
+  700,
+  800
+ ],
+ "models": {
+  "imitation_model.pt": {
+   "val_action_metrics": {
+    "val_seeds": [
+     700,
+     800
+    ],
+    "n": 302620,
+    "spawn_threshold": 0.5,
+    "spawn_label_horizon": 120,
+    "dist_mae": 0.833,
+    "dist_mae_rel": 0.196,
+    "dir_mae_rad": 1.316,
+    "dir_mae_on_moving": 1.316,
+    "spawn_expert_rate": 0.00165,
+    "spawn_pred_rate": 0.41155,
+    "spawn_precision": 0.002,
+    "spawn_recall": 0.43,
+    "spawn_f1": 0.003,
+    "gate_label_rate": 0.472,
+    "gate_f1": 0.611,
+    "fire_rate": 0.41155,
+    "dist_expert_mean": 4.245,
+    "dist_pred_mean": 4.183
+   },
+   "config": {
+    "obs_dim": 34,
+    "hidden": [
+     256,
+     128
+    ],
+    "lr": 0.001,
+    "epochs": 14,
+    "batch": 8192,
+    "spawn_loss_weight": 1.0,
+    "variant_filter": null,
+    "variant_weights": {
+     "expert": 3.0
+    },
+    "subsample": 1,
+    "pos_weight": 1.0,
+    "loss_hist": [
+     1.3451809401695545,
+     1.2495414992937675,
+     1.2100642667366908,
+     1.1703125949089344,
+     1.131356486907372,
+     1.0978382287117152,
+     1.0679116455408244,
+     1.0427247194143443,
+     1.0182425597539315,
+     0.998636429126446,
+     0.9820496262266085,
+     0.9684864987547581,
+     0.9536371861512845,
+     0.9411770237179903
+    ],
+    "train_samples": 858290,
+    "train_seeds": [
+     100,
+     200,
+     300,
+     400,
+     500,
+     600
+    ],
+    "spawn_threshold": 0.5,
+    "expert_spawn_rate_val": 0.0016456281805564735,
+    "spawn_label_horizon": 120
+   },
+   "spawn_threshold": 0.5,
+   "expert_spawn_rate_val": 0.0016456281805564735,
+   "spawn_cooldown": 120,
+   "data": "/Users/zaitzev/Life/Projects/nordic-ai-cup/survival-simulator/experiments/traj_train_im_aug.npz"
+  },
+  "imitation_model_expert.pt": {
+   "val_action_metrics": {
+    "val_seeds": [
+     700,
+     800
+    ],
+    "n": 302620,
+    "spawn_threshold": 0.5,
+    "spawn_label_horizon": 120,
+    "dist_mae": 1.069,
+    "dist_mae_rel": 0.252,
+    "dir_mae_rad": 1.318,
+    "dir_mae_on_moving": 1.318,
+    "spawn_expert_rate": 0.00165,
+    "spawn_pred_rate": 0.3535,
+    "spawn_precision": 0.002,
+    "spawn_recall": 0.333,
+    "spawn_f1": 0.003,
+    "gate_label_rate": 0.472,
+    "gate_f1": 0.59,
+    "fire_rate": 0.3535,
+    "dist_expert_mean": 4.245,
+    "dist_pred_mean": 4.219
+   },
+   "config": {
+    "obs_dim": 34,
+    "hidden": [
+     256,
+     128
+    ],
+    "lr": 0.001,
+    "epochs": 14,
+    "batch": 8192,
+    "spawn_loss_weight": 1.0,
+    "variant_filter": [
+     "expert"
+    ],
+    "variant_weights": null,
+    "subsample": 1,
+    "pos_weight": 1.0,
+    "loss_hist": [
+     0.9898554754257202,
+     0.8637185430526734,
+     0.818137662410736,
+     0.7937079358100891,
+     0.7745006585121155,
+     0.7588979005813599,
+     0.743707070350647,
+     0.7280760478973388,
+     0.7135026741027832,
+     0.6981854248046875,
+     0.6840017795562744,
+     0.668912250995636,
+     0.6545495319366456,
+     0.6418978309631348
+    ],
+    "train_samples": 207772,
+    "train_seeds": [
+     100,
+     200,
+     300,
+     400,
+     500,
+     600
+    ],
+    "spawn_threshold": 0.5,
+    "expert_spawn_rate_val": 0.0016456281805564735,
+    "spawn_label_horizon": 120
+   },
+   "spawn_threshold": 0.5,
+   "expert_spawn_rate_val": 0.0016456281805564735,
+   "spawn_cooldown": 120,
+   "data": "/Users/zaitzev/Life/Projects/nordic-ai-cup/survival-simulator/experiments/traj_train_im_aug.npz"
+  },
+  "imitation_model_obs31.pt": {
+   "val_action_metrics": {
+    "val_seeds": [
+     700,
+     800
+    ],
+    "n": 296456,
+    "spawn_threshold": 0.5,
+    "spawn_label_horizon": 120,
+    "dist_mae": 0.773,
+    "dist_mae_rel": 0.178,
+    "dir_mae_rad": 1.329,
+    "dir_mae_on_moving": 1.329,
+    "spawn_expert_rate": 0.00172,
+    "spawn_pred_rate": 0.47304,
+    "spawn_precision": 0.002,
+    "spawn_recall": 0.431,
+    "spawn_f1": 0.003,
+    "gate_label_rate": 0.4725,
+    "gate_f1": 0.608,
+    "fire_rate": 0.47304,
+    "dist_expert_mean": 4.339,
+    "dist_pred_mean": 4.322
+   },
+   "config": {
+    "obs_dim": 31,
+    "hidden": [
+     256,
+     128
+    ],
+    "lr": 0.001,
+    "epochs": 14,
+    "batch": 8192,
+    "spawn_loss_weight": 1.0,
+    "variant_filter": null,
+    "variant_weights": {
+     "expert": 3.0
+    },
+    "subsample": 1,
+    "pos_weight": 1.0,
+    "loss_hist": [
+     1.371911838346598,
+     1.298798834790989,
+     1.2695921026930517,
+     1.2358906293401912,
+     1.2019116987987442,
+     1.1715145269218756,
+     1.1438431751971343,
+     1.1213169268199377,
+     1.1013759666559648,
+     1.083206941886824,
+     1.0678905735210495,
+     1.055808568487362,
+     1.0430412973676408,
+     1.0333429258696887
+    ],
+    "train_samples": 808332,
+    "train_seeds": [
+     100,
+     200,
+     300,
+     400,
+     500,
+     600
+    ],
+    "spawn_threshold": 0.5,
+    "expert_spawn_rate_val": 0.0017236959278948646,
+    "spawn_label_horizon": 120
+   },
+   "spawn_threshold": 0.5,
+   "expert_spawn_rate_val": 0.0017236959278948646,
+   "spawn_cooldown": 120,
+   "data": "/Users/zaitzev/Life/Projects/nordic-ai-cup/survival-simulator/experiments/traj_train_im.npz"
+  }
+ }
+}

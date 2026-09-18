@@ -1,0 +1,7 @@
+[
+ {"tag": "R4-E200cd8", "params": {"repro_energy_abs": 200, "spawn_cooldown": 8}},
+ {"tag": "R4-E200cd3", "params": {"repro_energy_abs": 200, "spawn_cooldown": 3}},
+ {"tag": "R4-E200cd0", "params": {"repro_energy_abs": 200, "spawn_cooldown": 0}},
+ {"tag": "R4-E150cd15", "params": {"repro_energy_abs": 150, "spawn_cooldown": 15}},
+ {"tag": "R4-E250cd15", "params": {"repro_energy_abs": 250, "spawn_cooldown": 15}}
+]

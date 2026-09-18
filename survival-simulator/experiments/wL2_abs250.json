@@ -20,7 +20,7 @@
  "repro_popcap": 6,
  "spawn_cooldown": 120,
  "repro_safe_radius": 253.47550193496397,
- "repro_energy_abs": 0.0,
+ "repro_energy_abs": 250.0,
  "concern_cone": 2.2,
  "flee_speed_frac": 1.0,
  "reserve_frac": 0.15,
@@ -37,10 +37,5 @@
  "young_age": 25.0,
  "old_age": 60.0,
  "young_speed_frac": 1.0,
- "old_speed_frac": 0.5,
- "evade_mode": 1.0,
- "evade_dist": 140.0,
- "evade_disengage": 240.0,
- "evade_speed_frac": 1.0,
- "evade_energy_abs": 200.0
+ "old_speed_frac": 0.5
 }

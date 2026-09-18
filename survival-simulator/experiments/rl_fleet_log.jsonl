@@ -1,0 +1,85 @@
+{"it": 1, "steps": 11643, "collect_s": 3.1, "train_s": 0.1, "loss": 0.1005, "env_time_min": 0.31, "eval_ticks": 1217.0, "eval_per_seed": [1229, 1205], "saved": true}
+{"it": 2, "steps": 11705, "collect_s": 2.9, "train_s": 0.1, "loss": 0.0258, "env_time_min": 0.46, "eval_ticks": 1217.0, "eval_per_seed": [1230, 1204]}
+{"it": 3, "steps": 12265, "collect_s": 3.2, "train_s": 0.1, "loss": 0.2027, "env_time_min": 0.61}
+{"it": 4, "steps": 12645, "collect_s": 3.4, "train_s": 0.1, "loss": 0.2301, "env_time_min": 0.67, "eval_ticks": 1216.5, "eval_per_seed": [1229, 1204]}
+{"it": 5, "steps": 12594, "collect_s": 3.3, "train_s": 0.1, "loss": 0.2219, "env_time_min": 0.82}
+{"it": 6, "steps": 12016, "collect_s": 3.2, "train_s": 0.1, "loss": 0.1157, "env_time_min": 0.87, "eval_ticks": 1216.0, "eval_per_seed": [1229, 1203]}
+{"it": 7, "steps": 13818, "collect_s": 4.4, "train_s": 0.1, "loss": 0.2221, "env_time_min": 1.05}
+{"it": 8, "steps": 11519, "collect_s": 3.0, "train_s": 0.1, "loss": 0.0809, "env_time_min": 1.1, "eval_ticks": 1214.5, "eval_per_seed": [1229, 1200]}
+{"it": 9, "steps": 12683, "collect_s": 3.4, "train_s": 0.1, "loss": 0.243, "env_time_min": 1.26}
+{"it": 10, "steps": 12681, "collect_s": 3.8, "train_s": 0.1, "loss": 0.3254, "env_time_min": 1.32, "eval_ticks": 1213.5, "eval_per_seed": [1227, 1200]}
+{"it": 11, "steps": 11995, "collect_s": 3.1, "train_s": 0.1, "loss": 0.2089, "env_time_min": 1.48}
+{"it": 12, "steps": 13954, "collect_s": 4.4, "train_s": 0.1, "loss": 0.2956, "env_time_min": 1.55, "eval_ticks": 1212.5, "eval_per_seed": [1227, 1198]}
+{"phase": "bc", "steps": 30307, "spawn_rate": 0.0006269178702495992, "eval_ticks": 655.0, "eval_per_seed": [723, 535, 707], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 46112, "collect_s": 7.2, "train_s": 0.3, "loss": 0.1816, "env_time_min": 0.12, "eval_ticks": 653.3, "eval_per_seed": [723, 534, 703]}
+{"phase": "bc", "steps": 500007, "spawn_rate": 0.0009619865450076759, "eval_ticks": 1004.7, "eval_per_seed": [1222, 908, 884], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 63042, "collect_s": 16.4, "train_s": 0.3, "loss": 0.1541, "env_time_min": 0.28, "eval_ticks": 997.3, "eval_per_seed": [1222, 908, 862]}
+{"phase": "bc", "steps": 500007, "spawn_rate": 0.0009619865450076759, "eval_ticks": 819.3, "eval_per_seed": [734, 756, 968], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 102861, "collect_s": 24.9, "train_s": 0.6, "loss": 0.1089, "env_time_min": 0.43, "eval_ticks": 933.3, "eval_per_seed": [607, 1197, 996], "saved": true}
+{"phase": "bc", "steps": 500007, "spawn_rate": 0.0009619865450076759, "eval_ticks": 740.7, "eval_per_seed": [691, 789, 742], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 65141, "collect_s": 11.7, "train_s": 0.4, "loss": 0.2212, "env_time_min": 0.2, "eval_ticks": 919.0, "eval_per_seed": [894, 916, 947], "saved": true}
+{"phase": "bc", "steps": 300017, "spawn_rate": 0.0009432798833586276, "eval_ticks": 791.0, "eval_per_seed": [795, 615, 963], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 85417, "collect_s": 18.1, "train_s": 0.5, "loss": 0.1072, "env_time_min": 0.31, "eval_ticks": 885.3, "eval_per_seed": [964, 871, 821], "saved": true}
+{"phase": "bc", "steps": 300017, "spawn_rate": 0.0009432798833586276, "eval_ticks": 791.0, "eval_per_seed": [795, 615, 963], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 85417, "collect_s": 18.3, "train_s": 0.5, "loss": 0.1072, "env_time_min": 0.31, "eval_ticks": 885.3, "eval_per_seed": [964, 871, 821], "eval_fruits": 5.0, "saved": true}
+{"phase": "bc", "steps": 300017, "spawn_rate": 0.0009432798833586276, "eval_ticks": 791.0, "eval_per_seed": [795, 615, 963], "heuristic_ref": [3740.0, 3550.0, 1057.0]}
+{"it": 1, "steps": 70876, "collect_s": 11.6, "train_s": 0.4, "loss": 0.1045, "env_time_min": 0.2, "eval_ticks": 866.0, "eval_per_seed": [1074, 653, 871], "eval_fruits": 2.3, "saved": true}
+{"it": 2, "steps": 55083, "collect_s": 9.3, "train_s": 0.3, "loss": 0.1738, "env_time_min": 0.47}
+{"it": 3, "steps": 61390, "collect_s": 12.5, "train_s": 0.3, "loss": 0.1647, "env_time_min": 0.69}
+{"it": 4, "steps": 71928, "collect_s": 12.8, "train_s": 0.4, "loss": 0.2716, "env_time_min": 0.91, "eval_ticks": 791.0, "eval_per_seed": [722, 836, 815], "eval_fruits": 2.3}
+{"it": 5, "steps": 62371, "collect_s": 11.7, "train_s": 0.3, "loss": 0.2647, "env_time_min": 1.22}
+{"it": 6, "steps": 66216, "collect_s": 11.3, "train_s": 0.4, "loss": 0.2706, "env_time_min": 1.42}
+{"it": 7, "steps": 64161, "collect_s": 13.7, "train_s": 0.3, "loss": 0.3532, "env_time_min": 1.65}
+{"it": 8, "steps": 51999, "collect_s": 7.4, "train_s": 0.3, "loss": 0.3896, "env_time_min": 1.78, "eval_ticks": 930.7, "eval_per_seed": [1018, 774, 1000], "eval_fruits": 3.0, "saved": true}
+{"it": 9, "steps": 51388, "collect_s": 8.7, "train_s": 0.3, "loss": 0.4474, "env_time_min": 2.05}
+{"it": 10, "steps": 70548, "collect_s": 12.8, "train_s": 0.4, "loss": 0.5374, "env_time_min": 2.27}
+{"it": 11, "steps": 83485, "collect_s": 16.3, "train_s": 0.4, "loss": 0.4982, "env_time_min": 2.55}
+{"it": 12, "steps": 66552, "collect_s": 11.9, "train_s": 0.3, "loss": 0.5594, "env_time_min": 2.75, "eval_ticks": 926.7, "eval_per_seed": [827, 949, 1004], "eval_fruits": 4.3}
+{"it": 13, "steps": 45955, "collect_s": 6.4, "train_s": 0.2, "loss": 0.6467, "env_time_min": 2.98}
+{"it": 14, "steps": 57289, "collect_s": 10.6, "train_s": 0.3, "loss": 0.6653, "env_time_min": 3.16}
+{"it": 15, "steps": 73226, "collect_s": 17.3, "train_s": 0.4, "loss": 0.5874, "env_time_min": 3.45}
+{"it": 16, "steps": 59349, "collect_s": 9.2, "train_s": 0.3, "loss": 0.7576, "env_time_min": 3.61, "eval_ticks": 1011.3, "eval_per_seed": [1125, 1042, 867], "eval_fruits": 3.0, "saved": true}
+{"it": 17, "steps": 69547, "collect_s": 12.6, "train_s": 0.4, "loss": 0.6498, "env_time_min": 3.96}
+{"it": 18, "steps": 67727, "collect_s": 10.2, "train_s": 0.4, "loss": 0.6927, "env_time_min": 4.14}
+{"it": 19, "steps": 51499, "collect_s": 7.7, "train_s": 0.3, "loss": 0.7513, "env_time_min": 4.27}
+{"it": 20, "steps": 52930, "collect_s": 8.6, "train_s": 0.3, "loss": 0.7523, "env_time_min": 4.42, "eval_ticks": 1149.0, "eval_per_seed": [1173, 1275, 999], "eval_fruits": 5.0, "saved": true}
+{"it": 21, "steps": 51140, "collect_s": 7.4, "train_s": 0.3, "loss": 0.8277, "env_time_min": 4.68}
+{"it": 22, "steps": 62047, "collect_s": 10.5, "train_s": 0.3, "loss": 0.8702, "env_time_min": 4.86}
+{"it": 23, "steps": 56490, "collect_s": 8.2, "train_s": 0.3, "loss": 0.8356, "env_time_min": 5.0}
+{"it": 24, "steps": 53435, "collect_s": 11.2, "train_s": 0.3, "loss": 0.7253, "env_time_min": 5.2, "eval_ticks": 1176.7, "eval_per_seed": [1296, 1098, 1136], "eval_fruits": 9.0, "saved": true}
+{"it": 25, "steps": 59118, "collect_s": 10.2, "train_s": 0.3, "loss": 0.9842, "env_time_min": 5.52}
+{"it": 26, "steps": 62454, "collect_s": 9.1, "train_s": 0.3, "loss": 0.84, "env_time_min": 5.68}
+{"it": 27, "steps": 60309, "collect_s": 8.5, "train_s": 0.3, "loss": 0.9002, "env_time_min": 5.82}
+{"it": 28, "steps": 60162, "collect_s": 9.3, "train_s": 0.3, "loss": 1.0184, "env_time_min": 5.98, "eval_ticks": 1135.3, "eval_per_seed": [1211, 1114, 1081], "eval_fruits": 9.3}
+{"it": 29, "steps": 65149, "collect_s": 9.2, "train_s": 0.3, "loss": 0.881, "env_time_min": 6.29}
+{"it": 30, "steps": 52592, "collect_s": 9.5, "train_s": 0.3, "loss": 0.8592, "env_time_min": 6.45}
+{"it": 31, "steps": 47528, "collect_s": 6.8, "train_s": 0.2, "loss": 0.9178, "env_time_min": 6.57}
+{"it": 32, "steps": 52471, "collect_s": 7.7, "train_s": 0.3, "loss": 0.7875, "env_time_min": 6.7, "eval_ticks": 1110.7, "eval_per_seed": [1255, 1047, 1030], "eval_fruits": 3.0}
+{"it": 33, "steps": 56371, "collect_s": 8.8, "train_s": 0.3, "loss": 0.7514, "env_time_min": 6.99}
+{"it": 34, "steps": 51528, "collect_s": 7.9, "train_s": 0.3, "loss": 0.9813, "env_time_min": 7.13}
+{"it": 35, "steps": 54181, "collect_s": 8.5, "train_s": 0.3, "loss": 0.8852, "env_time_min": 7.27}
+{"it": 36, "steps": 50382, "collect_s": 7.4, "train_s": 0.3, "loss": 0.8655, "env_time_min": 7.4, "eval_ticks": 1148.7, "eval_per_seed": [1207, 1203, 1036], "eval_fruits": 1.3}
+{"it": 37, "steps": 48021, "collect_s": 7.1, "train_s": 0.2, "loss": 0.9833, "env_time_min": 7.67}
+{"it": 38, "steps": 50186, "collect_s": 7.2, "train_s": 0.3, "loss": 0.7128, "env_time_min": 7.79}
+{"it": 39, "steps": 53105, "collect_s": 8.4, "train_s": 0.3, "loss": 0.8077, "env_time_min": 7.94}
+{"it": 40, "steps": 52916, "collect_s": 8.7, "train_s": 0.3, "loss": 0.7945, "env_time_min": 8.09, "eval_ticks": 1155.3, "eval_per_seed": [1228, 1201, 1037], "eval_fruits": 3.0}
+{"it": 41, "steps": 58931, "collect_s": 10.5, "train_s": 0.3, "loss": 0.9522, "env_time_min": 8.41}
+{"it": 42, "steps": 51167, "collect_s": 6.8, "train_s": 0.3, "loss": 0.8546, "env_time_min": 8.52}
+{"it": 43, "steps": 56320, "collect_s": 7.8, "train_s": 0.3, "loss": 0.8219, "env_time_min": 8.66}
+{"it": 44, "steps": 59647, "collect_s": 10.6, "train_s": 0.3, "loss": 0.903, "env_time_min": 8.84, "eval_ticks": 1129.0, "eval_per_seed": [1155, 1202, 1030], "eval_fruits": 2.7}
+{"it": 45, "steps": 70441, "collect_s": 16.8, "train_s": 0.4, "loss": 0.6991, "env_time_min": 9.27}
+{"it": 46, "steps": 51467, "collect_s": 8.4, "train_s": 0.3, "loss": 0.9634, "env_time_min": 9.41}
+{"it": 47, "steps": 67319, "collect_s": 10.3, "train_s": 0.4, "loss": 0.9677, "env_time_min": 9.59}
+{"it": 48, "steps": 54557, "collect_s": 7.4, "train_s": 0.3, "loss": 0.7533, "env_time_min": 9.72, "eval_ticks": 1168.3, "eval_per_seed": [1222, 1232, 1051], "eval_fruits": 3.7}
+{"it": 49, "steps": 66157, "collect_s": 12.9, "train_s": 0.3, "loss": 1.0664, "env_time_min": 10.08}
+{"it": 50, "steps": 59318, "collect_s": 8.6, "train_s": 0.3, "loss": 0.837, "env_time_min": 10.23}
+{"it": 51, "steps": 53344, "collect_s": 7.5, "train_s": 0.3, "loss": 0.9767, "env_time_min": 10.36}
+{"it": 52, "steps": 59288, "collect_s": 10.6, "train_s": 0.3, "loss": 1.1156, "env_time_min": 10.54, "eval_ticks": 1142.0, "eval_per_seed": [1180, 1188, 1058], "eval_fruits": 3.7}
+{"it": 53, "steps": 55674, "collect_s": 9.4, "train_s": 0.3, "loss": 0.8983, "env_time_min": 10.86}
+{"it": 54, "steps": 49023, "collect_s": 6.7, "train_s": 0.3, "loss": 0.9999, "env_time_min": 10.97}
+{"it": 55, "steps": 48351, "collect_s": 7.9, "train_s": 0.2, "loss": 0.7827, "env_time_min": 11.11}
+{"it": 56, "steps": 55940, "collect_s": 8.8, "train_s": 0.3, "loss": 1.1097, "env_time_min": 11.26, "eval_ticks": 1170.0, "eval_per_seed": [1241, 1230, 1039], "eval_fruits": 3.3}
+{"it": 57, "steps": 55666, "collect_s": 8.9, "train_s": 0.3, "loss": 0.8904, "env_time_min": 11.56}
+{"it": 58, "steps": 53157, "collect_s": 8.0, "train_s": 0.3, "loss": 0.8797, "env_time_min": 11.7}
+{"it": 59, "steps": 55744, "collect_s": 8.8, "train_s": 0.3, "loss": 0.9865, "env_time_min": 11.85}
+{"it": 60, "steps": 61015, "collect_s": 9.5, "train_s": 0.3, "loss": 0.9093, "env_time_min": 12.01, "eval_ticks": 1195.3, "eval_per_seed": [1155, 1385, 1046], "eval_fruits": 8.7, "saved": true}

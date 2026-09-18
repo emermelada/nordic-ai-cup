@@ -1,0 +1,28 @@
+=== PART 1: fresh-process identity (horizon=16000, n_agents=5, stop_on_death) ===
+seed=100  shipped ticks=5846   score=611.01    spawns=90   fruits=799   pred=95     act_sha=8496cfb07ec5afdf
+        fast    ticks=5846   score=611.01    spawns=90   fruits=799   pred=95     act_sha=8496cfb07ec5afdf
+        shipped-vs-fast: EXACT MATCH   (shipped run-to-run reproducible: False, 2 reps)
+seed=200  shipped ticks=9736   score=986.87    spawns=197  fruits=1312  pred=202    act_sha=2ea653515c78673e
+        fast    ticks=9736   score=986.87    spawns=197  fruits=1312  pred=202    act_sha=5e0747606b768a8a
+        shipped-vs-fast: MISMATCH   (shipped run-to-run reproducible: False, 2 reps)
+seed=300  shipped ticks=12245  score=1203.57   spawns=212  fruits=1967  pred=217    act_sha=bcfbf57048613f20
+        fast    ticks=12245  score=1203.57   spawns=212  fruits=1967  pred=217    act_sha=8702ed596ffab5d6
+        shipped-vs-fast: MISMATCH   (shipped run-to-run reproducible: True, 2 reps)
+PART 1 RESULT: FAILED
+
+=== PART 2: ms/tick (same definition as bench_std.py: 1000*wall/total_ticks) ===
+  seed=100  shipped  ticks=5846   wall= 22.83s ms/tick=3.906
+  seed=100  shipped  ticks=5846   wall= 22.68s ms/tick=3.880
+  seed=100  fast     ticks=5846   wall= 22.66s ms/tick=3.875
+  seed=100  fast     ticks=5846   wall= 22.73s ms/tick=3.887
+  seed=200  shipped  ticks=9736   wall= 51.00s ms/tick=5.239
+  seed=200  shipped  ticks=9736   wall= 51.93s ms/tick=5.334
+  seed=200  fast     ticks=9736   wall= 52.39s ms/tick=5.381
+  seed=200  fast     ticks=9736   wall= 53.52s ms/tick=5.497
+  seed=300  shipped  ticks=12245  wall= 54.16s ms/tick=4.423
+  seed=300  shipped  ticks=12245  wall= 54.28s ms/tick=4.433
+  seed=300  fast     ticks=12245  wall= 53.45s ms/tick=4.365
+  seed=300  fast     ticks=12245  wall= 53.28s ms/tick=4.351
+  AGG shipped  total_ticks=55654  wall=256.89s ms/tick=4.616
+  AGG fast     total_ticks=55654  wall=258.01s ms/tick=4.636
+AB_EXIT=1

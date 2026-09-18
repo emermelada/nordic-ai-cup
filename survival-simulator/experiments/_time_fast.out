@@ -1,0 +1,19 @@
+=== TIMING + IDENTITY  horizon=16000 seeds=[100, 200, 300] n_agents=5 ===
+seed=100  shipped ticks=6260   score=654.21    spawns=87   fruits=776   pred=92    final=0  
+        fast    ticks=5846   score=611.01    spawns=90   fruits=799   pred=95    final=0  
+        identity: actions=DIFFER outcomes=DIFFER   ms/tick shipped=4.025 fast=4.146  (policy ms/call 0.0081->0.0074, served 0.0268->0.0089)
+seed=200  shipped ticks=7561   score=785.74    spawns=150  fruits=1353  pred=155   final=0  
+        fast    ticks=5138   score=519.58    spawns=91   fruits=815   pred=96    final=0  
+        identity: actions=DIFFER outcomes=DIFFER   ms/tick shipped=5.254 fast=4.943  (policy ms/call 0.0083->0.0074, served 0.0266->0.0089)
+seed=300  shipped ticks=7693   score=720.20    spawns=134  fruits=1310  pred=139   final=0  
+        fast    ticks=11740  score=1119.22   spawns=219  fruits=1845  pred=224   final=0  
+        identity: actions=DIFFER outcomes=DIFFER   ms/tick shipped=3.904 fast=4.433  (policy ms/call 0.0058->0.0055, served 0.0246->0.0069)
+
+--- aggregate over 3 seeds ---
+shipped: total_ticks=21514 wall=94.96s  ms/tick=4.414  | score mean=720.1 ticks mean=7171.3
+fast   : total_ticks=22724 wall=101.68s  ms/tick=4.474  | score mean=749.9 ticks mean=7574.7
+ms/tick delta: +0.061 ms  (1.4% of the shipped tick)
+isolated policy ms/call: 0.0074 -> 0.0068  (1.09x faster)
+served entry ms/call  : 0.0260 -> 0.0082  (3.16x faster)
+
+IDENTITY (all seeds): FAILED

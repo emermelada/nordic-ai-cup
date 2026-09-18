@@ -107,6 +107,24 @@ DEFAULT_PARAMS = {
     "face_cone": 1.05,          # half-plane kept clear, radians (~60 deg)
     "face_dist_max": 320.0,     # only face predators within this range
     "face_min_dist": 90.0,      # closer than this it charges anyway, so facing cannot help
+    # --- RETREAT-WHILE-FACING EVASION (evade_mode 0.0 = OFF, i.e. byte-identical behaviour) -----
+    # MEASURED, not inferred (w_lockout_diag.py on the deployed H1, 3 seeds, official 18k horizon):
+    # while the agent FACES a nearby predator the gap OPENS at 1.583 / 1.359 / 0.477 units per tick;
+    # while turned away it is -0.126 / +0.091 / +4.221, i.e. neutral to CLOSING. Facing is worth
+    # ~1.6 units/tick of separation. Mechanism (predator.py:37): a predator only CHARGES when the
+    # prey is not looking at it (|rel_dir| > pi/2) or is closer than 90; otherwise it PIVOTS 45 deg
+    # off-target, which closes radially ~29% slower before the agent's own motion is counted.
+    # Why this is worth testing where the reserve/gate arms failed: it does NOT throttle income. It
+    # changes the DIRECTION and FACING of an escape that already happens -- movement distance stays
+    # at sprint speed, so the agent keeps covering ground while separating.
+    # Retreated agent: move relative (bearing + pi) = directly away from the predator, then turn by
+    # -bearing so the predator ends up dead ahead (movement is applied BEFORE the turn, so both
+    # happen in one tick). Turn cost |turn|/(2pi) <= 0.5 against ~3.5/tick for the sprint itself.
+    "evade_mode": 0.0,          # 0 = off; 1 = retreat while facing when a predator is close
+    "evade_dist": 140.0,        # engage when the nearest predator is within this
+    "evade_disengage": 240.0,   # hysteresis: keep retreating until the predator is beyond this
+    "evade_speed_frac": 0.8,    # fraction of sprint_speed (16 units must beat the predator's 15)
+    "evade_energy_abs": 130.0,  # only retreat above this energy: the sim forbids sprinting < 100
     # --- PHASE-AWARE boom/famine policy (phase_mode 0 = OFF, i.e. exactly the previous behaviour) ---
     # Why this exists: fruit production decays 0.5^(t/300) at the POPULATION level -- a global property
     # no local observation can see -- while income is ALSO biome-dependent (forest 0.08/s per 100x100,
@@ -138,6 +156,86 @@ DEFAULT_PARAMS = {
     "old_age": 60.0,           # sim seconds above which an agent is "old" (conserve + bank heir)
     "young_speed_frac": 1.0,   # movement scale for young agents
     "old_speed_frac": 0.5,     # movement scale for old agents (they are a dying investment)
+    # --- STATE-TRIGGERED THIN-RELAY ENDGAME (thin_relay 0.0 = OFF, i.e. byte-identical) --------
+    # WHY THIS SHAPE, and why it is not another "bank late" arm:
+    #   MEASURED: the fleet dies at 4,624 / 4,896 ticks with 6,469 / 6,505 energy of fruit STILL
+    #   STANDING. Cost of keeping ONE lineage alive (0.1/tick metabolism + one 100-energy spawn per
+    #   ~900 ticks = 0.211/tick = 3,800 energy over 18,000 ticks) is 7% of the 55,405/57,072 energy
+    #   the world yields -> the endgame is NOT energy-limited, it is ACCESS-limited (agents are blind
+    #   76-87% of ticks and see 0.26-0.42 fruits each). Total production over 18k ticks is 55k-57k.
+    #   The four earlier 'bank late' arms FAILED because their trigger windows (tick 8,000-15,000)
+    #   were NEVER REACHED (fleet dead by ~4,600) and/or a population gate blocked ALL reproduction,
+    #   which broke the age-relay and killed the fleet. Both failure SHAPES are avoided here:
+    #     (a) the time threshold is LOW (4,000-6,000, not 8,000+) AND gated on a state signal, so the
+    #         mode can actually engage before the terminal cascade;
+    #     (b) reproduction is never blocked - see the THIN RELAY override in the spawn gate. A spawn
+    #         is the ONLY thing that keeps a lineage alive past max_age = 60+U(0,60) s.
+    #   The two things that actually end runs (per this session's measurements): age mortality past
+    #   one lifetime and a mid-game predation cascade (19 -> 15 -> 6 -> 0 agents inside ~600 ticks).
+    #   A TINY fleet is the right answer to BOTH: fewer bodies = fewer -energy/100 predation
+    #   liabilities and less 0.1/tick burn, while ONE unbroken heir chain still accrues +0.1/tick.
+    "thin_relay": 0.0,          # 0 = off (exactly the old behaviour); >0 enables the block below
+    "thin_trig_tick": 6000.0,   # (a) reconstructed-sim-time gate, in TICKS (_SIM_TICK, the existing
+                                #     estimator). Deliberately below the 8,000+ windows that were
+                                #     measured to be unreachable: the fleet is usually dead by ~4,600.
+    "thin_trig_vis": 0.35,      # (b) arm when the fleet EMA of FRUITS-VISIBLE-PER-AGENT falls below
+                                #     this. MEASURED collapse values in losing runs: 0.26-0.42 fruits
+                                #     visible per agent (vs 3-4x more fruit energy than the fleet owns
+                                #     standing in the world) -> the signal is ACCESS, not supply.
+    "thin_trig_vis_off": 0.70,  # HYSTERESIS: once armed, stay armed until the EMA recovers above
+                                #     this. Without a second threshold the mode would flap on/off
+                                #     tick-to-tick and the spawn cadence would never settle.
+    "thin_target_pop": 2.0,     # fleet size the relay keeps (1-3 agents). Population is NOT a score
+                                #     multiplier (score += dt once per tick regardless), so every extra
+                                #     body is pure cost: 0.1/tick metabolism + 100-energy spawn + an
+                                #     edible -energy/100 liability during a predation cascade.
+    "thin_spawn_energy_abs": 250.0,  # ABSOLUTE parent energy gate (the sim requires >100 to spawn,
+                                #     environment.py:621). 250 => the parent keeps >=150, comfortably
+                                #     above the sprint lockout at max_energy/5 (environment.py:512
+                                #     clamps distance to walking speed below that: 100 for the base
+                                #     500 cap) so the heir-maker stays mobile.
+    "thin_rescue_energy_abs": 160.0, # EMERGENCY gate when the fleet is down to its LAST agent:
+                                #     spawn even though the parent is left at ~60, i.e. sprint-locked.
+                                #     Rationale: a lone sprint-locked survivor that banks an heir still
+                                #     accrues +0.1/tick; a lone survivor that does NOT bank one scores
+                                #     ZERO from its death onward. Survival beats speed when pop <= 1.
+    "thin_spawn_cooldown": 200, # ticks between thin-relay spawns (age deaths land at 600-1,200
+                                #     ticks, so 200 is fast enough to keep a chain unbroken without
+                                #     letting a single rich parent flood the world)
+    "thin_move_frac": 0.7,      # move-distance scale while active: CONSERVE but never stop --
+                                #     movement is the INCOME mechanism. 'Stop dead' was measured to
+                                #     lose thousands of ticks; the floor below is a hard guarantee.
+    # --- GENOME-AWARE BREEDER SELECTION (genome_select 0.0 = OFF, i.e. byte-identical) -----------
+    # WHY THIS MECHANISM CLASS: a birth copies six heritable traits from the parent and mutates each
+    # with p=0.1 by U(0.5,1.5), capped at 2x the defaults (environment.py:296-345). The policy
+    # chooses who spawns, so reproduction is a SELECTION CHANNEL the simulator hands over for free.
+    # MEASURED on the deployed controller (w_traits.py, seed 100, 7,292 ticks, 119 births): newborns'
+    # max_energy reached mean 589.7 / max 996.8 (cap 1,000, default 500) BY ACCIDENT -- richer parents
+    # simply spawn more often -- while vision_range stayed FLAT (mean ~200, max 257.8, cap 400),
+    # because no part of the controller prefers a better-sighted breeder. An unbiased +/-50% mutation
+    # is a random walk; only selection turns it into a ratchet, and selection is a rule, not a
+    # training run.
+    # THE TRAITS ARE OBSERVABLE, which is what makes this implementable: the request carries the
+    # agent's OWN six traits (DTOs.py:14-20) and every observed conspecific carries its `id`
+    # (creature.py:173, include_id=True -> {'type','distance','angle','rel_dir','id'}, and NOTHING
+    # else). So an id->traits table maintained from our own calls reconstructs the whole fleet's
+    # genome with no new input channel -- and the same table answers "who is a good breeder".
+    # COST: zero energy. It only decides who may spend the 100-energy spawn (it never blocks the
+    # relay at pop <= gs_rescue_pop, the failure that killed four earlier arms).
+    "genome_select": 0.0,       # 0 = off; >0 = a spawn requires the parent to rank as a breeder
+    "gs_w_vision": 1.0,         # trait weights in the utility U, each normalised by its cap
+    "gs_w_cone": 0.6,
+    "gs_w_hearing": 0.3,
+    "gs_w_energy": 0.4,         # max_energy: the bank that sets how long a survivor outlasts the food
+    "gs_w_speed": 0.2,
+    "gs_w_sprint": 0.2,
+    "gs_topk": 2.0,             # spawn only if own U ranks within the fleet's top-k (1 = best)
+    "gs_min_known": 3.0,        # need at least this many tracked genomes before gating at all
+    "gs_rescue_pop": 1.0,       # gpop <= this => never gate (age mortality makes births load-bearing)
+    "gs_phase_tick": 6000.0,    # after this sim tick the objective shifts toward the BANK
+    "gs_late_energy_mult": 3.0, # multiplier on gs_w_energy past gs_phase_tick (capacity > perception
+                                #   once production has halved 4x -- the endgame is a bank race)
+    "gs_ttl": 60,               # epochs a tracked genome counts as alive (same TTL as _GC)
 }
 
 # module-level memory: per-agent-id last action / flee state / spawn clock.
@@ -149,8 +247,17 @@ _EPOCH = 0
 _SEEN = {}        # agent_id -> [birth_tick, calls_since_birth]
 _SIM_TICK = 0     # best estimate of the current simulated tick
 _BLIND_EMA = 0.0  # fleet-level EMA of the share of calls that saw NO fruit (adaptive guard)
+_FRUIT_EMA = 0.0  # fleet-level EMA of FRUITS VISIBLE PER AGENT (thin-relay state trigger)
+_THIN_ARMED = False  # thin-relay hysteresis latch (set/cleared only by the state trigger)
 _GC = {}  # agent_id -> last-seen epoch (pruned via TTL -> cheap cooperative population estimate)
 _AGE = {}  # agent_id -> last age (monotonic within an episode; a drop => new episode => reset memory)
+# --- genome observability (breeder selection): agent_id -> [vision, cone, hearing, max_energy,
+# speed, sprint, last_epoch]. Built ONLY from our own calls (each request carries the agent's own
+# traits), which is what makes a conspecific's genome readable: the observation gives us its `id`.
+_TRAIT_KEYS = ("vision_range", "vision_angle", "hearing_radius", "max_energy", "speed", "sprint_speed")
+_TRAIT_CAPS = (400.0, math.pi / 2.0, 100.0, 1000.0, 20.0, 40.0)
+_TRAITS = {}
+_GS_LAST = None  # telemetry: (own U, own rank, n_known) from the last gated call -- for probes only
 
 
 def _maybe_new_episode(aid, age):
@@ -163,6 +270,10 @@ def _maybe_new_episode(aid, age):
         _GC.clear()
         _AGE.clear()
         _EPOCH = 0
+        global _THIN_ARMED, _FRUIT_EMA
+        _THIN_ARMED = False
+        _FRUIT_EMA = 0.0
+        _TRAITS.clear()          # genome table is per-episode (ids restart every episode)
     _AGE[aid] = age
 
 
@@ -182,7 +293,37 @@ def reset_memory():
     global _SIM_TICK, _BLIND_EMA
     _SIM_TICK = 0
     _BLIND_EMA = 0.0
+    global _THIN_ARMED, _FRUIT_EMA
+    _THIN_ARMED = False
+    _FRUIT_EMA = 0.0
+    _TRAITS.clear()
     _EPOCH = 0
+
+
+def _genome_u(rec, w):
+    """Scalar genome utility: traits normalised by their caps, weighted. -1.0 for an unknown agent."""
+    if rec is None:
+        return -1.0
+    u = 0.0
+    for i in range(6):
+        c = _TRAIT_CAPS[i]
+        v = rec[i] / c
+        if v > 1.0:
+            v = 1.0
+        elif v < 0.0:
+            v = 0.0
+        u += w[i] * v
+    return u
+
+
+def _trait_weights(P):
+    """Utility weights, shifted toward the BANK (max_energy) once production has decayed."""
+    w = [float(P.get("gs_w_vision", 1.0) or 0.0), float(P.get("gs_w_cone", 0.6) or 0.0),
+         float(P.get("gs_w_hearing", 0.3) or 0.0), float(P.get("gs_w_energy", 0.4) or 0.0),
+         float(P.get("gs_w_speed", 0.2) or 0.0), float(P.get("gs_w_sprint", 0.2) or 0.0)]
+    if _SIM_TICK > float(P.get("gs_phase_tick", 6000.0) or 0.0):
+        w[3] = w[3] * float(P.get("gs_late_energy_mult", 1.0) or 1.0)
+    return w
 
 
 def _global_alive(ttl=60):
@@ -247,6 +388,39 @@ def potential_controller(state, P):
     m["clock"] += 1
     gpop = _global_alive()
 
+    # ---- GENOME-AWARE BREEDER SELECTION (genome_select > 0) -------------------------------------
+    # Every request carries this agent's OWN six heritable traits, and every observed conspecific
+    # carries its `id`, so the fleet's genotype is reconstructable from our own call history alone.
+    # This block (a) maintains that id->traits table and (b) decides whether THIS agent may spend a
+    # 100-energy spawn: only agents whose genome utility ranks in the fleet's top-k may breed, which
+    # turns an unbiased +/-50% mutation into a ratchet in whatever direction U points.
+    # When genome_select == 0 nothing here runs (no table write, no gate) => behaviour is byte-identical.
+    global _TRAITS, _GS_LAST
+    gs = float(P.get("genome_select", 0.0) or 0.0)
+    gs_ok = True
+    if gs > 0.0:
+        _TRAITS[aid] = [float(state.get(k, 0.0) or 0.0) for k in _TRAIT_KEYS] + [_EPOCH]
+        _ttl = int(P.get("gs_ttl", 60) or 60)
+        # prune agents not seen for _ttl epochs: same cooperative-alive proxy as _GC, so the ranking
+        # is against the LIVING fleet rather than against every agent that ever existed this episode
+        if len(_TRAITS) > 64:
+            for _k in [k for k, v in _TRAITS.items() if _EPOCH - v[6] > _ttl]:
+                _TRAITS.pop(_k, None)
+        _w = _trait_weights(P)
+        _alive = [(k, v) for k, v in _TRAITS.items() if _EPOCH - v[6] <= _ttl]
+        own_u = _genome_u(_TRAITS.get(aid), _w)
+        # rank: 1 = best genome in the fleet. Deterministic tie-break by agent id, so equal genomes
+        # (e.g. the 5 founders, all at the defaults) still produce a stable ordering.
+        _rank = 1 + sum(1 for k, v in _alive
+                        if k != aid and (_genome_u(v, _w) > own_u
+                                         or (_genome_u(v, _w) == own_u and k < aid)))
+        _GS_LAST = (own_u, _rank, len(_alive))
+        _min_known = float(P.get("gs_min_known", 3.0) or 0.0)
+        _rescue_pop = float(P.get("gs_rescue_pop", 1.0) or 0.0)
+        # never gate the relay: below the rescue population the lineage must continue whatever the
+        # genome, and with too few known genomes the ranking is not informative yet.
+        gs_ok = (len(_alive) < _min_known) or (gpop <= _rescue_pop) or (_rank <= float(P.get("gs_topk", 2.0) or 2.0))
+
     fruits = [x for x in o if x.get("type") == "Fruit"]
     preds = [x for x in o if x.get("type") == "Predator"]
     agents = [x for x in o if x.get("type") == "Agent"]
@@ -285,6 +459,25 @@ def potential_controller(state, P):
             _ph *= max(0.0, 1.0 - min(1.0, (1.0 - _BLIND_EMA) / _guard))
         phase = _ph * _pm
 
+    # ---- STATE-TRIGGERED THIN-RELAY (thin_relay > 0): a TIME gate AND a food-collapse gate, with
+    # a two-threshold latch so the mode cannot flap. Off => nothing below changes any behaviour
+    # (the fruit EMA is not even updated, so `_BLIND_EMA` and everything else stay bit-identical).
+    global _FRUIT_EMA, _THIN_ARMED
+    thin_active = False
+    _thin = float(P.get("thin_relay", 0.0) or 0.0)
+    if _thin > 0.0:
+        # fleet EMA of fruits visible per agent (each call = one agent's view this tick)
+        _FRUIT_EMA = 0.985 * _FRUIT_EMA + 0.015 * float(len(fruits))
+        _t_lo = float(P.get("thin_trig_tick", 6000.0) or 0.0)
+        _v_on = float(P.get("thin_trig_vis", 0.35) or 0.0)
+        _v_off = float(P.get("thin_trig_vis_off", 0.70) or 0.0)
+        if _THIN_ARMED:
+            if _FRUIT_EMA > _v_off:
+                _THIN_ARMED = False      # hysteresis release: food genuinely came back
+        elif _SIM_TICK > _t_lo and _FRUIT_EMA < _v_on:
+            _THIN_ARMED = True           # BOTH gates: sim time past threshold AND visibility collapsed
+        thin_active = _THIN_ARMED
+
     # --- descend spawn clock ---
     if m["spawn_clock"] > 0:
         m["spawn_clock"] -= 1
@@ -308,6 +501,29 @@ def potential_controller(state, P):
         weight = P["predator_weight"] / (max(d, 5.0) ** 2)
         px += fx * weight
         py += fy * weight
+
+    # ---- RETREAT-WHILE-FACING EVASION (evade_mode > 0) ---------------------------------------
+    # Placed BEFORE the flee override so it takes precedence when enabled. It replaces "run away
+    # with my back turned" (which triggers a CHARGE) with "back away while keeping the predator in
+    # front" (which makes it PIVOT). Measured separation while facing: +0.48 to +1.58 units/tick
+    # versus ~0 when turned. Same sprint cost -- this is about geometry, not about spending less.
+    if P.get("evade_mode", 0.0) > 0.0 and preds:
+        _pn = min(preds, key=lambda p: p["distance"])
+        _ed = float(P.get("evade_dist", 140.0) or 0.0)
+        _ex = float(P.get("evade_disengage", 240.0) or 0.0)
+        _ev = bool(m.get("evade", False))
+        if _pn["distance"] < _ed:
+            _ev = True
+        elif _pn["distance"] > _ex:
+            _ev = False
+        m["evade"] = _ev
+        if _ev and energy > float(P.get("evade_energy_abs", 130.0) or 0.0):
+            _a = _wrap(_pn["angle"])                 # predator bearing relative to our facing
+            _away = _wrap(_a + math.pi)              # move directly away from it
+            return [float(sprint * float(P.get("evade_speed_frac", 0.8) or 0.8)),
+                    float(_away),
+                    float(-_a),                      # ...then face it (suppresses the charge)
+                    0.0]
 
     # flee override with hysteresis
     facing_threat = False
@@ -502,6 +718,13 @@ def potential_controller(state, P):
         elif _age < P.get("young_age", 25.0):
             dist *= P.get("young_speed_frac", 1.0)
 
+    # ---- THIN-RELAY movement: conserve energy but NEVER stop. Movement is the INCOME mechanism
+    # (agents are blind 76-87% of ticks, so standing still earns nothing); 'stop dead' was measured
+    # to lose thousands of ticks. The floor is a hard guarantee of nonzero travel.
+    if thin_active:
+        _tmove = float(P.get("thin_move_frac", 0.7) or 0.0)
+        dist = max(speed * 0.2, dist * _tmove)
+
     # ---- reproduction (investment-gated; cooperative pop cap via shared estimate) ----
     spawn = 0.0
     use_repro = P.get("use_repro", True)
@@ -539,6 +762,23 @@ def potential_controller(state, P):
         cd = P.get("relay_cooldown", 700)     # slower cadence for relay spawns than the normal gate
     else:
         cd = P.get("spawn_cooldown", 400)
+    # --- THIN RELAY override: this is the part the four refuted 'bank late' arms got WRONG. -------
+    # A population gate that blocks ALL reproduction breaks the age-relay and the fleet dies (that is
+    # the documented failure, measured 4,719 vs 7,816 ticks). Here reproduction is NEVER blocked: the
+    # relay admits a spawn whenever the fleet is below the thin target, and always when only ONE agent
+    # is left. That single change is what makes an 18k-tick run possible at all -- it is not optional.
+    _thin_room = True
+    if thin_active:
+        _tsz = float(P.get("thin_target_pop", 2.0) or 0.0)
+        _rescue = (gpop <= 1)              # LAST agent standing: the chain must continue
+        pop_ok = True                      # never disable the relay (see comment above)
+        crowd_ok = True
+        # room = one spawn's worth below/at the target: at gpop == target exactly ONE agent banks an
+        # heir (the fleet settles at target..target+1 = 2-3), and below it any competent adult may.
+        # Restricting to gpop < target instead makes the fleet decay silently before the relay is
+        # ever allowed to act, which is how the refuted arms lost their lineage.
+        _thin_room = _rescue or (gpop <= _tsz)
+        cd = int(P.get("thin_spawn_cooldown", 200) or 200)
     # --- reproduction gate, in the RIGHT unit ---
     # environment.py hard-requires energy > 100 to spawn. Our gate was a FRACTION of max_energy
     # (0.35 * 500 = 175), which is both the wrong unit (max_energy varies per agent) and
@@ -546,11 +786,19 @@ def potential_controller(state, P):
     # the final 2,000 ticks of a losing run, with mean energy 37-120 and fruit_vis 0-1.
     # Minimum viable reproduction: spend down to just above the sim's own requirement.
     abs_gate = P.get("repro_energy_abs", 0.0)
+    if thin_active:
+        # ABSOLUTE energy gate: 250 normally (parent keeps >=150, clear of the sprint lockout at
+        # max_energy/5), dropped to the rescue value when this is the last agent alive -- see
+        # DEFAULT_PARAMS["thin_rescue_energy_abs"] for why survival beats keeping the parent fast.
+        abs_gate = float(P.get("thin_rescue_energy_abs", 160.0) if gpop <= 1
+                         else P.get("thin_spawn_energy_abs", 250.0))
     gate_ok = (energy > abs_gate) if abs_gate > 0.0 else (ef > rf)
     if (use_repro and gate_ok
             and m["spawn_clock"] <= 0
             and pop_ok
-            and crowd_ok):
+            and crowd_ok
+            and _thin_room
+            and gs_ok):
         safe = all(p["distance"] >= P.get("repro_safe_radius", 330.0) for p in preds)
         if safe:
             spawn = 1.0

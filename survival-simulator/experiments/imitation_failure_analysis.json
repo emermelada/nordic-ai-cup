@@ -1,0 +1,30 @@
+{
+ "provenance": {
+  "hybrid_ablation": "_im_diag.py, TRAIN seeds [100,200] (eval seeds untouched), horizon 3000, stop_on_death, 5 agents, model = imitation_model_obs31.pt (31-dim, gate-label spawn), spawn threshold from ckpt",
+  "probe": "_im_probe2.py, TRAIN seeds [1200,1400] (horizon 4000), imitation_model.pt (augmented obs) vs the expert on the same seed; p_spawn = mean of the learned spawn probability over the policy's own rollout",
+  "knob_sweep": "_im_sweep.py, TRAIN seeds [200,400,600], horizon 6000"
+ },
+ "hybrid_ablation": {
+  "note": "which action head is responsible for the collapse: hold three heads at the expert's choice, swap in the learned head(s)",
+  "expert_all_heads": {"ticks": [3000, 3000], "comment": "reference; horizon-capped"},
+  "learned_all_heads": {"ticks": [1265, 1409], "comment": "full learned policy -> collapse"},
+  "learned_dist_expert_dir_spawn": {"ticks": [3000, 3000], "comment": "learned distance is harmless"},
+  "expert_dist_learned_dir_spawn": {"ticks": [3000, 3000], "comment": "learned steering is harmless"},
+  "expert_dist_dir_learned_spawn": {"ticks": [1340, 2200], "comment": "LEARNED SPAWN ALONE collapses the run"}
+ },
+ "probe": {
+  "learned_seed1200": {"e_frac": 0.1596, "p_spawn_mean": 0.2296, "spawn_rate": 0.00206, "ticks": 971, "pop_end": 0},
+  "expert_seed1200": {"e_frac": 0.2981, "spawn_rate": 0.01675, "ticks": 4000, "pop_end": 4},
+  "learned_seed1400": {"e_frac": 0.2381, "p_spawn_mean": 0.2905, "spawn_rate": 0.00428, "ticks": 2338, "pop_end": 0},
+  "expert_seed1400": {"e_frac": 0.4286, "spawn_rate": 0.01625, "ticks": 4000, "pop_end": 12},
+  "reading": "the learned spawn probability averages 0.23-0.29, i.e. BELOW the 0.5 decision threshold, so almost no spawn request is issued (0.2-0.4% of agent-ticks vs the expert's ~1.6-1.7%); the energy fraction is also ~40-45% below the expert's, so the reproduction gate is genuinely less often satisfied. Population dies of age with no heir chain."
+ },
+ "knob_sweep": {
+  "selected": "SHIPPED = untuned gate threshold 0.50, cooldown 120 (no small-sample selection). The 0.20 threshold won on these 3 train seeds but did NOT transfer to the held-out eval seeds (mean 1307 vs 2569), so it is recorded as a negative result, not shipped.",
+  "threshold_0.50_cd120": {"mean": 2753, "median": 3576, "min": 915},
+  "threshold_0.35_cd120": {"mean": 2490, "median": 735, "min": 734},
+  "threshold_0.20_cd120": {"mean": 4988, "median": 4875, "min": 4089},
+  "cooldown_240_thr0.50": {"mean": 1718, "median": 1966, "min": 917},
+  "cooldown_400_thr0.50_obs31_model": {"median_run": "collapsed early"}
+ }
+}

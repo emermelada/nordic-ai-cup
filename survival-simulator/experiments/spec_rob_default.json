@@ -1,0 +1,49 @@
+{
+ "horizon": 16000,
+ "seeds": [
+  100,
+  200,
+  300,
+  400,
+  500,
+  600,
+  700,
+  800
+ ],
+ "out": "robust_default.jsonl",
+ "shapes": [
+  {
+   "name": "default",
+   "w": 1600,
+   "h": 1200,
+   "n": 5
+  }
+ ],
+ "configs": [
+  {
+   "tag": "ROB-R0BASE",
+   "params": {}
+  },
+  {
+   "tag": "ROB-G4-f024cd60",
+   "params": {
+    "repro_frac": 0.24,
+    "repro_frac_min": 0.22,
+    "spawn_cooldown": 60
+   }
+  },
+  {
+   "tag": "ROB-E200cd30",
+   "params": {
+    "repro_energy_abs": 200,
+    "spawn_cooldown": 30
+   }
+  },
+  {
+   "tag": "ROB-E200cd120",
+   "params": {
+    "repro_energy_abs": 200
+   }
+  }
+ ]
+}

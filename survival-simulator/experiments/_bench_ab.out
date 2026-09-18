@@ -1,0 +1,9 @@
+seed=100  states=62448    policy ms/call shipped median=0.0078 min=0.0077 | fast median=0.0073 min=0.0072 | speedup(median)=1.07x
+        served entry ms/call shipped=0.0258 fast=0.0087 -> 2.98x
+seed=200  states=78012    policy ms/call shipped median=0.0099 min=0.0098 | fast median=0.0089 min=0.0089 | speedup(median)=1.11x
+        served entry ms/call shipped=0.0292 fast=0.0106 -> 2.75x
+seed=300  states=72663    policy ms/call shipped median=0.0059 min=0.0058 | fast median=0.0054 min=0.0054 | speedup(median)=1.08x
+        served entry ms/call shipped=0.0238 fast=0.0068 -> 3.49x
+
+MEAN over 3 seeds: policy 0.0078 -> 0.0072 ms/call  (1.09x, -8.1%) | served 0.0263 -> 0.0087 ms/call (3.02x, -66.9%)
+BENCH_EXIT=0
