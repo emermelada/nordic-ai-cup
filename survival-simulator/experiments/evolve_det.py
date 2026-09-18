@@ -71,6 +71,13 @@ SPACE = {
     "famine_min_cap":      (0.0, 800.0, 0.30),   # 0 = any lineage; >0 = high-capacity lineages only
 }
 
+# Ranking = mean_ticks + FRUIT_W * mean_fruit. Kept SMALL and documented because the raw fruit term
+# has a HEADCOUNT BIAS: a bigger fleet eats more in total simply by having more mouths, so a large
+# weight would reward the over-breeding trap the finances sweep and the winner-vs-live comparison
+# both warn about. 0.05/fruit caps the bonus near +100 ticks -- enough to break near-ties toward
+# income (the low-variance causal quantity) without letting fleet size dominate survival.
+FRUIT_W = 0.05
+
 PARAMS_FILE = os.path.join(REPO, "best_controller", "params.json")
 BEST_FILE = os.path.join(HERE, "evolve_det_best.json")
 HIST_FILE = os.path.join(HERE, "evolve_det_history.jsonl")
@@ -183,6 +190,7 @@ def main():
     # 1 "improved" on a candidate that actually scored below the incumbent, because best_ticks
     # started as None.)
     best, best_ticks = dict(incumbent), _base[0]
+    best_rank = _base[0] + FRUIT_W * (_base[2] if len(_base) > 2 else 0.0)
     gen = 0
     while time.time() < deadline:
         gen += 1
@@ -194,12 +202,25 @@ def main():
         # Rank on survival ticks, with FRUIT EATEN as a tie-breaker: when the horizon cap is hit the
         # tick count saturates and capped candidates become indistinguishable, but they still differ
         # in how much they ate -- which is the income that actually drives survival.
-        scored = sorted(score_candidates(cands, seeds), key=lambda z: -(z[0] + 0.001 * z[2]))
+        # RANKING -- and this is the fix for the session's central failure. Survival ticks are a
+        # HIGH-VARIANCE objective: the same policy on the same seed swung 5,922 vs 7,825 ticks
+        # between runs, so ranking candidates on 3 seeds selects NOISE, which is why every sweep
+        # today (tree/blind/population/phase) gained on train seeds and evaporated on held-out ones.
+        # Fruit eaten is the same causal quantity with far lower variance (1,312/1,481/1,873/1,594/
+        # 1,426 across seeds vs a 2x swing in ticks), and it is the throughput that ultimately feeds
+        # survival. So: ticks stay primary, income gets a REAL weight (0.2/fruit ~ up to +500 ticks)
+        # instead of the 0.001 tie-break, which was numerically negligible.
+        scored = sorted(score_candidates(cands, seeds), key=lambda z: -(z[0] + FRUIT_W * z[2]))
         gen_best_ticks, gen_best_per, gen_best_fruit = scored[0][0], scored[0][1], scored[0][2]
+        gen_rank = gen_best_ticks + FRUIT_W * gen_best_fruit
         elapsed = time.time() - t0
-        improved = gen_best_ticks > best_ticks
+        # ADOPTION MUST MEASURE THE SAME QUANTITY AS THE RANKING (independent review finding):
+        # ranking on ticks + FRUIT_W*fruit while adopting on ticks alone meant a candidate that won
+        # the ranking on fruit could be recorded as "no gain" -- so the saved artifact could be
+        # WORSE than the ranked winner, and the elite path then drifted from a worse base.
+        improved = gen_rank > best_rank
         if improved:
-            best, best_ticks = dict(scored[0][3]), gen_best_ticks
+            best, best_ticks, best_rank = dict(scored[0][3]), gen_best_ticks, gen_rank
             json.dump({"params": best, "fitness_ticks": best_ticks, "seeds": seeds,
                        "horizon": a.horizon, "generation": gen, "gen_per_seed": gen_best_per,
                        "gen_fruit": gen_best_fruit, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")},

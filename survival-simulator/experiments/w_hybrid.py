@@ -26,8 +26,15 @@ import best_controller as bc                      # noqa: E402
 
 
 def load(path):
+    """Load a params file, tolerating BOTH shapes: flat {k: v} and the search's {"params": {...}}.
+
+    Not tolerating both silently produced a wrong control: without unwrapping, the winner loaded as
+    DEFAULT_PARAMS and the test "showed" it scoring 1,948 ticks (the defaults' number) instead of
+    ~8,000. A silently-degraded control is worse than no control.
+    """
+    blob = json.load(open(path))
     p = dict(bc.DEFAULT_PARAMS)
-    p.update(json.load(open(path)))
+    p.update(blob.get("params", blob) if isinstance(blob, dict) else {})
     return p
 
 

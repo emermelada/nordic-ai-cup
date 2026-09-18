@@ -70,6 +70,43 @@ DEFAULT_PARAMS = {
     # "keep using explore_frac", so adding them cannot change any already-measured result.
     "tree_weight": 0.25,        # attraction to Tree observations (0.25 = the original hardcoded value)
     "blind_explore_frac": None, # move-distance fraction when NO fruit is visible (None = explore_frac)
+    # --- MEMORY-BASED SEARCH: the optimal-foraging behaviours the controller never had. ---------
+    # WHY (and why this is the interesting fix): our controller is a MEMORYLESS potential field --
+    # chase the nearest visible fruit, otherwise wander randomly. Foraging ecology says that is the
+    # wrong shape for a patchy world, and our own measurements agree: income is ACCESS-limited
+    # (4,518 fruit energy standing in the world vs 1,109 eaten; 0.3 fruits visible per agent;
+    # 12-29% of ticks with NO fruit in view), so the binding problem is SEARCH, not appetite.
+    # The ML track independently reached the same conclusion from the other side: behaviour cloning
+    # of this controller failed because the observation is not Markov -- the missing state is
+    # exactly "where was the food I saw earlier". So give the heuristic that memory directly.
+    #   1. BALLISTIC RELOCATION (Levy-like): after losing sight of food, COMMIT to a straight run in
+    #      the remembered food direction instead of re-randomising the heading every tick, then
+    #      commit to a fresh straight run -- cover ground instead of milling in place.
+    #   2. SOCIAL FORAGING: when blind, steer toward a visible conspecific (the observation already
+    #      carries other agents' bearings and we ignored them entirely).
+    #   3. AREA-RESTRICTED SEARCH: while food IS visible, move slower so the agent stays inside the
+    #      patch it just found rather than walking straight out of it.
+    "memory_search": 0.0,       # 0 = off (exactly the old behaviour); 1 = enable the block below
+    "commit_len": 250.0,        # ticks to hold the remembered heading before re-committing
+    "commit_speed_frac": 1.0,   # speed fraction during a committed relocation run
+    "follow_agent_weight": 0.0, # 0 = off; >0 blends toward the nearest visible agent when blind
+    "ars_speed_frac": 1.0,      # 1 = off; <1 slows movement while food is visible (stay in patch)
+    # --- PREDATOR-FACING DEFENCE (face_predator 0.0 = OFF) -------------------------------------
+    # MEASURED IN THE SIM (src/elements/predator.py:37): a predator CHARGES only when the agent is
+    # NOT facing it (|agent_looking_dir| > pi/2) or when it is already inside hearing_radius*1.5 =
+    # 90 units. If the agent IS facing it, the predator instead PIVOTS 45 degrees off-target and
+    # does not close. Turning costs |turn|/(2pi) energy (a full 180deg turn = 0.5) against 5.5/tick
+    # to sprint away, and movement is applied BEFORE the turn (environment.py:614/618), so an agent
+    # can hold a pursuer inside its vision half-plane while still travelling toward fruit.
+    # Predators never tire (Predator.step sprints with NO energy accounting), so kiting is
+    # impossible -- facing is the cheap counter to the terminal predation cascade that ends runs.
+    # Death budget measured on the live controller: 35-43% of deaths are predation, and the fleet
+    # banks ~3,000 energy then loses 14 of 16 agents in a single 1,000-tick window, each kill
+    # carrying off that agent's bank. That cascade, not gradual starvation, ends the run.
+    "face_predator": 0.0,       # 0 = off; 1 = keep the nearest predator inside the facing cone
+    "face_cone": 1.05,          # half-plane kept clear, radians (~60 deg)
+    "face_dist_max": 320.0,     # only face predators within this range
+    "face_min_dist": 90.0,      # closer than this it charges anyway, so facing cannot help
     # --- PHASE-AWARE boom/famine policy (phase_mode 0 = OFF, i.e. exactly the previous behaviour) ---
     # Why this exists: fruit production decays 0.5^(t/300) at the POPULATION level -- a global property
     # no local observation can see -- while income is ALSO biome-dependent (forest 0.08/s per 100x100,
@@ -172,6 +209,26 @@ def _det_rand(i):
 
 def _mem(agent_id):
     return _MEM.setdefault(agent_id, {"flee": False, "spawn_clock": 0, "last_steer": 0.0, "clock": 0})
+
+
+def _facing_turn(P, preds):
+    """Radians to rotate so the nearest predator stays inside the facing cone (0.0 = no change).
+
+    See DEFAULT_PARAMS["face_predator"] for the measured mechanic this exploits. Costs
+    |turn|/(2pi) energy per tick; once the predator is inside the cone the steady-state correction
+    is tiny, because the predator's bearing changes slowly while it pivots instead of charging.
+    """
+    if P.get("face_predator", 0.0) <= 0.0 or not preds:
+        return 0.0
+    p = min(preds, key=lambda q: q["distance"])
+    d = p["distance"]
+    if not (float(P.get("face_min_dist", 90.0)) <= d <= float(P.get("face_dist_max", 320.0))):
+        return 0.0                      # too far to matter, or already inside the charge radius
+    a = _wrap(p["angle"])               # bearing to the predator, relative to our current facing
+    cone = float(P.get("face_cone", 1.05))
+    if abs(a) <= cone:
+        return 0.0                      # already facing it far enough -> it pivots, not charges
+    return math.copysign(abs(a) - cone, a)
 
 
 def potential_controller(state, P):
@@ -283,7 +340,7 @@ def potential_controller(state, P):
             dist = sprint * P["flee_speed_frac"]
         else:
             dist = speed * 0.9
-        return [float(dist), float(away), 0.0, 0.0]
+        return [float(dist), float(away), float(_facing_turn(P, preds)), 0.0]
 
     m["flee"] = False
 
@@ -376,9 +433,38 @@ def potential_controller(state, P):
         steer = m["last_steer"] + diff * P["target_hyst"]
     m["last_steer"] = _wrap(steer)
 
+    # ---- MEMORY-BASED SEARCH (optimal-foraging behaviours; memory_search 0.0 = OFF) -------------
+    # The controller is otherwise memoryless, and income is ACCESS-limited, so "where was the food?"
+    # is the missing state. See DEFAULT_PARAMS for why, and for the three behaviours implemented.
+    committed = False
+    if P.get("memory_search", 0.0) > 0.0:
+        if fruits:
+            m["blind_run"] = 0
+            m["mem_steer"] = _wrap(steer)          # remember the heading that led to food
+        else:
+            m["blind_run"] = int(m.get("blind_run", 0)) + 1
+            _fw = float(P.get("follow_agent_weight", 0.0) or 0.0)
+            _follow = None
+            if _fw > 0.0 and agents:               # SOCIAL FORAGING: follow a possible knower
+                _cand = [g for g in agents if g["distance"] < 260.0]
+                if _cand:
+                    _follow = min(_cand, key=lambda g: g["distance"])
+            if _follow is not None:
+                steer = _wrap(steer * (1.0 - _fw) + _wrap(_follow["angle"]) * _fw)
+            else:
+                _cl = int(P.get("commit_len", 250) or 250)
+                if m.get("mem_steer") is None or int(m.get("blind_run", 0)) > _cl:
+                    # nothing remembered, or the commitment expired -> commit to a fresh straight run
+                    m["mem_steer"] = _wrap(rw_ang)
+                    m["blind_run"] = 1
+                steer = _wrap(m["mem_steer"])      # BALLISTIC RELOCATION: hold the heading and RUN
+                committed = True
+
     # ---- move distance (energy-aware) ----
     use_energy = P.get("use_energy", True)
-    if direct_forage:
+    if committed:
+        dist = speed * float(P.get("commit_speed_frac", 1.0) or 0.0)   # cover ground, don't mill
+    elif direct_forage:
         dist = speed * float(P.get("forage_speed", 1.0))
     elif best_fruit is not None and best_fruit["distance"] < 40.0:
         dist = min(speed, best_fruit["distance"])
@@ -387,6 +473,11 @@ def potential_controller(state, P):
     else:
         _bf = P.get("blind_explore_frac")
         dist = speed * P["walk_frac"] if (best_fruit is not None) else speed * (P["explore_frac"] if _bf is None else _bf)
+    # AREA-RESTRICTED SEARCH: while food is visible, slow down so we stay INSIDE the patch we found
+    # instead of walking straight out of it (1.0 = off).
+    _ars = float(P.get("ars_speed_frac", 1.0) or 1.0)
+    if fruits and _ars < 1.0:
+        dist = min(dist, speed * _ars)
     if use_energy and ef < P["reserve_frac"]:
         dist = min(dist, speed * 0.25)
 
@@ -484,7 +575,7 @@ def potential_controller(state, P):
         if not (_rescue or _invest):
             spawn = 0.0
 
-    return [float(dist), float(steer), 0.0, float(spawn)]
+    return [float(dist), float(steer), float(_facing_turn(P, preds)), float(spawn)]
 
 
 def _load_params():
