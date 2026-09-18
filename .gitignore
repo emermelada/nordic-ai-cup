@@ -23,3 +23,7 @@ drone-flyby/annotated/
 survival-simulator/experiments/*.npz
 survival-simulator/experiments/*.npz.meta.json
 survival-simulator/experiments/*.log
+
+# Large local caches / trajectory dumps (never commit; a pre-receive hook rejected a 360MB push)
+survival-simulator/experiments/*.pkl
+survival-simulator/experiments/*.npz
