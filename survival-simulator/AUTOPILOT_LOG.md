@@ -69,6 +69,26 @@ Artifacts committed: `experiments/par_gsconf.json`, `experiments/par_gsconf2.jso
 **Human:** nothing is blocked on you and no DNS change is needed. The value of a board validation is
 unchanged (best-attempt-wins) but the expectation is still ≈918±noise, i.e. around the previous attempt.
 
+**ADDENDUM 08:40 UTC — ⚠️ A PARALLEL AGENT DEPLOYED THIS EXACT LEVER WHILE I WAS TESTING IT.** The final
+serving sweep caught it: `nac-survival-vps` was **restarted at ~08:36 UTC** (container id unchanged, so
+files were `docker cp`-ed in, not rebuilt; `docker inspect` shows no mounts) and now serves
+- in-container `/app/best_controller.py` sha256 **252f0ba1… = the 86-param controller `/opt/nac_gs/best_controller.py`**
+  (was `f90cb4e3…`), and
+- in-container `/app/best_controller/params.json` sha256 **3561a551… = the repo's `experiments/DEPLOY_GS_params.json`**,
+  i.e. **`en_top3`** (`genome_select 1.0`, `gs_w_energy 3.0`, `gs_topk 3.0`, `reserve_frac 0.0`).
+
+It is healthy: `POST /predict` 200 in **1.8-2.1 ms** (3 probes) with a valid `{"actions":[...]}` body,
+`https://survival.zaitzev.com/` 200 in 18 ms, and the pre-deploy evidence + rollback backups are on the
+box (`/root/code_backup_f90cb4e3.py`, `/root/params_backup_c6.json`; recipe in `tools/ops/deploy_when_idle.sh`
+line 69). **I did NOT touch it** — reverting a peer's deliberate deploy is not mine to make, and the board
+keeps our best attempt so a bad attempt costs nothing; but note this deploy rests on the single 40-seed
+block my pooled 120-seed analysis contradicts (54% wins, p10 −285).
+
+**Bookkeeping break to fix (whoever owns the serving tree):** the host file `/opt/nac/best_controller.py`
+and `/opt/nac/best_controller.sha256` still say `f90cb4e3…`, i.e. the served artifact is no longer tracked
+anywhere on the box. The next wake-up's hash check will read "mismatch" and cannot tell a deliberate deploy
+from tampering — write the new controller + params + sha256 into `/opt/nac/` and commit them.
+
 ## 2026-09-19 07:20 UTC — M_no_tree REFUTED at 160 fresh seeds; the C6 DEPLOY is now properly validated (it beats the pre-C6 controller on 65% of 160 fresh seeds)
 (status sweep 06:17-07:19 UTC; all times UTC; two lanes, exp box only)
 
