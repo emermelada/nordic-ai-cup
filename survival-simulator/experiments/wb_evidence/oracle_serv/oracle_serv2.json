@@ -1,0 +1,1951 @@
+[
+ {
+  "seed": 2721,
+  "focal": 4,
+  "features": {
+   "energy_frac": 0.039,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2721,
+  "focal": 24,
+  "features": {
+   "energy_frac": 0.407,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 14,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2721,
+  "focal": 47,
+  "features": {
+   "energy_frac": 0.757,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2721,
+  "focal": 73,
+  "features": {
+   "energy_frac": 0.451,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 57.7,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 57.7,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 57.7,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 57.7,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 57.7,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2722,
+  "focal": 0,
+  "features": {
+   "energy_frac": 0.993,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 800
+  },
+  "controller": {
+   "alive": true,
+   "energy": 301.1,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 227.4,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 242.4,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 243.7,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 243.7,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 243.7,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "flee_predator"
+ },
+ {
+  "seed": 2722,
+  "focal": 21,
+  "features": {
+   "energy_frac": 0.609,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2722,
+  "focal": 46,
+  "features": {
+   "energy_frac": 0.56,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 19,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2722,
+  "focal": 76,
+  "features": {
+   "energy_frac": 0.946,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": true,
+   "energy": 414.7,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 197.0,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 197.0,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 197.0,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2723,
+  "focal": 2,
+  "features": {
+   "energy_frac": 0.7,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 19,
+   "tick": 800
+  },
+  "controller": {
+   "alive": true,
+   "energy": 15.8,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 176.8,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 176.8,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 176.8,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 176.8,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 176.8,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2723,
+  "focal": 18,
+  "features": {
+   "energy_frac": -0.0,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2723,
+  "focal": 56,
+  "features": {
+   "energy_frac": 0.082,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2723,
+  "focal": 84,
+  "features": {
+   "energy_frac": 0.217,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 12,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2724,
+  "focal": 1,
+  "features": {
+   "energy_frac": 0.01,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 5,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2724,
+  "focal": 31,
+  "features": {
+   "energy_frac": 0.028,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 10,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2724,
+  "focal": 54,
+  "features": {
+   "energy_frac": 0.015,
+   "in_lockout": true,
+   "pred_visible": 1,
+   "pred_dist": 116.35793333183342,
+   "fruit_visible": 0,
+   "fleet_pop": 7,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2724,
+  "focal": 78,
+  "features": {
+   "energy_frac": 0.55,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 11,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 62.4,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [
+   "flee_predator"
+  ],
+  "beats": true,
+  "best": "flee_predator"
+ },
+ {
+  "seed": 2725,
+  "focal": 2,
+  "features": {
+   "energy_frac": 0.012,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 12,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2725,
+  "focal": 34,
+  "features": {
+   "energy_frac": 0.461,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": true,
+   "energy": -0.6,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 7.4,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 7.4,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 7.4,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 7.4,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 7.4,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2725,
+  "focal": 67,
+  "features": {
+   "energy_frac": 0.023,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 12,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2725,
+  "focal": 110,
+  "features": {
+   "energy_frac": 0.007,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 13,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2726,
+  "focal": 1,
+  "features": {
+   "energy_frac": 0.216,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 17,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2726,
+  "focal": 29,
+  "features": {
+   "energy_frac": 0.058,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 14,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2726,
+  "focal": 58,
+  "features": {
+   "energy_frac": 0.263,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 12,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2726,
+  "focal": 92,
+  "features": {
+   "energy_frac": 0.083,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 12,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2727,
+  "focal": 0,
+  "features": {
+   "energy_frac": 0.684,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 18,
+   "tick": 800
+  },
+  "controller": {
+   "alive": true,
+   "energy": 61.9,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 69.7,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 175.1,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 154.2,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 154.2,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 154.2,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "walk_to_fruit"
+ },
+ {
+  "seed": 2727,
+  "focal": 31,
+  "features": {
+   "energy_frac": 0.733,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": true,
+   "energy": 249.3,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 411.2,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 425.9,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 407.3,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 407.3,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 407.3,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "walk_to_fruit"
+ },
+ {
+  "seed": 2727,
+  "focal": 72,
+  "features": {
+   "energy_frac": 0.277,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 1,
+   "fleet_pop": 18,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2727,
+  "focal": 113,
+  "features": {
+   "energy_frac": 0.246,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2728,
+  "focal": 4,
+  "features": {
+   "energy_frac": 0.174,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 16,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2728,
+  "focal": 30,
+  "features": {
+   "energy_frac": 0.299,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 11,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": true,
+   "energy": 14.1,
+   "ticks_survived": 1
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": true,
+    "energy": 121.0,
+    "ticks_survived": 1
+   },
+   "walk_to_fruit": {
+    "alive": true,
+    "energy": 127.2,
+    "ticks_survived": 1
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 109.8,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": true,
+    "energy": 109.8,
+    "ticks_survived": 1
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 109.8,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "sprint_to_fruit",
+   "walk_to_fruit",
+   "flee_predator",
+   "toward_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "walk_to_fruit"
+ },
+ {
+  "seed": 2728,
+  "focal": 54,
+  "features": {
+   "energy_frac": 0.114,
+   "in_lockout": true,
+   "pred_visible": 1,
+   "pred_dist": 49.67414928616668,
+   "fruit_visible": 1,
+   "fleet_pop": 15,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": true,
+    "energy": 16.6,
+    "ticks_survived": 1
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": true,
+    "energy": 17.2,
+    "ticks_survived": 1
+   }
+  },
+  "winners": [
+   "flee_predator",
+   "still"
+  ],
+  "beats": true,
+  "best": "still"
+ },
+ {
+  "seed": 2728,
+  "focal": 110,
+  "features": {
+   "energy_frac": 0.053,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 10,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2729,
+  "focal": 2,
+  "features": {
+   "energy_frac": 0.229,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 800
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2729,
+  "focal": 21,
+  "features": {
+   "energy_frac": 0.535,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 20,
+   "tick": 2000
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2729,
+  "focal": 47,
+  "features": {
+   "energy_frac": 0.336,
+   "in_lockout": false,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 11,
+   "tick": 3200
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ },
+ {
+  "seed": 2729,
+  "focal": 77,
+  "features": {
+   "energy_frac": 0.188,
+   "in_lockout": true,
+   "pred_visible": 0,
+   "pred_dist": null,
+   "fruit_visible": 0,
+   "fleet_pop": 15,
+   "tick": 4400
+  },
+  "controller": {
+   "alive": false,
+   "energy": 0.0,
+   "ticks_survived": 0
+  },
+  "alternatives": {
+   "sprint_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "walk_to_fruit": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "flee_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "toward_predator": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "north": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   },
+   "still": {
+    "alive": false,
+    "energy": 0.0,
+    "ticks_survived": 0
+   }
+  },
+  "winners": [],
+  "beats": false,
+  "best": "sprint_to_fruit"
+ }
+]

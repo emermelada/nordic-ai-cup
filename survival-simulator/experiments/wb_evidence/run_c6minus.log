@@ -1,0 +1,36 @@
+LANE c6minus | simv 6595c9350a22d79e | cache 4622 episodes | workers 16 | results /opt/nac/results
+baseline = deployed controller: fruit_weight=1.148 evade_mode=1.0 walk_frac=0.493
+candidates: 13 (1 baseline + 12)
+
+=== stage 1: 13 candidates x 20 seeds @ 18000 ticks | 260 new episodes (0 cache hits) ===
+[stage1] 50/260 episodes done
+[stage1] 100/260 episodes done
+[stage1] 150/260 episodes done
+[stage1] 200/260 episodes done
+[stage1] 250/260 episodes done
+-> M_no_disperse                  n= 20 mean=   8152 med=   7978 p10=  6343 min=  3198 var=   3801630 ext=1.00 fruit=  1288 pop= 0.0  paired    +1590 (+24.2%)  W15/L5/T0  floorP10   +1829
+-> M_no_tree                      n= 20 mean=   7990 med=   8378 p10=  5691 min=   776 var=   5613557 ext=1.00 fruit=  1258 pop= 0.0  paired    +1428 (+21.8%)  W14/L6/T0  floorP10   +1177
+-> M_no_flee                      n= 20 mean=   7552 med=   7532 p10=  6247 min=   778 var=   4369375 ext=1.00 fruit=  1212 pop= 0.0  paired     +990 (+15.1%)  W13/L7/T0  floorP10   +1733
+-> M_no_concern                   n= 20 mean=   7009 med=   7700 p10=  4084 min=   778 var=   5895616 ext=1.00 fruit=  1141 pop= 0.0  paired     +447 ( +6.8%)  W14/L6/T0  floorP10    -430
+-> BASE_C6                        n= 20 mean=   6991 med=   7602 p10=  4084 min=   778 var=   5629476 ext=1.00 fruit=  1137 pop= 0.0  paired     +429 ( +6.5%)  W14/L6/T0  floorP10    -430
+-> M_no_risk                      n= 20 mean=   6948 med=   7602 p10=  4084 min=   778 var=   5461740 ext=1.00 fruit=  1132 pop= 0.0  paired     +386 ( +5.9%)  W14/L6/T0  floorP10    -430
+-> M_no_escape                    n= 20 mean=   6844 med=   7602 p10=  4084 min=   778 var=   5017793 ext=1.00 fruit=  1133 pop= 0.0  paired     +282 ( +4.3%)  W14/L6/T0  floorP10    -430
+stage 1 took 18.6 min
+early-stop dropped 6: ['M_no_hyst', 'M_no_danger', 'M_no_escape', 'M_no_urgent', 'M_no_cap', 'M_no_all_hunt']
+
+=== stage 2: 7 candidates x 40 seeds @ 18000 ticks | 280 new episodes (0 cache hits) ===
+[stage2] 50/280 episodes done
+[stage2] 100/280 episodes done
+[stage2] 150/280 episodes done
+[stage2] 200/280 episodes done
+[stage2] 250/280 episodes done
+-> M_no_disperse                  n= 40 mean=   8221 med=   8250 p10=  5688 min=  2972 var=   4984437 ext=1.00 fruit=  1402 pop= 0.0  paired     +655 ( +8.7%)  W24/L16/T0  floorP10      -2
+-> M_no_flee                      n= 40 mean=   7929 med=   7812 p10=  5651 min=  3676 var=   3262084 ext=1.00 fruit=  1367 pop= 0.0  paired     +363 ( +4.8%)  W22/L18/T0  floorP10     -40
+-> M_no_tree                      n= 40 mean=   7772 med=   7812 p10=  5383 min=  3880 var=   3083399 ext=1.00 fruit=  1349 pop= 0.0  paired     +206 ( +2.7%)  W22/L18/T0  floorP10    -307
+-> M_no_concern                   n= 40 mean=   7744 med=   7654 p10=  5275 min=  3203 var=   4312650 ext=1.00 fruit=  1327 pop= 0.0  paired     +178 ( +2.4%)  W18/L22/T0  floorP10    -415
+-> BASE_C6                        n= 40 mean=   7640 med=   7422 p10=  5275 min=  3203 var=   4143808 ext=1.00 fruit=  1312 pop= 0.0  paired      +74 ( +1.0%)  W19/L21/T0  floorP10    -415
+   BASE                           n= 40 mean=   7566 med=   7346 p10=  5690 min=  4321 var=   3237189 ext=1.00 fruit=  1233 pop= 0.0  paired       +0 ( +0.0%)  W0/L0/T40  floorP10      +0
+-> M_no_risk                      n= 40 mean=   7516 med=   7422 p10=  5275 min=  3203 var=   3667235 ext=1.00 fruit=  1292 pop= 0.0  paired      -50 ( -0.7%)  W19/L21/T0  floorP10    -415
+stage 2 took 23.7 min
+
+=== LANE c6minus COMPLETE ===  results in /opt/nac/results/c6minus_ledger.json
