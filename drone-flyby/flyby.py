@@ -383,6 +383,33 @@ SWEEPS = {
     'quad0': [p for corner in (TL, TR, BR, BL) for p in ((0, 1920, 1080), (1, *corner))],
     # The full sweep with a whole-frame look after every second step.
     'full0': [TL, TM, (0, 1920, 1080), TR, BR, (0, 1920, 1080), BM, BL, (0, 1920, 1080)],
+    # One full sweep to find what is already on screen, then the top row only.
+    #
+    # New objects only ever enter at the top edge, and recall is worst exactly
+    # there: measured on a recorded run, the served `full` sweep answers 0.546
+    # of object-frames in the top third against 0.797 in the bottom, because an
+    # object descends for several frames before the sweep looks its way. 16.8 %
+    # of all object-frames are lost to that lag alone (probe/miss_anatomy.py).
+    # Alternating the two top corners shows every new object within ~1 frame
+    # and gives it ~8 looks while it crosses the top half instead of ~2, which
+    # matters most for the small classes a single look finds only 30-45 % of
+    # the time (probe/detect_curve.py).
+    #
+    # It pays for that by never looking back: everything below the top half is
+    # carried. That is affordable only because the online motion fit carries
+    # well -- 85.8 % of boxes still hit after a 20-frame gap, against 16 % with
+    # the stale Helsinki prior (probe/carry_test.py). Expected recall over the
+    # fitted objects: 0.884 against `full`'s 0.841 (probe/camera_plan.py).
+    # NOTE the middle stops: TL -> TR is 1920 px and the L1 limit is 1102, so a
+    # bare left-right alternation is refused on every step. choose_next_view
+    # answers a refused step by rejoining at the nearest legal pattern point,
+    # which is the one it is standing on -- the camera would stall on TL for the
+    # whole flight while every log line looked healthy. 'top' (above) already
+    # has the right shape; these are the same idea with a wider duty cycle.
+    'toprow': FULL_SWEEP + [TL, TM, TR, TM] * 200,
+    # Top row mostly, with an occasional look back at the bottom middle for
+    # objects the first pass missed. TM -> BM is 1080 px, just inside the limit.
+    'top_mostly': FULL_SWEEP + [TL, TM, TR, TM, TL, TM, TR, TM, BM, TM] * 80,
 }
 # Chosen on validation runs with v3 (same flight, same model):
 # full 0.130, quad0 0.126, full0 0.119, dwell 0.117, top 0.108.
