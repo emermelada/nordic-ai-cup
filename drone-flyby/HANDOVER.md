@@ -1395,3 +1395,41 @@ on a known host rather than three.
 Note when reading stall rates: run `tools/stall`-style counting on the RUN's
 recording only. A `tools/preflight.py` replay sends frames as fast as it can
 and shows ~23 % "stalls" that mean nothing.
+
+### Model agreement does NOT separate real objects from phantoms — measured, failed
+
+`AGREEMENT_WEIGHT=0.7`, three complete runs against four of the locked config
+on the same host:
+
+| arm | runs | mean |
+|---|---|---|
+| locked config | 0.5027 / 0.5065 / 0.5113 / 0.5065 | **0.5067** |
+| + `AGREEMENT_WEIGHT=0.7` | 0.4983 / 0.5052 / 0.5017 | 0.5017 |
+
+Inside the noise but consistently below; no run beat the baseline mean. The
+hypothesis was that the ranking loss comes from phantom tracks only one model
+sees. It does not. **Our three models agree on their false positives** — they
+share a training pipeline, an architecture family and the same synthetic-paste
+data, so a bush that reads as a tank to v4 reads as a tank to v6 and v8 too.
+Ensembling siblings does not diversify errors.
+
+The knob is committed and defaults to 1.0 (no-op). Do not spend runs on
+`MISS_PENALTY` or `HITS_BASE` expecting a different answer: all three are the
+same idea — demote tracks with weaker evidence — and the evidence signal they
+rely on is shared across the ensemble.
+
+**What is still unresolved about the 0.168.** Mean recall 0.661 against mean AP
+0.494 is measured and real, but its cause is now open. Two candidates, and they
+need different fixes:
+
+1. the false positives are genuinely confident and shared, so only a
+   differently-trained model (different backbone, different data) or a
+   second-stage verifier would separate them; or
+2. a substantial share of the "false positives" are **real objects the truth
+   file never listed** — it holds 32 objects mined by our own models, and
+   mining is recorded as exhausted. If so the 0.168 is partly an artifact of
+   incomplete ground truth and the real headroom is smaller.
+
+Distinguishing them costs labelling, not runs: take the highest-confidence
+unmatched detections from a recorded run, crop them from `data/scene`, and look.
+That is the first thing to do with offline time, before any further ranking work.
