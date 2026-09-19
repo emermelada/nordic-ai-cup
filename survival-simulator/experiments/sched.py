@@ -320,6 +320,10 @@ def main():
     cands = [{"id": "BASE", "params": base_params}]
     if args.candidates and os.path.exists(args.candidates):
         for c in json.load(open(args.candidates)):
+            # sched.py requires an "id"; accept "tag" too so a generator cannot silently produce an
+            # unusable candidate file (gen_search.py emits "tag", which killed the first wide run).
+            if "id" not in c and "tag" in c:
+                c["id"] = c["tag"]
             cands.append({"id": c["id"], "params": {"id": c["id"], **c["params"]}})
     print(f"candidates: {len(cands)} (1 baseline + {len(cands)-1})", flush=True)
 
