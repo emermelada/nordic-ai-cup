@@ -32,6 +32,10 @@ BIOME_PENALTY = {"forest": 1.0, "grassland": 1.0, "swamp": 0.5, "desert": 0.8, "
 WORLD_W, WORLD_H = 1600.0, 1200.0
 EDGE_CELL = 64.0
 RASTER_CELL = 10.0
+GRID = 10.0                        # path-planning grid (world frame only)
+GW, GH = int(WORLD_W / GRID), int(WORLD_H / GRID)
+CLEAR = 7.0                        # path cell centres keep this far from known wall slabs (agent radius 5)
+_NB = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
 DEFAULT_PARAMS = {
     # breeding
@@ -78,6 +82,10 @@ DEFAULT_PARAMS = {
     "min_gain": 8.0,
     "food_stick": 0.0,             # score bonus for the fruit an agent was already heading to               # skip fruit whose net energy gain would be smaller than this
     "wait_dist": 18.0,             # where to wait next to an unripe fruit (touching is < 5 + radius <= 14)
+    "wait_w": 0.8,                 # energy-equivalent cost per second spent waiting for a fruit to ripen
+    "undated_wait": 16.0,          # an undated fruit is treated as ripe this long after it was first seen
+    "wait_margin": 12.0,           # an agent waits for ripeness only if it keeps this much energy meanwhile
+    "avoid_young": 1.0,            # 1 = steer so that no move ends on a young fruit (touching eats it)
     # threats
     "alert_awake": 190.0,          # react to awake predators whose track is this uncertain/close
     "alert_close": 110.0,          # react to an awake predator this close (it charges under 90) ...
@@ -93,11 +101,35 @@ DEFAULT_PARAMS = {
     "track_memory": 1.5,           # seconds an unseen predator heading our way stays a threat
     # exploration
     "explore_speed": 8.0,
+    "plan_paths": 1.0,             # 1 = walk around known walls on the cheapest grid path (terrain-weighted)
 }
 
 
 def wrap(a):
     return (a + PI) % TWO_PI - PI
+
+
+# Age (s) of a fruit when first mapped without a usable spawn-time bracket, measured over 7755 fruits
+# (agediag.py): most are seen within seconds of spawning, so "unknown age" mostly means "young".
+_AGE_BINS = [(0.0, 5.0, 0.569), (5.0, 10.0, 0.096), (10.0, 15.0, 0.070), (15.0, 20.0, 0.055), (20.0, 30.0, 0.089),
+             (30.0, 40.0, 0.069), (40.0, 50.0, 0.052)]
+
+
+def _undated_value_table(step=0.1, s_max=80.0):
+    """Expected energy of an undated fruit eaten s seconds after it was first seen (0 if it rotted by then)."""
+    ages, w = [], []
+    for lo, hi, wt in _AGE_BINS:
+        for k in range(10):
+            ages.append(lo + (k + 0.5) * (hi - lo) / 10)
+            w.append(wt / 10)
+    ages, w = np.array(ages), np.array(w)
+    s = np.arange(0.0, s_max + step, step)
+    a = ages[None, :] + s[:, None]
+    val = np.where(a < 50.0, np.minimum(60.0, 20.0 + 2.0 * a), 0.0)
+    return (val * w[None, :]).sum(axis=1)
+
+
+UNDATED_VALUE = _undated_value_table()
 
 
 class Mem:
@@ -152,6 +184,19 @@ class FrameMap:
         self.seen = np.zeros((16, 12)) if world else None
         self.preds = []            # [x, y, h, last_seen, last_moved, first_seen]
         self.biome = {}            # (i, j) of 20 px cells -> move penalty observed there
+        # path planning (world frame): cells blocked by known walls, graph over free cells, cached distance fields
+        self.occ = None
+        if world:
+            self.occ = np.zeros((GW, GH), bool)
+            b = int(math.ceil((30.0 + CLEAR) / GRID - 0.5))       # boundary walls are 30 px thick
+            self.occ[:b, :] = self.occ[-b:, :] = True
+            self.occ[:, :b] = self.occ[:, -b:] = True
+        self.occ_pending = []
+        self.occ_ver = 0
+        self.graph = None
+        self.graph_ver = -1
+        self.graph_tick = -10 ** 9
+        self.fields = {}
         # hearing raster: tick when each 10 px cell was last well inside someone's hearing radius
         if world:
             self.r_off = (0.0, 0.0)
@@ -190,6 +235,8 @@ class FrameMap:
 
     def _register_cells(self, idx):
         """Put the face in every cell its slab (plus margin) touches; unknown side: both sides, thin."""
+        if self.occ is not None:
+            self.occ_pending.append(idx)
         x1, y1, x2, y2, nx, ny = self.edges[idx]
         if nx or ny:
             xs = (x1, x2, x1 + 40 * nx, x2 + 40 * nx)
@@ -204,6 +251,133 @@ class FrameMap:
                 lst = self.edge_cells.setdefault((i, j), [])
                 if idx not in lst:
                     lst.append(idx)
+
+    # --- path planning ------------------------------------------------------------------------------------
+    def _occ_update(self):
+        if not self.occ_pending:
+            return
+        for idx in self.occ_pending:
+            x1, y1, x2, y2, nx, ny = self.edges[idx]
+            if nx or ny:
+                xs = (x1, x2, x1 + 30 * nx, x2 + 30 * nx)
+                ys = (y1, y2, y1 + 30 * ny, y2 + 30 * ny)
+            else:
+                xs, ys = (x1, x2), (y1, y2)
+            i0 = max(0, int(math.ceil((min(xs) - CLEAR) / GRID - 0.5)))
+            i1 = min(GW - 1, int(math.floor((max(xs) + CLEAR) / GRID - 0.5)))
+            j0 = max(0, int(math.ceil((min(ys) - CLEAR) / GRID - 0.5)))
+            j1 = min(GH - 1, int(math.floor((max(ys) + CLEAR) / GRID - 0.5)))
+            if i0 <= i1 and j0 <= j1:
+                self.occ[i0:i1 + 1, j0:j1 + 1] = True
+        self.occ_pending = []
+        self.occ_ver += 1
+
+    def _graph(self, tick):
+        """8-connected grid graph over free cells; edge cost = length / terrain speed factor (energy per
+        progress px scales with it). Rebuilt when walls change, at most every 20 ticks."""
+        self._occ_update()
+        if self.graph is not None and (self.graph_ver == self.occ_ver or tick - self.graph_tick < 20):
+            return self.graph
+        from scipy.sparse import csr_matrix
+        free = ~self.occ
+        tf20 = np.ones((int(WORLD_W / 20), int(WORLD_H / 20)))
+        for (i, j), v in self.biome.items():
+            if 0 <= i < tf20.shape[0] and 0 <= j < tf20.shape[1]:
+                tf20[i, j] = 1.0 / max(v, 0.2)
+        tf = np.repeat(np.repeat(tf20, 2, axis=0), 2, axis=1)[:GW, :GH]
+        idx = np.arange(GW * GH).reshape(GW, GH)
+        rows, cols, wts = [], [], []
+        for di, dj in ((1, 0), (0, 1), (1, 1), (1, -1)):
+            a0, a1 = 0, GW - di
+            b0, b1 = max(0, -dj), GH - max(0, dj)
+            A = (slice(a0, a1), slice(b0, b1))
+            B = (slice(a0 + di, a1 + di), slice(b0 + dj, b1 + dj))
+            ok = free[A] & free[B]
+            if di and dj:           # no corner cutting
+                ok &= free[a0 + di:a1 + di, b0:b1] & free[a0:a1, b0 + dj:b1 + dj]
+            w = GRID * math.hypot(di, dj) * 0.5 * (tf[A] + tf[B])
+            ia, ib = idx[A][ok], idx[B][ok]
+            rows += [ia, ib]
+            cols += [ib, ia]
+            wts += [w[ok], w[ok]]
+        self.graph = csr_matrix((np.concatenate(wts), (np.concatenate(rows), np.concatenate(cols))),
+                                shape=(GW * GH, GW * GH))
+        self.graph_ver = self.occ_ver
+        self.graph_tick = tick
+        self.fields = {}
+        return self.graph
+
+    def _free_cell(self, x, y):
+        i = min(max(int(x / GRID), 0), GW - 1)
+        j = min(max(int(y / GRID), 0), GH - 1)
+        if not self.occ[i, j]:
+            return i, j
+        for r in (1, 2, 3):
+            best = None
+            for di in range(-r, r + 1):
+                for dj in range(-r, r + 1):
+                    a, b = i + di, j + dj
+                    if 0 <= a < GW and 0 <= b < GH and not self.occ[a, b]:
+                        dd = (a + 0.5) * GRID - x, (b + 0.5) * GRID - y
+                        dd = dd[0] * dd[0] + dd[1] * dd[1]
+                        if best is None or dd < best[0]:
+                            best = (dd, a, b)
+            if best is not None:
+                return best[1], best[2]
+        return None
+
+    def clear_line(self, x0, y0, x1, y1, skip=8.0):
+        """No known wall cell on the segment (ignoring `skip` px at both ends: we may stand at a wall)."""
+        d = math.hypot(x1 - x0, y1 - y0)
+        if d <= 2 * skip:
+            return True
+        n = int(d / 4.0) + 2
+        f = np.linspace(skip / d, 1.0 - skip / d, n)
+        i = np.clip(((x0 + (x1 - x0) * f) / GRID).astype(np.int64), 0, GW - 1)
+        j = np.clip(((y0 + (y1 - y0) * f) / GRID).astype(np.int64), 0, GH - 1)
+        return not self.occ[i, j].any()
+
+    def waypoint(self, tick, x, y, tx, ty):
+        """Where to head for next on the cheapest known path to (tx, ty); None = straight or no path known."""
+        self._occ_update()
+        if self.clear_line(x, y, tx, ty):
+            return None
+        tc = self._free_cell(tx, ty)
+        sc = self._free_cell(x, y)
+        if tc is None or sc is None:
+            return None
+        g = self._graph(tick)
+        key = tc[0] * GH + tc[1]
+        f = self.fields.get(key)
+        if f is None:
+            from scipy.sparse.csgraph import dijkstra
+            f = dijkstra(g, directed=True, indices=key, limit=4000.0).reshape(GW, GH)
+            if len(self.fields) > 96:
+                self.fields.clear()
+            self.fields[key] = f
+        i, j = sc
+        if not np.isfinite(f[i, j]):
+            return None
+        path = [(i, j)]
+        for _ in range(80):
+            if (i, j) == tc:
+                break
+            best, bv = None, f[i, j]
+            for di, dj in _NB:
+                a, b = i + di, j + dj
+                if 0 <= a < GW and 0 <= b < GH and f[a, b] < bv:
+                    best, bv = (a, b), f[a, b]
+            if best is None:
+                break
+            i, j = best
+            path.append(best)
+        # farthest path cell still in straight sight
+        for a, b in reversed(path[1:]):
+            wx, wy = (a + 0.5) * GRID, (b + 0.5) * GRID
+            if self.clear_line(x, y, wx, wy, skip=4.0):
+                return wx, wy
+        a, b = path[1] if len(path) > 1 else path[0]
+        return (a + 0.5) * GRID, (b + 0.5) * GRID
 
     def near_edges(self, x, y):
         return self.edge_cells.get((int(math.floor(x / EDGE_CELL)), int(math.floor(y / EDGE_CELL))), ())
@@ -917,11 +1091,15 @@ class Hive:
                 m.mode = "food"
                 x, y, wait = food[m.aid]
                 act = self._go(m, x, y, stop=p["wait_dist"] if wait else 0.0)
+                act = self._spare_young(m, fm, act, None if wait else (x, y))
+                if wait and act["move_distance"] < 3.0:
+                    act["turn_angle"] = p["scan_rate"]      # waiting for it to ripen: watch all round meanwhile
             else:
                 tree = self._choose_tree(m, fm)
                 if tree is not None:
                     m.mode = "camp"
-                    act = self._go(m, tree[0], tree[1], stop=0.0)   # sit on the tree: its fruit spawns 10-60 px around
+                    act = self._go(m, tree[0], tree[1], stop=0.0)   # sit on the tree: its fruit spawns 20-60 px around
+                    act = self._spare_young(m, fm, act, None)
                     if act["move_distance"] < 3.0:
                         act["turn_angle"] = p["scan_rate"]
                 else:
@@ -942,16 +1120,33 @@ class Hive:
         hungry = np.array([m.energy < p["starve_frac"] * m.max_energy for m in agents])
         d = np.hypot(fm.fx[None, :] - ax[:, None], fm.fy[None, :] - ay[:, None])
         arrive = t + d / spd[:, None] * 0.1
-        age_min = arrive - fm.fhi[None, :]           # youngest it can be on arrival
-        age_mid = arrive - 0.5 * (fm.flo + fm.fhi)[None, :]
-        rot = age_min > 49.0                           # surely rotten before we get there
-        value = np.minimum(60.0, 20.0 + 2.0 * np.maximum(age_mid, 0.0))
+        # When to eat: on arrival, or later once the fruit is ripe (a fruit gains 2 energy/s until 20 s old,
+        # rots at 50 s, and nothing but us eats fruit, so waiting only costs time). Dated fruit: born within
+        # [flo, fhi]; undated fruit: age at first sight follows the measured prior (mostly just spawned).
+        dated = (fm.fhi - fm.flo) < 8.0
+        s_arr = np.maximum(arrive - fm.fhi[None, :], 0.0)       # seconds since first seen, at arrival
+        v_now_d = np.where(arrive < fm.flo[None, :] + 49.5, np.minimum(60.0, 20.0 + 2.0 * s_arr), 0.0)
+        idx = np.minimum((s_arr / 0.1).astype(np.int64), UNDATED_VALUE.size - 1)
+        v_now_u = UNDATED_VALUE[idx]
+        v_now = np.where(dated[None, :], v_now_d, v_now_u)
+        ripe_s = np.where(dated, p["ripe_age"], p["undated_wait"])[None, :]
+        s_eat = np.maximum(s_arr, ripe_s)
+        wait = s_eat - s_arr
+        v_late_d = np.where(fm.fhi[None, :] + s_eat < fm.flo[None, :] + 49.5, 60.0, 0.0)
+        idx = np.minimum((s_eat / 0.1).astype(np.int64), UNDATED_VALUE.size - 1)
+        v_late = np.where(dated[None, :], v_late_d, UNDATED_VALUE[idx])
+        drain = np.array([1.0 + (0.1 * m.age if m.old else 0.0) for m in agents])
+        e_left = (np.array([m.energy for m in agents])[:, None] - 0.05 * d - (arrive - t + wait) * drain[:, None])
+        can_wait = e_left > p["wait_margin"]
+        u_now = v_now
+        u_late = np.where(can_wait, v_late - p["wait_w"] * wait, -1e9)
+        late = u_late > u_now
+        value = np.where(late, v_late, v_now)
+        wait = np.where(late, wait, 0.0)
         need = np.array([max(0.0, m.max_energy - m.energy) for m in agents])
         value = np.minimum(value, need[:, None])        # energy above max_energy is thrown away
-        # A fruit gains 2 energy/s until 20 s old while waiting costs 1/s: eat it young only when starving.
-        dated = (fm.fhi - fm.flo) < 8.0               # spawn time known to within a few seconds
-        unripe = dated[None, :] & (age_min < p["ripe_age"])
-        eff = np.where(unripe & ~hungry[:, None], -1e9, value)
+        eff = value - p["wait_w"] * wait
+        eff = np.where(value <= 0.0, -1e9, eff)
         frac_missing = np.array([1.0 - m.energy / max(m.max_energy, 1.0) for m in agents])
         breeder = np.array([bool(m.spawned) and not (m.old and m.energy < 101.0) for m in agents])
         # food eaten by an agent that will never pass it on is wasted: they only get what nobody else wants
@@ -973,7 +1168,7 @@ class Hive:
         reach = np.where(at_fresh, p["food_range"], p["food_range_idle"])
         reach = np.where(hungry, np.maximum(reach, p["food_range_hungry"]), reach)
         starving = np.array([m.energy < 25.0 for m in agents])
-        score[rot | (d > reach[:, None]) | (((eff - p["dist_cost"] * d) < p["min_gain"]) & ~starving[:, None])] = -1e9
+        score[(d > reach[:, None]) | (((eff - p["dist_cost"] * d) < p["min_gain"]) & ~starving[:, None])] = -1e9
         out = {}
         if score.size == 0:
             return out
@@ -988,7 +1183,7 @@ class Hive:
                 continue
             used_a.add(i)
             used_f.add(j)
-            out[agents[i].aid] = (float(fm.fx[j]), float(fm.fy[j]), False)
+            out[agents[i].aid] = (float(fm.fx[j]), float(fm.fy[j]), bool(wait[i, j] > 0.3))
             agents[i].food_tgt = (float(fm.fx[j]), float(fm.fy[j]))
             if len(used_a) == na:
                 break
@@ -1150,11 +1345,57 @@ class Hive:
         return {"agent_id": m.aid, "move_distance": float(min(m.speed, 5.0)), "move_direction": float(wrap(ang - m.h)),
                 "turn_angle": 0.0, "spawn_agent": False}
 
+    def _spare_young(self, m, fm, act, target):
+        """Bend or shorten a move that would end touching a young fruit (touching eats it at once, at 20-60
+        energy, while it would be worth 60 once ripe). `target` is the fruit we mean to eat now, if any."""
+        p = self.p
+        dist = act["move_distance"]
+        if p["avoid_young"] <= 0 or not fm.fx.size or dist < 0.5 or m.energy < 20.0:
+            return act
+        age = self.t - fm.fhi
+        young = age < np.where((fm.fhi - fm.flo) < 8.0, p["ripe_age"], p["undated_wait"])
+        reach = dist + 16.0
+        near = young & (np.abs(fm.fx - m.x) < reach) & (np.abs(fm.fy - m.y) < reach)
+        if target is not None:
+            near &= (np.abs(fm.fx - target[0]) + np.abs(fm.fy - target[1])) > 1.0
+        if not near.any():
+            return act
+        fx, fy = fm.fx[near], fm.fy[near]
+        pen = BIOME_PENALTY.get(m.biome, 1.0)
+        base = act["move_direction"]
+
+        def clear(dd, rel):
+            a = m.h + rel
+            ex, ey = m.x + dd * pen * math.cos(a), m.y + dd * pen * math.sin(a)
+            return float(np.min(np.hypot(fx - ex, fy - ey))) >= 14.5
+
+        if clear(dist, base):
+            return act
+        for dang in (0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4):
+            if clear(dist, base + dang):
+                act["move_direction"] = float(wrap(base + dang))
+                return act
+        for f in (0.5, 0.25):
+            if clear(dist * f, base):
+                act["move_distance"] = float(dist * f)
+                return act
+        act["move_distance"] = 0.0
+        return act
+
     def _go(self, m, tx, ty, stop=0.0, face_target=False):
         dx, dy = tx - m.x, ty - m.y
         d = math.hypot(dx, dy)
         ang = math.atan2(dy, dx) if d > 1e-9 else m.h
         dist = min(m.speed, max(0.0, d - stop))
+        if self.p["plan_paths"] > 0 and dist > 0.5:
+            fm = self.maps.get(m.frame)
+            if fm is not None and fm.occ is not None:
+                wp = fm.waypoint(self.tick, m.x, m.y, tx, ty)
+                if wp is not None:
+                    wd = math.hypot(wp[0] - m.x, wp[1] - m.y)
+                    if wd > 0.5:
+                        ang = math.atan2(wp[1] - m.y, wp[0] - m.x)
+                        dist = min(dist, wd + 3.0)
         turn = wrap(ang - m.h) if dist > 3.0 else 0.0
         if abs(turn) < 0.05:
             turn = 0.0
