@@ -64,7 +64,7 @@ def _ent(e):
             round(float(getattr(e, "energy", 0.0)), 1)]
 
 
-def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
+def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12, traces=False):
     P = load_params(params_path)
     random.seed(seed)
     np.random.seed(seed)
@@ -86,7 +86,15 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
     rec = {"seed": int(seed), "horizon": int(horizon), "every": int(every),
            "params_sha": os.path.basename(params_path), "w": 1600, "h": 1200,
            "biome_legend": legend, "biome": biome_idx, "frames": [],
-           "events": [], "edges": []}
+           "events": [], "edges": [],
+           # ENERGY LEDGER (one row per tick). The simulator's accounting is fully known
+           # (environment.py: metabolism `dt*biome_modifier` ~0.1/tick, age penalty 0.01*age,
+           # movement 0.05/unit walking or speed*0.05+(extra)*0.5 sprinting, 100 per birth, fruit
+           # absorption capped by max_energy). Recording the observable side of that balance per tick
+           # lets us ask the question the aggregate statistics could not: does income per agent fall
+           # BEFORE the population collapses (overshoot), or does the collapse happen at flat income
+           # (something else)? Columns: t, pop, energy_sum, score, cmd_cost, births, deaths, lockout
+           "ledger": []}
 
     prev_pred_e = {id(p): float(p.energy) for p in core.env.predators}
     prev_states = {}
@@ -95,6 +103,20 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
     edges_seen = {}
     t = -1
     alive_now = {}
+    # PER-AGENT TRACES (opt-in): the raw material for "what do unusually successful agents DO
+    # differently". Selection uses LINEAGE, not individual lifetime: within one episode, individual
+    # outcomes are heavily contaminated by luck (spawn position, inherited max_energy, a predator
+    # happening to be near at birth), so an agent is only "successful" if its DESCENDANTS are still
+    # alive at the end. Parentage is inferred from the spawn cost: the simulator charges the parent
+    # exactly 100 energy (environment.py:623), so the agent whose energy drops by ~100 on a birth tick
+    # is the parent.
+    A = {}
+
+    def rec_agent(aid, tick):
+        return A.setdefault(aid, {"id": aid, "birth": tick, "death": None, "ticks": 0, "travel": 0.0,
+                                  "fruits": 0, "spawns": 0, "parent": None, "children": [],
+                                  "lockout_ticks": 0, "obs_fruit": 0, "obs_pred": 0,
+                                  "e_max": 0.0, "e_min": 1e9, "sprint_ticks": 0, "last_e": 0.0})
 
     for t in range(horizon):
         live = list(core.env.agents)
@@ -160,6 +182,24 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
                 d = min(o["distance"] for o in preds)
                 if d < NEAR_PRED:
                     c["approach_pred"] += 1
+            if traces:
+                ar = rec_agent(aid, t)
+                ar["ticks"] += 1
+                e_now = float(st.get("energy", 0.0))
+                sp = float(st.get("speed", 10.0))
+                d_cmd = float(action[0])
+                ar["travel"] += d_cmd
+                if d_cmd > sp:
+                    ar["sprint_ticks"] += 1
+                if e_now > ar["last_e"] + 5.0:            # energy jump = absorbed fruit
+                    ar["fruits"] += 1
+                ar["last_e"] = e_now
+                ar["e_max"] = max(ar["e_max"], e_now)
+                ar["e_min"] = min(ar["e_min"], e_now)
+                ar["obs_fruit"] += len(fruit)
+                ar["obs_pred"] += len(preds)
+                if e_now < 0.2 * max_e:
+                    ar["lockout_ticks"] += 1
             if len(hist[aid]) >= 3:
                 turns = [h[2] for h in hist[aid][-3:]]
                 if turns[0] * turns[1] < 0 and turns[1] * turns[2] < 0:
@@ -199,6 +239,8 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
             cause = "eaten" if eaten else ("aged" if float(st.get("age", 0.0)) > float(st.get("max_age", 999.0))
                                           else "starved")
             preds = [o for o in (st.get("observations") or []) if o.get("type") == "Predator"]
+            if traces:
+                rec_agent(aid, t)["death"] = t
             ev.append({"k": "die", "t": t, "a": aid, "cause": cause,
                        "x": round(st["x"], 1), "y": round(st["y"], 1),
                        "e": round(float(st.get("energy", 0.0)), 1),
@@ -210,6 +252,19 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
         for aid in alive_now:
             if aid not in prev_e:
                 ev.append({"k": "born", "t": t, "a": aid})
+                if traces:
+                    # parentage by the spawn cost: the parent pays exactly 100 energy (environment.py:623)
+                    par = None
+                    best = 0.0
+                    for a2 in prev_e:
+                        if a2 in alive_now:
+                            d_e = prev_e[a2] - alive_now[a2]
+                            if d_e > 90.0 and d_e > best:
+                                par, best = a2, d_e
+                    if par is not None:
+                        rec_agent(aid, t)["parent"] = par
+                        rec_agent(par, t)["spawns"] += 1
+                        A[par]["children"].append(aid)
         # score jump = fruit eaten (dt term is 0.1)
         if out["score"] and t > 0:
             pass
@@ -233,6 +288,20 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
                           for tr in core.env.trees],
             })
 
+        # ---- energy ledger row: the observable side of the simulator's energy balance ----
+        n_births = sum(1 for e in ev if e["k"] == "born")
+        n_deaths = sum(1 for e in ev if e["k"] == "die")
+        cmd_cost = 0.0
+        for st in states:
+            d = float(next((a[1].move_distance for a in acts if a[0] == st["agent_id"]), 0.0))
+            sp = float(st.get("speed", 10.0))
+            # exactly the simulator's formula: walk 0.05/unit, sprint speed*0.05 + extra*0.5
+            cmd_cost += min(d, sp) * 0.05 + max(0.0, d - sp) * 0.5
+        rec["ledger"].append([t, len(alive_now), round(sum(alive_now.values()), 1),
+                              round(float(out["score"]), 4), round(cmd_cost, 2), n_births, n_deaths,
+                              sum(1 for st in states
+                                  if float(st.get("energy", 0.0)) < 0.2 * float(st.get("max_energy", 500.0) or 500.0))])
+
         if int(out.get("num_agents", len(alive_now))) == 0:
             # STOP CONDITION FIDELITY: env_wrapper.run_eval_episode ends the episode on the simulator's
             # own `num_agents == 0` signal, not on len(env.agents). Without this the recorder could
@@ -249,6 +318,34 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12):
                     "eaten": sum(1 for e in rec["events"] if e["k"] == "die" and e["cause"] == "eaten"),
                     "starved": sum(1 for e in rec["events"] if e["k"] == "die" and e["cause"] == "starved"),
                     "aged": sum(1 for e in rec["events"] if e["k"] == "die" and e["cause"] == "aged")}
+    if traces:
+        # Lineage success = how many DESCENDANTS an agent left, and how many were still alive at the end.
+        # This is the selector for "unusually successful agent": an agent whose line survives is the one
+        # whose behaviour (and genes) actually worked, whereas individual lifetime is contaminated by
+        # luck (spawn position, inherited max_energy, a predator near at birth).
+        alive_ids = set(alive_now)
+
+        def descendants(aid):
+            seen, stack = set(), list(A.get(aid, {}).get("children", []))
+            while stack:
+                c = stack.pop()
+                if c in seen:
+                    continue
+                seen.add(c)
+                stack += A.get(c, {}).get("children", [])
+            return seen
+
+        rows = []
+        for aid, a in A.items():
+            d = descendants(aid)
+            b = dict(a)
+            b["descendants"] = len(d)
+            b["descendants_alive_end"] = len(d & alive_ids)
+            b["alive_end"] = aid in alive_ids
+            b["travel_per_fruit"] = (a["travel"] / a["fruits"]) if a["fruits"] else None
+            b["lockout_frac"] = (a["lockout_ticks"] / a["ticks"]) if a["ticks"] else 0.0
+            rows.append(b)
+        rec["agents"] = rows
     return rec
 
 
@@ -324,11 +421,11 @@ def digest(rec, every_bucket=1000):
 
 
 # --------------------------------------------------------------------------- corpus
-def make_corpus(seeds, horizon, outdir, n=6):
+def make_corpus(seeds, horizon, outdir, n=6, traces=False):
     os.makedirs(outdir, exist_ok=True)
     index = []
     for sd in seeds:
-        rec = record_episode(sd, horizon)
+        rec = record_episode(sd, horizon, traces=traces)
         idx = {"seed": sd, "ticks": rec["final"]["ticks"], "score": rec["final"]["score"],
                "causes": {}, "wall_blocked_total": 0, "pred_deaths": 0, "min_energy_seen": 9e9}
         for e in rec["events"]:
@@ -366,16 +463,19 @@ def main():
     r = sub.add_parser("record"); r.add_argument("--seed", type=int, required=True)
     r.add_argument("--horizon", type=int, default=18000); r.add_argument("--out", required=True)
     r.add_argument("--every", type=int, default=2); r.add_argument("--params", default=DEPLOYED)
+    r.add_argument("--traces", action="store_true", help="also record per-agent traces + lineage")
     d = sub.add_parser("digest"); d.add_argument("path")
     a = sub.add_parser("ascii"); a.add_argument("path"); a.add_argument("--at", type=int, default=None)
     a.add_argument("--ticks", type=int, default=6)
     c = sub.add_parser("corpus"); c.add_argument("--seeds", required=True)
     c.add_argument("--horizon", type=int, default=18000); c.add_argument("--outdir", required=True)
     c.add_argument("--n", type=int, default=6)
+    c.add_argument("--traces", action="store_true", help="also record per-agent traces + lineage")
     args = ap.parse_args()
 
     if args.cmd == "record":
-        rec = record_episode(args.seed, args.horizon, args.params, every=args.every)
+        rec = record_episode(args.seed, args.horizon, args.params, every=args.every,
+                             traces=getattr(args, "traces", False))
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
         with gzip.open(args.out, "wt") as fh:
             json.dump(rec, fh)
@@ -400,7 +500,7 @@ def main():
                 a2, b2 = part.split("-"); seeds += list(range(int(a2), int(b2) + 1))
             else:
                 seeds.append(int(part))
-        make_corpus(seeds, args.horizon, args.outdir, args.n)
+        make_corpus(seeds, args.horizon, args.outdir, args.n, traces=getattr(args, "traces", False))
 
 
 if __name__ == "__main__":
