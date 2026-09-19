@@ -49,6 +49,8 @@ DEFAULT_PARAMS = {
     "tree_prod_w": 60.0,           # px of walking one known fruit / known-fruiting tree is worth
     "barren_reach": 250.0,         # do not walk farther than this to a tree not seen fruiting
     "tree_stick": 100.0,           # keep the current tree unless another is this much nearer
+    "grab_energy": 0.0,            # below this energy an agent under threat still grabs a fruit ...
+    "grab_dist": 35.0,             # ... within this distance
     "camp_spacing": 60.0,          # a tree counts as taken if another camper sits within this distance
     "tree_fresh_w": 120.0,         # px a tree with fruit seen in the last 30 s is worth
     "barren_watch": 20.0,          # s sitting at a tree without fruit before giving up on it
@@ -62,6 +64,7 @@ DEFAULT_PARAMS = {
     "pop_min": 6,                  # below this anyone may breed
     "breed_colony_e": 100.0,       # no births (except old-age dumps) while the colony's mean energy is below
     "brake_min_pop": 15,           # ... applied only to colonies at least this big (the early boom)
+    "retire_min_pop": 6,           # weak genomes stop eating only in colonies at least this big
     "weak_food_w": 0.3,            # fruit value for agents that will not breed (weak genome / old and poor)
     "endgame_t": 2926.0,           # a child born now (75 energy) lives idle to t=3000
     # foraging
@@ -886,7 +889,7 @@ class Hive:
         # --- food assignment (global greedy per frame)
         food = {}
         retire = set()
-        if n >= p["pop_min"]:
+        if n >= p["retire_min_pop"]:
             for m, obs in order:
                 if not m.spawned and m.aid not in threat:
                     retire.add(m.aid)     # a weak genome turns food into nothing: leave it to the breeders
@@ -896,7 +899,12 @@ class Hive:
         actions = []
         for m, obs in order:
             fm = self.maps[m.frame]
-            if m.aid in threat:
+            grab = self._grab(m, fm) if (m.aid in threat and m.energy < p["grab_energy"]) else None
+            if grab is not None:
+                m.mode = "grab"          # nearly empty: fleeing hungry is certain death, a fruit within reach is not
+                act = self._go(m, grab[0], grab[1])
+                act["move_distance"] = float(m.speed)
+            elif m.aid in threat:
                 act = self._flee(m, fm, threat[m.aid])
             elif m.aid in retire:
                 act = self._retire(m, fm)
@@ -1008,18 +1016,14 @@ class Hive:
         fresh = (t - fm.tfruit) < 30.0
         ok = fresh | (((t - fm.tfirst) >= 20.0) & (fm.twatch <= p["barren_watch"]))
         d = np.hypot(fm.tx - m.x, fm.ty - m.y)
+        # Claims, not positions: a tree is taken when another agent's claimed tree is within camp_spacing
+        # (no clusters: one predator would eat them in a row). Claims persist while their owner walks or
+        # fetches fruit, so the assignment does not flip every time somebody passes by.
         occ = np.zeros(fm.tx.size, bool)
         for q in self.mem.values():
-            if q.aid == m.aid or q.frame != m.frame:
+            if q.aid == m.aid or q.frame != m.frame or q.target is None or q.mode == "retire":
                 continue
-            if q.mode != "camp":
-                continue
-            dq = np.hypot(fm.tx - q.x, fm.ty - q.y)
-            occ |= dq < self.p["camp_spacing"]   # no clusters: one predator would eat them in a row
-            if q.target is not None:
-                k = int((np.abs(fm.tx - q.target[0]) + np.abs(fm.ty - q.target[1])).argmin())
-                if dq[k] < d[k]:
-                    occ[k] = True
+            occ |= np.hypot(fm.tx - q.target[0], fm.ty - q.target[1]) < self.p["camp_spacing"]
         slow = np.array([1.0 - fm.biome.get((int(x // 20), int(y // 20)), 1.0) for x, y in zip(fm.tx.tolist(), fm.ty.tolist())])
         score = d - p["tree_fresh_w"] * fresh + p["slow_tree_pen"] * slow
         score[~ok | occ] = np.inf
@@ -1105,6 +1109,16 @@ class Hive:
         j = int(score.argmax())
         return {"agent_id": m.aid, "move_distance": float(speed), "move_direction": float(wrap(dirs[j] - m.h)),
                 "turn_angle": float(turn), "spawn_agent": False}
+
+    def _grab(self, m, fm):
+        """Closest known fruit within grab_dist px, if any."""
+        if not fm.fx.size:
+            return None
+        d = np.hypot(fm.fx - m.x, fm.fy - m.y)
+        j = int(d.argmin())
+        if d[j] > self.p["grab_dist"]:
+            return None
+        return float(fm.fx[j]), float(fm.fy[j])
 
     def _retire(self, m, fm):
         """Stay out of the way: keep >= 75 px from trees and known fruit (touching a fruit eats it), watch around."""

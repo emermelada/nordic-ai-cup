@@ -1,0 +1,6 @@
+server_log*.jsonl
+server_trace.csv
+server_stdout*.txt
+first_request.json
+cloudflared_*.log
+hive_tune*.py

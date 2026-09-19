@@ -2,15 +2,16 @@ import sys, os, math, collections
 sys.path.insert(0, os.path.dirname(__file__))
 from fastsim import SimulationCore, to_actions
 from hive import Hive
-seed = int(sys.argv[1]); T1 = float(sys.argv[2])
+seed = int(sys.argv[1]); T1 = float(sys.argv[2]); T0 = float(sys.argv[3]) if len(sys.argv) > 3 else 0.0
 sim = SimulationCore(seed=seed); env = sim.env; hv = Hive(seed=seed)
+if os.environ.get('NO_PREDATORS'): env.spawn_predator = lambda *a, **k: None
 actions = []; prev_t = {}; dist_mode = collections.Counter(); switches = 0; reasons = collections.Counter(); ticks_mode = collections.Counter()
 for k in range(30000):
     st = sim.step(actions)
     if st["num_agents"] == 0 or env.time > T1: break
     acts = hv.decide({"sim_time": st["sim_time"], "agent_status": st["observations"]})
     fm = hv.maps.get("W")
-    for act in acts:
+    for act in (acts if env.time >= T0 else []):
         m = hv.mem[act["agent_id"]]
         dist_mode[m.mode] += act["move_distance"]; ticks_mode[m.mode] += 1
         if m.mode == "camp":
