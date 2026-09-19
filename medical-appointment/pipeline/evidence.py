@@ -186,6 +186,47 @@ def _span_overlap(a, b):
     return max(0.0, min(a[1], b[1]) - max(a[0], b[0])) / union if union > 0 else 0.0
 
 
+def medoid_span(spans):
+    """The span overlapping the others most; a tie keeps the earliest candidate offered.
+
+    This is a vote on location, not on quality: a producer earns its place by being
+    wrong differently, so a weaker third opinion still breaks ties usefully.
+    """
+    best, best_score = None, None
+    for i, span in enumerate(spans):
+        score = sum(_span_overlap(span, other) for j, other in enumerate(spans) if j != i)
+        if best_score is None or score > best_score:
+            best, best_score = span, score
+    return best
+
+
+def vote_response(response, candidates):
+    """Replace each yes span with the medoid of the candidates that exist for it.
+
+    ``candidates`` holds {question number: (start, end)} from independent producers.
+    Fewer than three spans for a question keeps the selected one, because a medoid
+    over two candidates cannot break a tie.
+    """
+    result = response.model_copy(deep=True)
+    changed = 0
+    for index, answer in enumerate(result.answers):
+        selected = (result.evidence_start[index], result.evidence_end[index])
+        if not answer or selected[0] is None:
+            continue
+        spans = [selected]
+        for source in candidates:
+            span = (source or {}).get(index + 1)
+            if span and span[0] is not None and span[1] is not None:
+                spans.append((span[0], span[1]))
+        if len(spans) < 3:
+            continue
+        chosen = medoid_span(spans)
+        if chosen != selected:
+            result.evidence_start[index], result.evidence_end[index] = chosen
+            changed += 1
+    return result, changed
+
+
 def primary_evidence_response(primary, secondary, exempt=()):
     """Keep primary evidence, but reject a primary yes on a secondary no.
 

@@ -1,9 +1,12 @@
 """Local-cache-only Whisper and Qwen inference; importing this module is cheap."""
 
 import io
+import logging
 import os
 import time
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # The 8-bit ASR is half the size of the fp16 one and scored the same; mlx-whisper wants
 # the weights named weights.safetensors, so it is staged locally (see RUNNING.md).
@@ -33,6 +36,9 @@ EVIDENCE_ADAPTER = None
 EVIDENCE_BUDGET_SECONDS = float(os.environ.get('MEDICAL_EVIDENCE_BUDGET', '40'))
 # Refine outputs are 90 tokens on median and under 160 except when the model loops.
 EVIDENCE_MAX_TOKENS = {'refine': 320, 'window': 60, 'perq': 120, 'locate': 64}
+# A second per-question pass whose prompt deliberately differs from the first, so the
+# evidence vote has two disagreeing generations to place against the extractor's span.
+EVIDENCE_VOTE = os.environ.get('MEDICAL_EVIDENCE_VOTE') == '1'
 DEFAULT_PROMPT = os.environ.get('MEDICAL_ANSWER_PROMPT', 'compact')
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
@@ -245,6 +251,16 @@ class MLXBackend:
                 transcript, question, drafts.get(i + 1, ''),
                 examples=examples_for(questions, question) if retrieved else None,
             )) for i, question in enumerate(questions) if answers[i]]
+            if EVIDENCE_VOTE:
+                # The opposite prompt of whichever is serving, negated keys keeping the
+                # two sets apart in one batched call.
+                try:
+                    prompts += [(-(i + 1), build_perq_messages(
+                        transcript, question, drafts.get(i + 1, ''),
+                        examples=None if retrieved else examples_for(questions, question),
+                    )) for i, question in enumerate(questions) if answers[i]]
+                except Exception:
+                    logger.exception('Second evidence prompt unavailable; the vote loses a producer')
         else:
             from rank_bm25 import BM25Okapi
             from pipeline.stage_b import _content, sentence_text
@@ -253,7 +269,11 @@ class MLXBackend:
             prompts = [(i + 1, build_window_messages(words, question, anchors[i], sentences, ranker))
                        for i, question in enumerate(questions) if answers[i]]
         outputs = self.generate_many(prompts, EVIDENCE_MAX_TOKENS[EVIDENCE_MODE], request_started)
-        return {'mode': EVIDENCE_MODE, 'outputs': outputs, 'seconds': time.monotonic() - started}
+        frame = {'mode': EVIDENCE_MODE, 'outputs': {k: v for k, v in outputs.items() if k > 0},
+                 'seconds': time.monotonic() - started}
+        if EVIDENCE_VOTE:
+            frame['vote_outputs'] = {-k: v for k, v in outputs.items() if k < 0}
+        return frame
 
     def complete_rescue(self, words, questions, answers, request_started):
         """P(yes) for each question currently answered no, or {} without token probabilities."""

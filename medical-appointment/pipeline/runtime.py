@@ -115,6 +115,35 @@ def _stage_b(backend, words, questions, raw, transcript, request_started, rescue
         return {'error': f'{type(exc).__name__}: {exc}'}
 
 
+def _vote_evidence(evidence, response, before, words, questions, duration, envelope,
+                   deadline, extend_replies, trace=None):
+    """Medoid of independent evidence producers; any failure keeps the selected spans.
+
+    Each producer sees the same transcript and answers, so the vote only ever moves a
+    span between passages all of them considered.
+    """
+    from pipeline.evidence import vote_response
+    from pipeline.extractor import predict_spans
+
+    try:
+        alternative = apply_evidence({'mode': evidence.get('mode'), 'outputs': evidence['vote_outputs']},
+                                     before, words, duration, envelope, deadline, extend_replies)
+        second = {i + 1: (alternative.evidence_start[i], alternative.evidence_end[i])
+                  for i in range(len(alternative.answers))}
+        extracted = predict_spans(words, questions, response.answers, deadline)
+        voted, changed = vote_response(response, [second, extracted])
+        if trace is not None:
+            trace['vote'] = {'second': alternative.model_dump(),
+                             'extractor': {str(k): list(v) for k, v in extracted.items()},
+                             'changed': changed}
+        logger.info('Evidence vote: %d producer span(s) from the extractor, %d span(s) moved',
+                    len(extracted), changed)
+        return voted
+    except Exception:
+        logger.exception('Evidence vote failed; keeping the selected spans')
+        return response
+
+
 def _make_backend():
     if os.environ.get('MEDICAL_BACKEND') == 'vllm':
         from pipeline.vllm_backend import VLLMBackend
@@ -393,9 +422,14 @@ class Pipeline:
                             logger.warning('Evidence stage did not run (%s): spans are the answer '
                                            'pass\'s own quotes for this conversation',
                                            evidence.get('skipped') or evidence.get('error'))
+                        before_evidence = response.model_copy(deep=True)
                         response = apply_evidence(evidence, response, words, duration, envelope, deadline, extend_replies)
                         if trace is not None:
                             trace['selected'] = response.model_dump()
+                        if isinstance(evidence, dict) and evidence.get('vote_outputs'):
+                            response = _vote_evidence(
+                                evidence, response, before_evidence, words, request.questions,
+                                duration, envelope, deadline, extend_replies, trace)
                     if message.get('second'):
                         secondary_fallback = fallback.model_copy(deep=True)
                         # Missing or invalid secondary answers cannot veto the primary.
