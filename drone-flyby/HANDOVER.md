@@ -1433,3 +1433,45 @@ need different fixes:
 Distinguishing them costs labelling, not runs: take the highest-confidence
 unmatched detections from a recorded run, crop them from `data/scene`, and look.
 That is the first thing to do with offline time, before any further ranking work.
+
+## 2026-09-19, 17:45 CEST: 0.5211 — inference resolution is v9's P2 head, free
+
+**A fourth model at `imgsz 2560` — the same weights already loaded, named twice —
+took the mean from 0.5067 to 0.5211**, and took `small_launcher` from **0.000 to
+0.512**. That class had been dead in every configuration ever measured here.
+
+```bash
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-v8.pt \
+DRONE_IMGSZ=960,1280,1280,2560 \
+DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3 \
+DRONE_SET=BOTH_MODELS=1,NEW_TRACK_CONFIDENCE=0.10
+```
+
+**Why it works, and why it is exactly the v9/P2 argument.** The P2 recipe's case
+is cells-per-object: under ~2 cells nothing is ever detected, over ~4 everything
+is. A P2 head at stride 4 halves the source pixels per cell. **So does doubling
+imgsz**, and at 2560 the numbers are identical to what the P2 recipe predicts
+for itself:
+
+| class | src px | cells @1280 | cells @2560 | cells with P2 @1280 |
+|---|---|---|---|---|
+| small_launcher | 12.9 | 1.1 | **2.1** | 2.2 |
+| spacecraft | 24.5 | 2.0 | **4.1** | 4.1 |
+| mine_roller | 26.8 | 2.2 | **4.5** | 4.5 |
+| tank | 34.3 | 2.9 | **5.7** | 5.8 |
+
+Same arithmetic, no GPU hours. Cost on a 5090: v8@2560 is 26 ms against v8@1280's
+8 ms, taking the served stack from ~21 ms to ~47 ms of a 333 ms budget.
+
+**As an ADDITION, never a replacement.** HANDOVER records v6 alone peaking at
+1280 and falling at 1600 (0.398 -> 0.370), which is why nobody tried this. That
+measurement is not wrong, it is about a *replacement*: a model run far above its
+training scale loses the large classes. As a fourth member of the ensemble it
+only has to contribute what the others cannot see, and the object memory takes
+the union. This is the same lesson as v8, which failed as a replacement and paid
+as an addition.
+
+Cold start: the first run after restarting with four models lost frames 2-5 and
+had to be discarded. Four models warm up more slowly -- send a few throwaway
+frames (`tools/preflight.py`) before an attempt.
