@@ -35,6 +35,7 @@ def main() -> int:
                                       'Injected into flyby.SWEEP; flyby.py is not modified.')
     ap.add_argument('--frames', type=int, default=249)
     ap.add_argument('--device', default='cpu')
+    ap.add_argument('--dump', help='Write the answers to this JSON, for AP scoring elsewhere.')
     args = ap.parse_args()
 
     os.environ['DRONE_CAMERA'] = args.camera
@@ -118,6 +119,11 @@ def main() -> int:
         if frame % 25 == 0:
             print(f'  frame {frame}', flush=True)
 
+    if args.dump:
+        Path(args.dump).write_text(json.dumps(
+            {str(f): [[n, [float(v) for v in b], float(c)] for n, b, c in v]
+             for f, v in answers.items()}))
+        print(f'wrote {args.dump}')
     print(f'\ncamera={args.camera}  frames={len(answers)}  refused camera commands={refused}')
     print(f'scoring only the {len(scored)} fully covered frames')
     rr.score({f: v for f, v in answers.items() if f in scored}, 1, True)
