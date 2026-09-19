@@ -657,6 +657,9 @@ class Sequence:
     pending: Optional[Tuple[int, int, int]] = None
     answers_since_inspection: int = 0
     hybrid_step: int = 0
+    # Where the hybrid camera's Level-1 coverage phase has got to. Separate from
+    # sweep_index, which the hybrid uses for the Level-2 snake.
+    cover_index: int = 0
     # This flight's ground motion, re-fitted as re-detections come in.
     motion: Tuple[float, ...] = MOTION
     motion_samples: List[Tuple[float, float, float, float]] = field(default_factory=list)
@@ -961,11 +964,31 @@ def hybrid_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
             point = SURVEY[state.sweep_index % len(SURVEY)]
         target = step_towards(base, 2, *point)
     else:
-        # Coverage: the nearest Level-1 sweep point, so leaving L2 costs one move.
-        reachable = [p for p in SWEEP if p[0] == 1 and legal(base, *p)]
-        if reachable:
-            target = min(reachable, key=lambda p: (p[1] - base[1]) ** 2 + (p[2] - base[2]) ** 2)
+        # Coverage. Leaving L2 costs one move, so rejoin at the nearest point --
+        # but then ADVANCE along the sweep on every following coverage frame.
+        #
+        # This used to pick the nearest reachable Level-1 point every time, and
+        # once the camera had arrived the nearest point was the one it was
+        # already standing on. Driving choose_next_view through the evaluator's
+        # own Camera showed the whole coverage phase as L1(2880,540) three times
+        # running: HYBRID_COVER=3 bought one sixth of the frame, looked at
+        # three times. Worst 60 px cell over a flight: 1 look, against 42 for
+        # `full`. The 0.1234 the hybrid scored measured that, not Level 2.
+        l1 = [p for p in SWEEP if p[0] == 1] or [(1, *FULL_FRAME_CENTER)]
+        target = None
+        if base[0] != 1:
+            reachable = [(i, p) for i, p in enumerate(l1) if legal(base, *p)]
+            if reachable:
+                state.cover_index, target = min(
+                    reachable,
+                    key=lambda item: (item[1][1] - base[1]) ** 2 + (item[1][2] - base[2]) ** 2)
         else:
+            for step in range(1, len(l1) + 1):
+                index = (state.cover_index + step) % len(l1)
+                if legal(base, *l1[index]):
+                    state.cover_index, target = index, l1[index]
+                    break
+        if target is None:
             target = step_towards(base, 1, base[1], base[2])
 
     if target is not None and legal(base, *target):

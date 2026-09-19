@@ -252,11 +252,10 @@ def from_recording(run: str):
     return predictions
 
 
-def from_replay(run: str, model: Path, overrides, model_alt: Path = None,
-                imgsz=None, imgsz_alt=None):
+def from_replay(run: str, model: Path, overrides, alts=(), imgsz=None, alt_sizes=()):
     """Replay the recorded requests through flyby.predict with cached detections.
 
-    With ``model_alt``, this mirrors what the service actually does with two sets
+    With ``alts``, this mirrors what the service actually does with several sets
     of weights: flyby.raw_detections picks ``_models[which % len(_models)]``, so
     the models alternate on the request frame, and DRONE_SET=BOTH_MODELS=1 runs
     both on every frame and concatenates. The patch below replaces flyby.detect,
@@ -267,8 +266,8 @@ def from_replay(run: str, model: Path, overrides, model_alt: Path = None,
     logging.disable(logging.WARNING)
     import os
     os.environ['DRONE_MODEL'] = str(model)
-    if model_alt is not None:
-        os.environ['DRONE_MODEL_ALT'] = str(model_alt)
+    if alts:
+        os.environ['DRONE_MODEL_ALT'] = ','.join(str(p) for p in alts)
     import flyby
     from bench_recordings import cached_detections
     from dtos import DroneFlybyPredictRequestDto
@@ -290,8 +289,8 @@ def from_replay(run: str, model: Path, overrides, model_alt: Path = None,
         return cached_detections(path)
 
     caches = [cache_at(model, imgsz)]
-    if model_alt is not None:
-        caches.append(cache_at(model_alt, imgsz_alt))
+    for path, size in zip(alts, alt_sizes):
+        caches.append(cache_at(path, size))
     current = {}
     flyby.decode_view = lambda view: None
 
@@ -329,8 +328,13 @@ def main() -> int:
                         help='Recorded run to score (default: the best v4 run).')
     parser.add_argument('--replay', action='store_true', help='Re-run flyby.predict instead of scoring stored answers.')
     parser.add_argument('--model', type=Path, default=ROOT / 'models' / 'drone-yolo11n-v4.pt')
-    parser.add_argument('--model-alt', type=Path, default=None,
-                        help='Second weights, alternating per frame like the served pair. '
+    # Repeatable. It took exactly one alternate while THREE models were being
+    # served, so this tool could not replay the served configuration at all and
+    # every offline A/B was measuring a config we do not ship.
+    parser.add_argument('--model-alt', type=Path, action='append', default=[],
+                        help='Further weights, alternating per frame like the served set. '
+                             'Repeat it once per extra model: the served trio is '
+                             '--model v4.pt:960 --model-alt v6.pt:1280 --model-alt v8.pt:1280. '
                              'Either model may carry an inference size as PATH:SIZE, so '
                              'one model at two scales is a pair too. '
                              'Add --set BOTH_MODELS=1 to run both on every frame instead.')
@@ -365,14 +369,16 @@ def main() -> int:
         return Path(text), None
 
     model, imgsz = split_size(args.model)
-    model_alt, imgsz_alt = split_size(args.model_alt)
+    split_alts = [split_size(value) for value in args.model_alt]
+    alts = [path for path, _ in split_alts]
+    alt_sizes = [size for _, size in split_alts]
 
     if not (RECORDINGS / args.run).is_dir():
         raise SystemExit(f'no recording {args.run}')
     objects = json.loads(OBJECTS.read_text())['objects']
     frames = [f for f in range(1, args.frames + 1) if f >= args.from_frame]
 
-    predictions = (from_replay(args.run, model, args.set, model_alt, imgsz, imgsz_alt)
+    predictions = (from_replay(args.run, model, args.set, alts, imgsz, alt_sizes)
                    if args.replay else from_recording(args.run))
     # Only the frames actually scored, or --frames makes the per-frame rate nonsense.
     total = sum(len(predictions.get(f, [])) for f in frames)
@@ -388,9 +394,11 @@ def main() -> int:
 
     if args.replay:
         label = f'replay {model.name}' + (f'@{imgsz}' if imgsz else '')
-        if model_alt is not None:
+        if alts:
             mode = 'both every frame' if flyby.BOTH_MODELS else 'alternating'
-            label += f' + {model_alt.name}' + (f'@{imgsz_alt}' if imgsz_alt else '') + f' ({mode})'
+            for path, size in zip(alts, alt_sizes):
+                label += f' + {path.name}' + (f'@{size}' if size else '')
+            label += f' ({mode}, {1 + len(alts)} models)'
     else:
         label = f'recorded answers of {args.run[:12]}'
     print(f'{label}')
