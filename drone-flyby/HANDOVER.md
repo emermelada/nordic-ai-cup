@@ -1829,3 +1829,31 @@ grass, dirt, containers, boats -- see the tank section above). But no *global*
 suppression rule can separate it, because the same rule hits the eleven classes
 where the unmatched boxes are real. Fixing `tank` needs training data, not a
 serving knob.
+
+### `LEVEL_WEIGHT[0]` swept on real runs: 1.5 is the peak
+
+With the `row0` camera (67 Level-0 views per run against `full`'s 2), five runs
+at each setting:
+
+| `DRONE_LEVEL0_WEIGHT` | all-runs mean (n=5) |
+|---|---|
+| 1.0 (the old served value) | 0.5398 |
+| **1.5** | **0.5519** |
+| 2.0 | 0.5436 |
+
+Nearly symmetric either side of 1.5, which is what an optimum looks like rather
+than noise -- the same shape the box-growth sweep produced at 1.3. **Bracketed
+on both sides; stop here.**
+
+Counted on complete runs only the picture is the same but thinner (LW 1.0
+0.5380 over 3, LW 1.5 0.5432 over 1), because the evaluator was dropping frames
+on roughly two runs in three during this sweep. That loss is evaluator-side and
+random -- our service answered every frame it received in 78 ms median with
+nothing over 1000 ms, and the link measured 29.6 ms and 88-91 MB/s throughout --
+so all-runs means are the honest comparison here, and both agree.
+
+Note the mechanism: `LEVEL_WEIGHT` scales class *votes*, not detections. Raising
+L0's weight does not add boxes; it changes which class a track resolves to when
+L0 and L1 sightings disagree. At imgsz 2560 an L0 view has the same
+cells-per-object as an L1 view had at 1280, so L0 sightings are about as
+informative as L1 ones -- and were being counted at 1.0 against L1's 0.8.
