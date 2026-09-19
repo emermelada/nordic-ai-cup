@@ -48,6 +48,54 @@ Three measured ceilings say the room exists:
 
 0.85 needs one fifth of the leak. The pool gap alone is three times that size.
 
+## The one thing that validated: a medoid vote over diverse producers
+
+Measured 2026-09-20 against the **current build** (`stageb-on-own-named-perq-v3`,
+0.718340 tIoU / 0.831004 raw on 195 answered positives), not the older control.
+
+The rule is parameter-free: among the candidate spans for a question, keep the one
+with the greatest total temporal overlap with the others. Reproduce any row with
+`python -m tools.evidence_training.ensemble`.
+
+| Vote (always includes the build) | Raw | Gain | Conversation bootstrap 95% | Above zero |
+| --- | ---: | ---: | --- | ---: |
+| + extractor + 122B | 0.854756 | +0.023752 | [+0.013136, +0.034306] | 100% |
+| + extractor + 9B (Mac MLX) | 0.846397 | +0.015393 | [+0.004331, +0.026075] | 100% |
+| **+ extractor + retrieved variant** | **0.844766** | **+0.013763** | [+0.003530, +0.024334] | 100% |
+| + extractor + no-draft variant | 0.842957 | +0.011953 | [+0.000381, +0.022805] | 98% |
+| + retrieved + no-draft (no extractor) | 0.839157 | +0.008153 | [+0.000438, +0.016563] | 98% |
+| + extractor + rerun of the same config | 0.835357 | +0.004353 | [+0.000131, +0.010215] | 99% |
+
+**Diversity of the producer is what pays.** A different model is worth the most
+(+0.024 for the 122B, +0.015 for a 9B), a different prompt variant about +0.012 to
++0.014, and a rerun of the same configuration almost nothing (+0.004). The trained
+extractor is the most valuable single partner: dropping it from the best
+deployable rule costs more than half the gain.
+
+**The rule must be fixed in advance.** Choosing the voter subset by its own score
+gives +0.016; the same search under nested leave-one-conversation-out validation
+gives **-0.000589** with 47% of resamples above zero. With 39 conversations, free
+subset choice is pure overfitting. The rules above are each pre-specified and
+bootstrapped individually.
+
+All voters share the identical answer pass (390/390 questions) and the same
+`stageb-perq` mode, differing only by the `--variant` flag the pipeline already
+implements, so a deployed vote reproduces these spans exactly.
+
+### What it would take to deploy the +0.0138 version
+
+1. A second stage-B pass with `--variant retrieved` on the same 27B, roughly
+   doubling stage-B latency. The budget has room on paper — worst round trip is
+   about 23 s against 60 s — but this must be measured, not assumed.
+2. The extractor checkpoint served alongside vLLM (435M, about 1 GiB, small
+   against the 27B's 61 GiB).
+3. The medoid combination in the evidence stage, then end-to-end validation and a
+   latency check before any platform attempt.
+
+The 122B version scores higher but its weights were deleted, and at 74 GB it
+cannot co-reside with the 27B in 96 GiB of VRAM, so it is a measurement rather
+than an option.
+
 ## Mechanisms, in the order worth trying
 
 ### 1. Boundary refinement inside a local window
@@ -123,12 +171,17 @@ the right region its boundaries are already right. The apparent length shortfall
 (gold 3.21 s, control 2.98 s, extractor 2.78 s) is an artifact of the complete
 misses, not systematic under-coverage.
 
-**The one cheap shot left at the oracle** is the extractor's own decode margin —
-its best span score minus its CLS score, already computed in `decode_window` and
-currently discarded by `prediction_spans`. If that margin predicts which system
-is right, the chooser is nearly free. It needs one short GPU inference pass over
-the three fold checkpoints to emit margins alongside spans. Test that before
-concluding selection is closed.
+**The decode-margin chooser was tested on 2026-09-20 and failed.**
+`tools/evidence_training/rerank.py` scores both systems' spans under the same
+model, CLS-normalized, and takes the argmax. On the 75 questions where the two
+systems differ it picks the better span **46.7% of the time** — worse than chance.
+The mean margin gap is +2.055 when the extractor is right and +1.869 when it is
+wrong, which is noise: a model's confidence in its own argmax is not a calibrated
+comparator. The rule scores +0.005870, below simply always trusting the extractor.
+
+A working chooser therefore needs a model trained to *rank* candidate spans by
+overlap with gold, not a re-used extractor. The medoid vote above sidesteps this
+by using agreement among independent producers instead of any confidence score.
 
 ### 3. The extractor as the evidence stage
 
