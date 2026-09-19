@@ -145,8 +145,12 @@ MOTION_MAX_CORRECTION = 15.0    # px/frame at the frame centre; beyond this, dis
 # (+0.010 offline, inside the real run-to-run noise of +/-0.01), not the +0.04.
 # 2.0 was tried and rejected: it scores higher on the three-view runs than on
 # the well-sampled ones, which is noise, not effect.
-# DRONE_SET=LEVEL_WEIGHT={0:0.4,1:0.8,2:1.0} restores the old value for an A/B.
-LEVEL_WEIGHT = {0: 1.0, 1: 0.8, 2: 1.0}
+# DRONE_LEVEL0_WEIGHT=0.4 restores the old value for an A/B. It is a separate
+# variable because DRONE_SET takes numeric settings only -- it splits on commas
+# and rejects anything that is not already an int or float, so passing a dict
+# literal there makes the service exit at startup rather than run with the old
+# value.
+LEVEL_WEIGHT = {0: float(os.environ.get('DRONE_LEVEL0_WEIGHT', '1.0')), 1: 0.8, 2: 1.0}
 MATCH_IOU = 0.2
 # A track the camera looked at without finding it this many times is dropped.
 MAX_MISSES = 6
@@ -164,6 +168,65 @@ MIN_VOTE_SCORE = 0.02
 # validation flight measure 0.55-0.85x their Helsinki box diagonal, so our
 # boxes may be systematically too big for the 0.50 IoU the scorer needs.
 BOX_SCALE = 1.0
+# Box growth toward the official box convention, applied to REPORTED boxes only.
+#
+# The evaluator's boxes look like the projected 3D box of each object -- rotor
+# span, wingtips and height included -- while make_dataset.py labels every
+# pasted cut-out with the tight box around its alpha mask. So our models learned
+# tight boxes and are scored against loose ones.
+#
+# The strongest evidence is already in our own history: DRONE_BOX_SCALE=0.8
+# collapsed a real run from 0.143 to 0.017. Shrinking a well-matched box by 20%
+# gives IoU ~0.64, comfortably over the 0.50 threshold and worth a few points at
+# most. An 88% collapse only happens if the boxes were already sitting just
+# above the threshold -- which is what a systematic size mismatch looks like.
+#
+# Measured on this machine's Helsinki cut-outs (official patch box / tight mask
+# box, median per class; training/measure_box_convention.py re-measures):
+# scoring an offline replay against truth grown by these factors cuts the mean
+# error against six real validation scores from 0.134 to 0.075.
+#
+#   DRONE_BOX_GROW=helsinki   the isotropic factors below, capped
+#   DRONE_BOX_GROW_CAP=1.3    ... at this (default 1.3)
+#   DRONE_BOX_GROW=1.2        one factor for every class
+#   DRONE_BOX_GROW=tank=1.3,jet_plane=1.5     explicit per class
+#   DRONE_BOX_GROW unset      off, the 0.3048 behaviour
+#
+# NOT confirmed on a real run yet. The offline case rests on a truth file grown
+# by these same factors, which cannot be fully independent. One validation run
+# decides it, and the effect should be far outside the +/-0.01 noise either way.
+HELSINKI_BOX_FACTORS = {
+    'condor': 1.496, 'hangar': 1.152, 'helicopter': 1.531, 'jammer': 1.078,
+    'jet_plane': 1.489, 'large_launcher': 1.115, 'large_tower': 1.078,
+    'medium_launcher': 2.302, 'medium_plane': 1.320, 'mine_roller': 1.077,
+    'small_launcher': 1.936, 'small_plane': 1.075, 'small_tower': 1.184,
+    'spacecraft': 1.104, 'ta-ta': 1.147, 'tank': 1.309,
+}
+BOX_GROW_CAP = float(os.environ.get('DRONE_BOX_GROW_CAP', '1.3'))
+
+
+def _parse_box_grow(spec: str):
+    """'helsinki' | '1.2' | 'tank=1.3,jet_plane=1.5' -> {class: factor}."""
+    spec = (spec or '').strip()
+    if not spec:
+        return {}
+    if spec == 'helsinki':
+        return {n: min(f, BOX_GROW_CAP) for n, f in HELSINKI_BOX_FACTORS.items()}
+    try:
+        return {n: min(float(spec), BOX_GROW_CAP) for n in OBJECT_CLASSES}
+    except ValueError:
+        pass
+    out = {}
+    for item in spec.split(','):
+        name, _, value = item.partition('=')
+        name = name.strip()
+        if name not in OBJECT_CLASSES:
+            raise SystemExit(f'DRONE_BOX_GROW: unknown class {name!r}')
+        out[name] = min(float(value), BOX_GROW_CAP)
+    return out
+
+
+BOX_GROW = _parse_box_grow(os.environ.get('DRONE_BOX_GROW', ''))
 # A response may carry 500 annotations and we send ~10, so naming every class
 # on every object looked free. It is not: validation with v4 scored 0.134 with
 # it at 0.01, against 0.143 without, because those floor boxes outrank genuine
@@ -623,11 +686,27 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         w, h = (x2 - x1) * BOX_SCALE / 2, (y2 - y1) * BOX_SCALE / 2
         return np.array([cx - w, cy - h, cx + w, cy + h])
 
-    for name, confidence, box in transient:
-        box = scaled(box)
-        bbox = clip_bbox_to_frame((
-            box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT, box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
+    def reported(box, name):
+        """Track box -> the bbox we answer with, grown for this class.
+
+        Growth is per class and a track answers several classes (the winner plus
+        runner-ups), so it cannot be folded into the single box computed per
+        track. It is applied here and nowhere else: the stored track box must
+        stay tight, or matching, motion fitting and truncation all shift with it.
+        """
+        factor = BOX_GROW.get(name, 1.0)
+        if factor != 1.0:
+            x1, y1, x2, y2 = box
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            w, h = (x2 - x1) * factor / 2, (y2 - y1) * factor / 2
+            box = np.array([cx - w, cy - h, cx + w, cy + h])
+        return clip_bbox_to_frame((
+            box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT,
+            box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
         ))
+
+    for name, confidence, box in transient:
+        bbox = reported(scaled(box), name)
         if bbox is not None:
             annotations.append(DroneFlybyPredictionDto(
                 object_id=name, bbox=[round(c, 6) for c in bbox],
@@ -635,11 +714,9 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             ))
     for track in state.tracks:
         box = scaled(track.box)
-        bbox = clip_bbox_to_frame((
-            box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT,
-            box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
-        ))
-        if bbox is None:
+        # Whether the track is on screen at all is judged on the ungrown box, so
+        # turning growth on never changes which tracks are answered.
+        if reported(box, '') is None:
             continue
         ranked = sorted(track.votes.items(), key=lambda item: -item[1])
         base = track.best_confidence
@@ -663,6 +740,9 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
                 break
             named.add(name)
             confidence = base if rank == 0 else base * 0.9 * share
+            bbox = reported(box, name)
+            if bbox is None:
+                continue
             annotations.append(DroneFlybyPredictionDto(
                 object_id=name,
                 bbox=[round(c, 6) for c in bbox],
@@ -671,6 +751,9 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         if FLOOR_ALL_CLASSES:
             for name in OBJECT_CLASSES:
                 if name not in named:
+                    bbox = reported(box, name)
+                    if bbox is None:
+                        continue
                     annotations.append(DroneFlybyPredictionDto(
                         object_id=name,
                         bbox=[round(c, 6) for c in bbox],

@@ -153,6 +153,13 @@ def hello():
         # and v6 at 1280, so a single number here means the sizes did not apply.
         'imgsz': [flyby.size_for(i) for i in range(max(1, len(flyby._models)))],
         'device': flyby.DEVICE,
+        # What the answer policy will actually do, so preflight can confirm the
+        # served config rather than the one someone meant to serve.
+        'box_grow': flyby.BOX_GROW or None,
+        'box_grow_cap': flyby.BOX_GROW_CAP,
+        'level0_weight': flyby.LEVEL_WEIGHT[0],
+        'unseen_decay': flyby.UNSEEN_DECAY,
+        'new_track_confidence': flyby.NEW_TRACK_CONFIDENCE,
         'model_loaded': flyby._model is not None,
         'camera': flyby.CAMERA,
         'recording': bool(RECORD_DIR),
