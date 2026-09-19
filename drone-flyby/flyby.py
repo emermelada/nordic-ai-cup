@@ -383,6 +383,15 @@ SWEEPS = {
     'quad0': [p for corner in (TL, TR, BR, BL) for p in ((0, 1920, 1080), (1, *corner))],
     # The full sweep with a whole-frame look after every second step.
     'full0': [TL, TM, (0, 1920, 1080), TR, BR, (0, 1920, 1080), BM, BL, (0, 1920, 1080)],
+    # The full sweep with a whole-frame look after each ROW. Measured best of
+    # ten patterns in tools/camera_sim.py: recall 0.545 against full's 0.466,
+    # and ahead on AP against both truth files. The Level-0 look is what pays --
+    # every pattern containing one beat every pattern without one -- and it only
+    # works because of the imgsz 2560 pass: at Level 0 one transmitted pixel is
+    # 4 source pixels, so a stride-8 cell at 2560 spans 12 source pixels, which
+    # is exactly what a Level-1 view had at 1280. v4@960 finds 0 of 18 objects
+    # at Level 0; v6@1280 finds 12 of 18. That is why full0/quad0 lost on v3.
+    'row0': [TL, TM, TR, (0, 1920, 1080), BR, BM, BL, (0, 1920, 1080)],
 }
 # Chosen on validation runs with v3 (same flight, same model):
 # full 0.130, quad0 0.126, full0 0.119, dwell 0.117, top 0.108.
