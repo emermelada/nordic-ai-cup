@@ -1475,3 +1475,26 @@ as an addition.
 Cold start: the first run after restarting with four models lost frames 2-5 and
 had to be discarded. Four models warm up more slowly -- send a few throwaway
 frames (`tools/preflight.py`) before an attempt.
+
+### The resolution ladder has a hard latency cliff, and preflight cannot see it
+
+| stack | compute (5090) | real score |
+|---|---|---|
+| 960 / 1280 / 1280 | 49 ms | 0.5067 |
+| **+ 2560** | **75 ms** | **0.5211** |
+| + 2560 + 3200 | **514 ms** | **0.2639** (134/249 frames) |
+
+A fifth pass at 3200 costs ~7x the 2560 one, not the ~1.5x its pixel count
+suggests, and blew the 333 ms budget: 87 of 146 answered frames were late and
+115 frames were never answered at all.
+
+**`tools/preflight.py` reported "0/11 over budget" on that same configuration.**
+It replays frames *sequentially against a warm service*; the evaluator emits
+every 333 ms whether or not the previous answer landed, so queueing effects
+never appear. Preflight is a configuration check and a sanity check on the
+link. **It is not a load test, and a latency result from it means little.**
+The honest test of a heavier stack is a validation run, and the cost of being
+wrong is one run.
+
+If a fifth pass is tried again, prefer a cheap model: measured on a 5090,
+v4@2560 is 15.6 ms and v6@2560 17.5 ms against v8@2560's 26.3 ms.
