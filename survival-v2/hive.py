@@ -1,0 +1,972 @@
+"""Hive: controller for the survival simulator.
+
+One `Hive` instance serves consecutive games; it resets itself when `sim_time` goes backwards.
+`decide(step)` takes the StepResponse as a dict and returns ActionRequest dicts.
+
+World model
+-----------
+* Every agent starts in its own frame at pose (0, 0, 0). Its pose afterwards is dead reckoning with the sim's
+  own rules: heading changes only by our turns, the move uses the sim's caps and the biome penalty we observe,
+  and collisions are replayed against the walls we have mapped. A translation fix from re-observed walls
+  catches whatever the replay missed (the heading is exact, so one wall is enough).
+* Frames merge when an agent of one frame observes an agent of another: the observation gives the other's
+  exact position and heading. A child therefore joins its parent's frame the tick after birth.
+* A frame snaps to world coordinates when one of its agents sees a boundary wall (1600/1200 px edges whose
+  start->end runs along +x/+y). All world frames share the frame id "W".
+* Map per frame: walls (every seen face as a 30 px deep slab: every obstacle is >= 30 px thick), trees,
+  fruit with spawn-time bounds (from a raster of when each spot was last within someone's hearing), and
+  predator tracks (the observation gives a predator's heading exactly).
+
+Behaviour per agent and tick (first match wins): evade threats; breed (elite genomes early; anyone old,
+at the end, or when the colony is tiny); eat or wait for ripe fruit (global greedy assignment); camp at
+productive trees; explore.
+"""
+import math
+import random
+
+import numpy as np
+
+PI = math.pi
+TWO_PI = 2 * math.pi
+BIOME_PENALTY = {"forest": 1.0, "grassland": 1.0, "swamp": 0.5, "desert": 0.8, "river": 0.3}
+WORLD_W, WORLD_H = 1600.0, 1200.0
+EDGE_CELL = 64.0
+RASTER_CELL = 10.0
+
+DEFAULT_PARAMS = {
+    # breeding
+    "w_speed": 6.0, "w_hear": 1.5, "w_vis": 0.7, "w_cone": 0.7, "w_sprint": 0.8, "w_energy": 0.0,
+    "elite_margin": 0.03,          # fitness within this of the best alive counts as elite
+    "breed_reserve_early": 40.0,   # energy an elite keeps after spawning while t < breed_phase_end
+    "breed_reserve_late": 120.0,   # energy kept after spawning later on
+    "breed_phase_end": 900.0,
+    "breed_reserve_span": 200.0,   # the worst genome that may breed keeps this much more than the best
+    "breed_min_rank": 0.6,         # genomes ranked below this (0 = bottom quartile, 1 = best) do not breed
+    "sprint_keep": 15.0,           # once predators exist, keep max_energy/5 + this after spawning (sprint lock)
+    "spread_r": 70.0,              # campers avoid trees with another agent within this radius
+    "spread_pen": 200.0,
+    "pop_cap_early": 36, "pop_cap_mid": 18, "pop_cap_late": 8,
+    "t_mid": 900.0, "t_late": 1800.0,
+    "pop_min": 4,                  # below this anyone may breed
+    "endgame_t": 2926.0,           # a child born now (75 energy) lives idle to t=3000
+    # foraging
+    "ripe_age": 19.0,              # leave dated fruit younger than this (s) on the tree ...
+    "starve_frac": 0.12,           # ... unless below this fraction of max energy
+    "dist_cost": 0.06,             # energy-equivalent cost per px of travel (walk 0.05 + living time)
+    "food_range": 250.0,
+    "min_gain": 8.0,               # skip fruit whose net energy gain would be smaller than this
+    "wait_dist": 18.0,             # where to wait next to an unripe fruit (touching is < 5 + radius <= 14)
+    # threats
+    "alert_awake": 190.0,          # react to awake predators whose track is this uncertain/close
+    "alert_close": 110.0,          # always react to an awake predator this close (it charges under 90)
+    "alert_rest": 75.0,            # stay this far from resting ones (they hear 60 px when they wake)
+    "charge_zone": 95.0,           # predators charge inside 90 px whatever we do: run (sprint if slower)
+    "keep_dist": 160.0,            # back off from awake predators closer than this
+    "drift_speed": 3.0,            # ... and drift away slowly from farther ones that can see us
+    "face_tol": 0.9,               # keep the nearest awake predator within this bearing (< pi/2)
+    "scan_rate": 0.15,             # idle agents turn this much per tick to watch all round
+    "track_memory": 1.5,           # seconds an unseen predator heading our way stays a threat
+    # exploration
+    "explore_speed": 8.0,
+}
+
+
+def wrap(a):
+    return (a + PI) % TWO_PI - PI
+
+
+class Mem:
+    """What the hive remembers about one agent."""
+    __slots__ = ("aid", "frame", "x", "y", "h", "energy", "max_energy", "speed", "sprint", "hear", "vis", "cone",
+                 "age", "biome", "last", "old", "born", "fit", "mode", "target", "wander_dir", "wander_until",
+                 "expected", "fixes", "spawned", "stale")
+
+    def __init__(self, aid, frame, tick):
+        self.aid = aid
+        self.frame = frame
+        self.x = self.y = self.h = 0.0
+        self.age = -1.0
+        self.stale = False
+        self.last = None
+        self.old = False
+        self.born = tick
+        self.mode = "new"
+        self.target = None
+        self.wander_dir = None
+        self.wander_until = 0
+        self.expected = None
+        self.fixes = 0
+        self.spawned = 0
+
+
+class FrameMap:
+    """Everything known in one coordinate frame."""
+
+    def __init__(self, fid, world):
+        self.fid = fid
+        self.world = world
+        self.edges = []            # [x1, y1, x2, y2, nx, ny]  (n: unit normal pointing into the obstacle)
+        self.edge_cells = {}       # (i, j) -> list of edge indices
+        self.edge_keys = set()
+        self.edge_idx = {}         # rounded key -> edge index
+        # fruit: parallel arrays; lo/hi bound the spawn time, last = last time seen
+        self.fx = np.empty(0)
+        self.fy = np.empty(0)
+        self.flo = np.empty(0)
+        self.fhi = np.empty(0)
+        self.flast = np.empty(0)
+        # trees
+        self.tx = np.empty(0)
+        self.ty = np.empty(0)
+        self.tfirst = np.empty(0)
+        self.tlast = np.empty(0)
+        self.preds = []            # [x, y, h, last_seen, last_moved, first_seen]
+        # hearing raster: tick when each 10 px cell was last well inside someone's hearing radius
+        if world:
+            self.r_off = (0.0, 0.0)
+            self.raster = np.zeros((int(WORLD_W / RASTER_CELL) + 1, int(WORLD_H / RASTER_CELL) + 1), np.int32)
+        else:
+            self.r_off = (-2400.0, -2400.0)
+            self.raster = np.zeros((481, 481), np.int32)
+
+    # --- walls ---------------------------------------------------------------------------------------------
+    def add_edge(self, x1, y1, x2, y2, nx, ny):
+        """Add a wall face. (nx, ny) = (0, 0) when the obstacle side is not known yet."""
+        key = (round(x1), round(y1), round(x2), round(y2))
+        k0 = self.edge_idx.get(key)
+        if k0 is not None:
+            e = self.edges[k0]
+            if e[4] == 0.0 and e[5] == 0.0 and (nx or ny):
+                self.edges[k0] = (e[0], e[1], e[2], e[3], nx, ny)
+                self._register_cells(k0)
+            return False
+        near = self.near_edges((x1 + x2) / 2, (y1 + y2) / 2)
+        for k in near:
+            e = self.edges[k]
+            if abs(e[0] - x1) + abs(e[1] - y1) + abs(e[2] - x2) + abs(e[3] - y2) < 3:
+                if e[4] == 0.0 and e[5] == 0.0 and (nx or ny):
+                    self.edges[k] = (e[0], e[1], e[2], e[3], nx, ny)
+                    self._register_cells(k)
+                self.edge_idx[key] = k
+                self.edge_keys.add(key)
+                return False
+        self.edge_keys.add(key)
+        idx = len(self.edges)
+        self.edge_idx[key] = idx
+        self.edges.append((x1, y1, x2, y2, nx, ny))
+        self._register_cells(idx)
+        return True
+
+    def _register_cells(self, idx):
+        """Put the face in every cell its slab (plus margin) touches; unknown side: both sides, thin."""
+        x1, y1, x2, y2, nx, ny = self.edges[idx]
+        if nx or ny:
+            xs = (x1, x2, x1 + 40 * nx, x2 + 40 * nx)
+            ys = (y1, y2, y1 + 40 * ny, y2 + 40 * ny)
+        else:
+            xs = (x1, x2)
+            ys = (y1, y2)
+        i0, i1 = int(math.floor((min(xs) - 45) / EDGE_CELL)), int(math.floor((max(xs) + 45) / EDGE_CELL))
+        j0, j1 = int(math.floor((min(ys) - 45) / EDGE_CELL)), int(math.floor((max(ys) + 45) / EDGE_CELL))
+        for i in range(i0, i1 + 1):
+            for j in range(j0, j1 + 1):
+                lst = self.edge_cells.setdefault((i, j), [])
+                if idx not in lst:
+                    lst.append(idx)
+
+    def near_edges(self, x, y):
+        return self.edge_cells.get((int(math.floor(x / EDGE_CELL)), int(math.floor(y / EDGE_CELL))), ())
+
+    def blocked(self, x, y):
+        """Inside a known wall slab expanded by the agent radius (the sim's square expansion)."""
+        for k in self.near_edges(x, y):
+            x1, y1, x2, y2, nx, ny = self.edges[k]
+            ux, uy = x2 - x1, y2 - y1
+            ln = math.hypot(ux, uy)
+            qx, qy = x - x1, y - y1
+            along = (qx * ux + qy * uy) / ln
+            if along <= -5 or along >= ln + 5:
+                continue
+            if nx or ny:
+                depth = qx * nx + qy * ny
+                if -5 < depth < 35:
+                    return True
+            elif abs(qx * uy - qy * ux) / ln < 5:
+                return True
+        return False
+
+    # --- raster --------------------------------------------------------------------------------------------
+    def stamp(self, x, y, r, tick):
+        rc = int((r - 7.0) / RASTER_CELL)
+        if rc < 1:
+            return
+        ci = int((x - self.r_off[0]) / RASTER_CELL)
+        cj = int((y - self.r_off[1]) / RASTER_CELL)
+        mask = _disc(rc)
+        n0, n1 = self.raster.shape
+        i0, j0 = ci - rc, cj - rc
+        a0, b0 = max(i0, 0), max(j0, 0)
+        a1, b1 = min(ci + rc + 1, n0), min(cj + rc + 1, n1)
+        if a0 >= a1 or b0 >= b1:
+            return
+        sub = self.raster[a0:a1, b0:b1]
+        sub[mask[a0 - i0:a1 - i0, b0 - j0:b1 - j0]] = tick
+
+    def last_heard(self, x, y):
+        ci = ((x - self.r_off[0]) / RASTER_CELL).astype(np.int64)
+        cj = ((y - self.r_off[1]) / RASTER_CELL).astype(np.int64)
+        n0, n1 = self.raster.shape
+        ok = (ci >= 0) & (ci < n0) & (cj >= 0) & (cj < n1)
+        out = np.zeros(len(x), np.int64)
+        out[ok] = self.raster[ci[ok], cj[ok]]
+        return out
+
+
+_DISCS = {}
+
+
+def _disc(rc):
+    d = _DISCS.get(rc)
+    if d is None:
+        g = np.arange(-rc, rc + 1)
+        d = (g[:, None] ** 2 + g[None, :] ** 2) <= rc * rc
+        _DISCS[rc] = d
+    return d
+
+
+class Hive:
+    def __init__(self, params=None, seed=0):
+        self.p = dict(DEFAULT_PARAMS)
+        if params:
+            self.p.update(params)
+        self.seed = seed
+        self.reset()
+
+    def reset(self):
+        self.rng = random.Random(self.seed)
+        self.tick = 0
+        self.t = 0.0
+        self.last_t = -1.0
+        self.mem = {}
+        self.maps = {}
+        self.next_frame = 0
+        self.best_fit = 0.0
+        self.stats = {"births": 0, "merges": 0, "world_regs": 0, "fixes": 0}
+
+    # ------------------------------------------------------------------------------------------------------
+    def fitness(self, m):
+        p = self.p
+        return (p["w_speed"] * min(m.speed, 20.0) / 20.0 + p["w_hear"] * min(m.hear, 100.0) / 100.0
+                + p["w_vis"] * min(m.vis, 400.0) / 400.0 + p["w_cone"] * min(m.cone, PI / 2) / (PI / 2)
+                + p["w_sprint"] * min(m.sprint, 40.0) / 40.0 + p["w_energy"] * min(m.max_energy, 1000.0) / 1000.0)
+
+    def _new_frame(self, world=False):
+        if world:
+            fid = "W"
+        else:
+            fid = self.next_frame
+            self.next_frame += 1
+        self.maps[fid] = FrameMap(fid, world)
+        return fid
+
+    # ------------------------------------------------------------------------------------------------------
+    def decide(self, step):
+        agents = step.get("agent_status") or []
+        t = step.get("sim_time")
+        if t is None:
+            t = self.t + 0.1 if (agents and self.tick) else 0.0
+        t = float(t)
+        if t < self.last_t - 1e-9:
+            self.reset()
+        self.last_t = t
+        self.t = t
+        self.tick += 1
+        if not agents:
+            return []
+
+        alive = {}
+        for a in agents:
+            aid = a["agent_id"]
+            m = self.mem.get(aid)
+            if m is None:
+                m = Mem(aid, self._new_frame(), self.tick)
+                self.mem[aid] = m
+                if self.tick > 2:
+                    self.stats["births"] += 1
+            else:
+                self._predict(m)
+            self._update_traits(m, a)
+            alive[aid] = (m, _split_obs(a.get("observations") or []) if not m.stale else _EMPTY_OBS)
+        for aid in [k for k in self.mem if k not in alive]:
+            del self.mem[aid]
+
+        for m, obs in alive.values():
+            if not self.maps[m.frame].world and obs["Edge"]:
+                self._try_world_register(m, obs["Edge"])
+        for m, obs in alive.values():
+            for o in obs["Agent"]:
+                other = alive.get(o.get("id"))
+                if other is not None and other[0].frame != m.frame:
+                    self._merge_by_sighting(m, o, other[0])
+        for m, obs in alive.values():
+            if obs["Edge"]:
+                self._landmark_fix(m, obs["Edge"])
+                self._map_edges(m, obs["Edge"])
+        by_frame = {}
+        for m, obs in alive.values():
+            by_frame.setdefault(m.frame, []).append((m, obs))
+        for fid, group in by_frame.items():
+            fm = self.maps[fid]
+            self._map_trees(fm, group)
+            self._map_fruits(fm, group)
+            self._map_predators(fm, group)
+            for m, _ in group:
+                if not m.stale:
+                    fm.stamp(m.x, m.y, m.hear, self.tick)
+        # frames nobody is in any more are dropped
+        live_frames = set(by_frame)
+        for fid in [f for f in self.maps if f not in live_frames]:
+            del self.maps[fid]
+
+        self.best_fit = max(m.fit for m, _ in alive.values())
+        actions = self._plan(alive, by_frame)
+        md = self.stats.setdefault("mode_dist", {})
+        mt = self.stats.setdefault("mode_ticks", {})
+        for act in actions:
+            m = self.mem[act["agent_id"]]
+            m.last = (act["move_distance"], act["move_direction"], act["turn_angle"], act["spawn_agent"])
+            md[m.mode] = md.get(m.mode, 0.0) + act["move_distance"]
+            mt[m.mode] = mt.get(m.mode, 0) + 1
+        return actions
+
+    # ------------------------------------------------------------------------------------------------------
+    def _update_traits(self, m, a):
+        energy = float(a.get("energy", 0.0))
+        age = float(a.get("age", 0.0))
+        # The sim skips the agent after one that starves in its update loop: that agent's age does not advance
+        # and it is handed last tick's observations (relative to last tick's pose). Ignore them this tick.
+        m.stale = age == m.age
+        # old age: extra drain of 0.01*age per tick beyond what our own actions cost
+        if m.expected is not None and not m.old and not m.stale and age > 59.0 and energy < m.expected - 0.3:
+            m.old = True
+        m.energy = energy
+        m.age = age
+        m.max_energy = float(a.get("max_energy", 500.0))
+        m.speed = float(a.get("speed", 10.0))
+        m.sprint = float(a.get("sprint_speed", 20.0))
+        m.hear = float(a.get("hearing_radius", 50.0))
+        m.vis = float(a.get("vision_range", 200.0))
+        m.cone = float(a.get("vision_angle", PI / 3))
+        m.biome = str(a.get("biome", "grassland")).lower()
+        m.fit = self.fitness(m)
+
+    def _predict(self, m):
+        """Advance m's pose and expected energy by the action we sent last tick (the sim's own rules)."""
+        if m.last is None:
+            return
+        dist, mdir, turn, spawn = m.last
+        d = min(max(dist, 0.0), m.sprint)
+        if m.energy < m.max_energy / 5 and d > m.speed:
+            d = m.speed
+        cost = d * 0.05 if d <= m.speed else m.speed * 0.05 + (d - m.speed) * 0.5
+        cost += min(PI, abs(turn)) / TWO_PI
+        e = m.energy - cost
+        if spawn and e > 100:
+            e -= 100
+            m.spawned += 1
+        e -= 0.1
+        if m.old:
+            e -= 0.01 * (m.age + 0.1)
+        m.expected = e
+        d *= BIOME_PENALTY.get(m.biome, 1.0)
+        if d > 0:
+            fm = self.maps[m.frame]
+            direction = m.h + mdir
+            nx = m.x + d * math.cos(direction)
+            ny = m.y + d * math.sin(direction)
+            if fm.edges and fm.blocked(nx, ny):
+                step = PI / 18
+                nx, ny = m.x, m.y
+                for i in range(36):
+                    ta = direction + step * ((i + 1) // 2) * (1.0 if i % 2 == 0 else -1.0)
+                    tx = m.x + d * math.cos(ta)
+                    ty = m.y + d * math.sin(ta)
+                    if not fm.blocked(tx, ty):
+                        nx, ny = tx, ty
+                        break
+            m.x, m.y = nx, ny
+        m.h += turn
+
+    # ------------------------------------------------------------------------------------------------------
+    def _to_frame(self, m, lx, ly):
+        c, s = math.cos(m.h), math.sin(m.h)
+        return m.x + lx * c - ly * s, m.y + lx * s + ly * c
+
+    def _try_world_register(self, m, edges):
+        for (sx, sy), (ex, ey) in edges:
+            vx, vy = ex - sx, ey - sy
+            ln = math.hypot(vx, vy)
+            if abs(ln - 1600.0) < 1e-3:
+                h = -math.atan2(vy, vx)
+                c, s = math.cos(h), math.sin(h)
+                wsx, wsy = sx * c - sy * s, sx * s + sy * c   # start point relative to agent, world axes
+                Y = 30.0 if wsy < 0 else 1170.0
+                self._register_world(m, 0.0 - wsx, Y - wsy, h)
+                return True
+            if abs(ln - 1200.0) < 1e-3:
+                h = PI / 2 - math.atan2(vy, vx)
+                c, s = math.cos(h), math.sin(h)
+                wsx, wsy = sx * c - sy * s, sx * s + sy * c
+                X = 30.0 if wsx < 0 else 1570.0
+                self._register_world(m, X - wsx, 0.0 - wsy, h)
+                return True
+        return False
+
+    def _register_world(self, m, X, Y, Hd):
+        if "W" not in self.maps:
+            self._new_frame(world=True)
+        phi = Hd - m.h
+        c, s = math.cos(phi), math.sin(phi)
+        self._move_frame(m.frame, "W", phi, X - (c * m.x - s * m.y), Y - (s * m.x + c * m.y))
+        self.stats["world_regs"] += 1
+
+    def _merge_by_sighting(self, m, o, om):
+        """m (frame A) sees om (frame B): express the non-world / smaller frame in the other one."""
+        th = m.h + o["angle"]
+        ox = m.x + o["distance"] * math.cos(th)
+        oy = m.y + o["distance"] * math.sin(th)
+        if o["distance"] > 1e-9:
+            oh = th + PI - o.get("rel_dir", 0.0)
+        else:   # spawned on the parent: the sim's atan2(0, 0) = 0 makes angle = -h_A and rel_dir = -h_B
+            oh = m.h + o["angle"] - o.get("rel_dir", 0.0)
+        fa, fb = m.frame, om.frame
+        a_world, b_world = self.maps[fa].world, self.maps[fb].world
+        n_a = sum(1 for q in self.mem.values() if q.frame == fa)
+        n_b = sum(1 for q in self.mem.values() if q.frame == fb)
+        if b_world or (not a_world and n_b > n_a):
+            # move A into B: om's pose in B is (om.x, om.y, om.h), in A it is (ox, oy, oh)
+            phi = om.h - oh
+            c, s = math.cos(phi), math.sin(phi)
+            self._move_frame(fa, fb, phi, om.x - (c * ox - s * oy), om.y - (s * ox + c * oy))
+        else:
+            phi = oh - om.h
+            c, s = math.cos(phi), math.sin(phi)
+            self._move_frame(fb, fa, phi, ox - (c * om.x - s * om.y), oy - (s * om.x + c * om.y))
+        self.stats["merges"] += 1
+
+    def _move_frame(self, src, dst, phi, tx, ty):
+        if src == dst:
+            return
+        c, s = math.cos(phi), math.sin(phi)
+        a, b = self.maps[src], self.maps[dst]
+        for m in self.mem.values():
+            if m.frame == src:
+                m.x, m.y = c * m.x - s * m.y + tx, s * m.x + c * m.y + ty
+                m.h += phi
+                m.frame = dst
+        for x1, y1, x2, y2, nx, ny in a.edges:
+            b.add_edge(c * x1 - s * y1 + tx, s * x1 + c * y1 + ty, c * x2 - s * y2 + tx, s * x2 + c * y2 + ty,
+                       c * nx - s * ny, s * nx + c * ny)
+        if a.fx.size:
+            fx, fy = c * a.fx - s * a.fy + tx, s * a.fx + c * a.fy + ty
+            b.fx, b.fy = np.concatenate((b.fx, fx)), np.concatenate((b.fy, fy))
+            b.flo, b.fhi = np.concatenate((b.flo, a.flo)), np.concatenate((b.fhi, a.fhi))
+            b.flast = np.concatenate((b.flast, a.flast))
+            _dedupe_fruit(b)
+        if a.tx.size:
+            tx2, ty2 = c * a.tx - s * a.ty + tx, s * a.tx + c * a.ty + ty
+            b.tx, b.ty = np.concatenate((b.tx, tx2)), np.concatenate((b.ty, ty2))
+            b.tfirst, b.tlast = np.concatenate((b.tfirst, a.tfirst)), np.concatenate((b.tlast, a.tlast))
+            _dedupe_trees(b)
+        for pr in a.preds:
+            b.preds.append([c * pr[0] - s * pr[1] + tx, s * pr[0] + c * pr[1] + ty, pr[2] + phi, pr[3], pr[4],
+                            pr[5]])
+        del self.maps[src]
+
+    def _landmark_fix(self, m, edges):
+        """Every wall face has its own random length (30-100 px, or 1200/1600), and the heading is exact, so a
+        re-observed face matched by length and direction gives the position error directly."""
+        fm = self.maps[m.frame]
+        if not fm.edges:
+            return
+        pts = []
+        for (sx, sy), (ex, ey) in edges[:10]:
+            x1, y1 = self._to_frame(m, sx, sy)
+            x2, y2 = self._to_frame(m, ex, ey)
+            if (round(x1), round(y1), round(x2), round(y2)) in fm.edge_keys:
+                return                      # a known face sits exactly where we expect it: pose is right
+            pts.append((x1, y1, x2, y2))
+        # Candidate shifts: same length and direction, closer than 25 px. Opposite faces of a box share
+        # length and direction but are >= 30 px apart, so they cannot be confused within that radius.
+        cands = []
+        for x1, y1, x2, y2 in pts:
+            cx0, cy0 = (x1 + x2) / 2, (y1 + y2) / 2
+            for k in fm.near_edges(cx0, cy0):
+                e = fm.edges[k]
+                dx1, dy1 = e[0] - x1, e[1] - y1
+                dx2, dy2 = e[2] - x2, e[3] - y2
+                if abs(dx1 - dx2) + abs(dy1 - dy2) > 0.05:      # different length or direction
+                    continue
+                if abs(dx1) + abs(dy1) < 25.0:
+                    cands.append((dx1, dy1))
+        if not cands:
+            return
+        # the shift most faces agree on, smallest first
+        best = None
+        for dx, dy in cands:
+            support = sum(1 for qx, qy in cands if abs(qx - dx) + abs(qy - dy) < 0.5)
+            key = (-support, abs(dx) + abs(dy))
+            if (best is None or key < best[0]) and not fm.blocked(m.x + dx, m.y + dy):
+                best = (key, dx, dy)
+        if best is not None and abs(best[1]) + abs(best[2]) > 1e-3:
+            m.x += best[1]
+            m.y += best[2]
+            m.fixes += 1
+            self.stats["fixes"] += 1
+
+    def _map_edges(self, m, edges):
+        fm = self.maps[m.frame]
+        for (sx, sy), (ex, ey) in edges:
+            x1, y1 = self._to_frame(m, sx, sy)
+            x2, y2 = self._to_frame(m, ex, ey)
+            ux, uy = x2 - x1, y2 - y1
+            ln = math.hypot(ux, uy)
+            if ln < 1e-6:
+                continue
+            nx, ny = -uy / ln, ux / ln
+            # The obstacle lies on the far side from the viewer, but only when the viewer faces the face itself:
+            # a ray aimed exactly at a corner can report the adjacent face from behind (tie at the corner).
+            along = ((m.x - x1) * ux + (m.y - y1) * uy) / ln
+            if 1.0 < along < ln - 1.0:
+                if (m.x - x1) * nx + (m.y - y1) * ny > 0:
+                    nx, ny = -nx, -ny
+            else:
+                nx = ny = 0.0
+            fm.add_edge(x1, y1, x2, y2, nx, ny)
+
+    def _map_trees(self, fm, group):
+        pts = []
+        for m, obs in group:
+            if obs["Tree"]:
+                c, s = m.h, None
+                for o in obs["Tree"]:
+                    th = m.h + o["angle"]
+                    pts.append((m.x + o["distance"] * math.cos(th), m.y + o["distance"] * math.sin(th)))
+        t = self.t
+        seen = np.zeros(fm.tx.size, bool)
+        if pts:
+            P = np.array(pts)
+            if fm.tx.size:
+                d = np.abs(P[:, 0:1] - fm.tx[None, :]) + np.abs(P[:, 1:2] - fm.ty[None, :])
+                j = d.argmin(axis=1)
+                hit = d[np.arange(len(P)), j] < 4.0
+                seen[j[hit]] = True
+                new = P[~hit]
+            else:
+                new = P
+            if len(new):
+                new = _unique_pts(new, 4.0)
+                fm.tx = np.concatenate((fm.tx, new[:, 0]))
+                fm.ty = np.concatenate((fm.ty, new[:, 1]))
+                fm.tfirst = np.concatenate((fm.tfirst, np.full(len(new), t)))
+                fm.tlast = np.concatenate((fm.tlast, np.full(len(new), t)))
+                seen = np.concatenate((seen, np.ones(len(new), bool)))
+        if fm.tx.size:
+            fm.tlast[seen] = t
+            gone = (~seen) & self._perceivable(fm, group, fm.tx, fm.ty, 12.0)
+            keep = (~gone) & (t - fm.tlast < 120.0)
+            if not keep.all():
+                fm.tx, fm.ty, fm.tfirst, fm.tlast = fm.tx[keep], fm.ty[keep], fm.tfirst[keep], fm.tlast[keep]
+
+    def _perceivable(self, fm, group, x, y, margin):
+        """Which points some agent of the group should perceive now (hearing, or cone ignoring walls)."""
+        out = np.zeros(x.size, bool)
+        for m, _ in group:
+            if m.stale:
+                continue
+            dx, dy = x - m.x, y - m.y
+            d = np.hypot(dx, dy)
+            near = d <= m.hear - margin
+            cone = (d <= m.vis - 2 * margin) & (np.abs((np.arctan2(dy, dx) - m.h + PI) % TWO_PI - PI) <= m.cone / 2 - 0.08)
+            out |= near | cone
+        return out
+
+    def _map_fruits(self, fm, group):
+        pts = []
+        for m, obs in group:
+            for o in obs["Fruit"]:
+                th = m.h + o["angle"]
+                pts.append((m.x + o["distance"] * math.cos(th), m.y + o["distance"] * math.sin(th)))
+        t = self.t
+        seen = np.zeros(fm.fx.size, bool)
+        if pts:
+            P = _unique_pts(np.array(pts), 1.5)
+            if fm.fx.size:
+                d = np.abs(P[:, 0:1] - fm.fx[None, :]) + np.abs(P[:, 1:2] - fm.fy[None, :])
+                j = d.argmin(axis=1)
+                hit = d[np.arange(len(P)), j] < 2.5
+                seen[j[hit]] = True
+                new = P[~hit]
+            else:
+                new = P
+            if len(new):
+                heard = fm.last_heard(new[:, 0], new[:, 1])
+                lo = np.where(heard > 0, t - (self.tick - heard) * 0.1, t - 50.0)
+                lo = np.maximum(lo, t - 50.0)
+                fm.fx = np.concatenate((fm.fx, new[:, 0]))
+                fm.fy = np.concatenate((fm.fy, new[:, 1]))
+                fm.flo = np.concatenate((fm.flo, lo))
+                fm.fhi = np.concatenate((fm.fhi, np.full(len(new), t - 0.1)))
+                fm.flast = np.concatenate((fm.flast, np.full(len(new), t)))
+                seen = np.concatenate((seen, np.ones(len(new), bool)))
+        if fm.fx.size:
+            fm.flast[seen] = t
+            gone = (~seen) & self._perceivable(fm, group, fm.fx, fm.fy, 6.0)
+            keep = (~gone) & (t - fm.fhi < 50.2)
+            if not keep.all():
+                fm.fx, fm.fy, fm.flo, fm.fhi, fm.flast = (fm.fx[keep], fm.fy[keep], fm.flo[keep], fm.fhi[keep],
+                                                          fm.flast[keep])
+
+    def _map_predators(self, fm, group):
+        t = self.t
+        obs_pts = []
+        for m, obs in group:
+            for o in obs["Predator"]:
+                th = m.h + o["angle"]
+                x = m.x + o["distance"] * math.cos(th)
+                y = m.y + o["distance"] * math.sin(th)
+                if not any(abs(q[0] - x) < 1.5 and abs(q[1] - y) < 1.5 for q in obs_pts):
+                    obs_pts.append((x, y, th + PI - o.get("rel_dir", 0.0)))
+        tracks = fm.preds
+        used = set()
+        for x, y, h in obs_pts:
+            best, bd = None, 32.0
+            for i, tr in enumerate(tracks):
+                if i in used:
+                    continue
+                d = math.hypot(tr[0] - x, tr[1] - y)
+                if d < bd:
+                    best, bd = i, d
+            if best is None:
+                tracks.append([x, y, h, t, t, t])
+                used.add(len(tracks) - 1)
+            else:
+                tr = tracks[best]
+                if bd > 0.3:
+                    tr[4] = t
+                tr[0], tr[1], tr[2], tr[3] = x, y, h, t
+                used.add(best)
+        if tracks:
+            fm.preds = [tr for tr in tracks if t - tr[3] < 15.0]
+
+    # ------------------------------------------------------------------------------------------------------
+    def _pop_cap(self):
+        p = self.p
+        if self.t < p["t_mid"]:
+            return p["pop_cap_early"]
+        if self.t < p["t_late"]:
+            return p["pop_cap_mid"]
+        return p["pop_cap_late"]
+
+    def _threats(self, m, fm):
+        """Predators that can perceive m now or very soon: list of (distance, bearing, awake, sees).
+
+        A predator hears 60 px all round and sees 250 px inside +-30 deg of its heading. It charges when
+        closer than 90 px or when the agent looks away; otherwise it circles (sprinting, 10.6 px/tick closing).
+        A resting one does nothing until its energy refills, then looks around.
+        """
+        out = []
+        t = self.t
+        p = self.p
+        for tr in fm.preds:
+            dx, dy = tr[0] - m.x, tr[1] - m.y
+            d = math.hypot(dx, dy)
+            stale = t - tr[3]
+            resting = (t - tr[4]) > 0.25 and stale < 0.25
+            if resting:
+                if d < p["alert_rest"]:
+                    out.append((d, math.atan2(dy, dx), False, False))
+                continue
+            off = abs(wrap(math.atan2(-dy, -dx) - tr[2]))   # predator heading vs the line predator -> m
+            if stale > 0.25:
+                if stale > p["track_memory"] or off > 0.8:
+                    continue
+                d_eff = d - stale * 110.0 * math.cos(off)
+            else:
+                d_eff = d
+            sees = (off <= PI / 6 + 0.1 and d_eff < 260.0) or d_eff < 65.0
+            if d_eff < p["alert_close"] or sees:
+                out.append((max(d_eff, 0.0), math.atan2(dy, dx), True, sees))
+        return out
+
+    def _plan(self, alive, by_frame):
+        p = self.p
+        t = self.t
+        n = len(alive)
+        cap = self._pop_cap()
+        order = sorted(alive.values(), key=lambda v: v[0].aid)
+        # --- threats first
+        threat = {}
+        for m, obs in order:
+            th = self._threats(m, self.maps[m.frame])
+            if th:
+                threat[m.aid] = th
+        # --- who spawns
+        spawners = set()
+        budget = cap - n
+        endgame = t >= p["endgame_t"]
+        fits = sorted(m.fit for m, _ in order)
+        lo_fit = fits[len(fits) // 4] if len(fits) >= 4 else fits[0]
+        span = self.best_fit - lo_fit
+        early = t < p["breed_phase_end"]
+        r_lo = p["breed_reserve_early"] if early else p["breed_reserve_late"]
+        r_hi = r_lo + p["breed_reserve_span"]
+        cands = []
+        for m, obs in order:
+            if m.energy <= 101.0 or m.aid in threat:
+                continue
+            if m.old:
+                cands.append((0, -m.fit, m.aid, 3.0))
+            elif endgame:
+                cands.append((1, -m.fit, m.aid, 3.0))
+            else:
+                rank = 1.0 if span < 1e-3 else min(1.0, max(0.0, (m.fit - lo_fit) / span))   # 1 = best alive
+                if rank < p["breed_min_rank"] and n >= p["pop_min"]:
+                    continue
+                cands.append((2, -m.fit, m.aid, r_hi - (r_hi - r_lo) * rank))
+        cands.sort()
+        preds_seen = any(fm.preds for fm in self.maps.values()) or t > 150.0
+        for pri, _, aid, reserve in cands:
+            m = alive[aid][0]
+            if pri >= 2 and preds_seen:
+                reserve = max(reserve, m.max_energy / 5 + p["sprint_keep"])
+            if m.energy - 101.0 < reserve:
+                continue
+            if pri >= 2 and budget <= 0:
+                continue
+            if pri == 0 and budget <= -6:
+                continue
+            spawners.add(aid)
+            budget -= 1
+        # --- food assignment (global greedy per frame)
+        food = {}
+        for fid, group in by_frame.items():
+            food.update(self._assign_food(self.maps[fid], [m for m, _ in group if m.aid not in threat]))
+        actions = []
+        for m, obs in order:
+            fm = self.maps[m.frame]
+            if m.aid in threat:
+                act = self._flee(m, fm, threat[m.aid])
+            elif m.aid in food:
+                m.mode = "food"
+                x, y, wait = food[m.aid]
+                act = self._go(m, x, y, stop=p["wait_dist"] if wait else 0.0)
+            else:
+                tree = self._choose_tree(m, fm)
+                if tree is not None:
+                    m.mode = "camp"
+                    act = self._go(m, tree[0], tree[1], stop=0.0)   # sit on the tree: its fruit spawns 10-60 px around
+                    if act["move_distance"] < 3.0:
+                        act["turn_angle"] = p["scan_rate"]
+                else:
+                    m.mode = "explore"
+                    act = self._explore(m, fm)
+            act["spawn_agent"] = m.aid in spawners
+            actions.append(act)
+        return actions
+
+    def _assign_food(self, fm, agents):
+        if not agents or not fm.fx.size:
+            return {}
+        p = self.p
+        t = self.t
+        ax = np.array([m.x for m in agents])
+        ay = np.array([m.y for m in agents])
+        spd = np.array([max(m.speed * BIOME_PENALTY.get(m.biome, 1.0), 1.0) for m in agents])
+        hungry = np.array([m.energy < p["starve_frac"] * m.max_energy for m in agents])
+        d = np.hypot(fm.fx[None, :] - ax[:, None], fm.fy[None, :] - ay[:, None])
+        arrive = t + d / spd[:, None] * 0.1
+        age_min = arrive - fm.fhi[None, :]           # youngest it can be on arrival
+        age_mid = arrive - 0.5 * (fm.flo + fm.fhi)[None, :]
+        rot = age_min > 49.0                           # surely rotten before we get there
+        value = np.minimum(60.0, 20.0 + 2.0 * np.maximum(age_mid, 0.0))
+        need = np.array([max(0.0, m.max_energy - m.energy) for m in agents])
+        value = np.minimum(value, need[:, None])        # energy above max_energy is thrown away
+        # A fruit gains 2 energy/s until 20 s old while waiting costs 1/s: eat it young only when starving.
+        dated = (fm.fhi - fm.flo) < 8.0               # spawn time known to within a few seconds
+        unripe = dated[None, :] & (age_min < p["ripe_age"])
+        eff = np.where(unripe & ~hungry[:, None], -1e9, value)
+        score = eff - p["dist_cost"] * d
+        score[rot | (d > p["food_range"]) | (score < p["min_gain"])] = -1e9
+        out = {}
+        if score.size == 0:
+            return out
+        flat = np.argsort(-score, axis=None)
+        used_a, used_f = set(), set()
+        na, nf = score.shape
+        for k in flat[: max(4 * na * 4, 64)].tolist():
+            i, j = divmod(k, nf)
+            if score[i, j] < -1e8:
+                break
+            if i in used_a or j in used_f:
+                continue
+            used_a.add(i)
+            used_f.add(j)
+            out[agents[i].aid] = (float(fm.fx[j]), float(fm.fy[j]), False)
+            if len(used_a) == na:
+                break
+        return out
+
+    def _choose_tree(self, m, fm):
+        if not fm.tx.size:
+            return None
+        taken = {}
+        for other in self.mem.values():
+            if other.aid != m.aid and other.frame == m.frame and other.mode == "camp" and other.target is not None:
+                taken[other.target] = taken.get(other.target, 0) + 1
+        d = np.hypot(fm.tx - m.x, fm.ty - m.y)
+        crowd = np.array([taken.get((round(x), round(y)), 0) for x, y in zip(fm.tx.tolist(), fm.ty.tolist())])
+        others = [(q.x, q.y) for q in self.mem.values() if q.aid != m.aid and q.frame == m.frame]
+        near = np.zeros(fm.tx.size)
+        if others:
+            O = np.array(others)
+            dd = np.hypot(fm.tx[:, None] - O[None, :, 0], fm.ty[:, None] - O[None, :, 1])
+            near = (dd < self.p["spread_r"]).sum(axis=1)
+        score = d + 250.0 * crowd + self.p["spread_pen"] * near
+        j = int(score.argmin())
+        m.target = (round(float(fm.tx[j])), round(float(fm.ty[j])))
+        return float(fm.tx[j]), float(fm.ty[j])
+
+    def _flee(self, m, fm, threats):
+        """Keep awake predators in front (|bearing| < 90 deg makes them circle instead of charge beyond 90 px)
+        and back off; inside 90 px it charges anyway, so get out at the best affordable speed."""
+        m.mode = "flee"
+        p = self.p
+        fx = fy = 0.0
+        awake = [q for q in threats if q[2]]
+        nearest = min(awake or threats, key=lambda q: q[0])
+        for d, bearing, is_awake, sees in threats:
+            w = (2.0 if is_awake else 1.0) / max(d - 10.0, 5.0) ** 2
+            fx -= math.cos(bearing) * w
+            fy -= math.sin(bearing) * w
+        for k in fm.near_edges(m.x, m.y):
+            x1, y1, x2, y2, nx, ny = fm.edges[k]
+            if not (nx or ny):
+                continue
+            ux, uy = x2 - x1, y2 - y1
+            ln = math.hypot(ux, uy)
+            qx, qy = m.x - x1, m.y - y1
+            along = (qx * ux + qy * uy) / ln
+            if -20 < along < ln + 20:
+                depth = qx * nx + qy * ny
+                if -60 < depth < 0:
+                    w = 0.5 / max(-depth, 6.0) ** 2
+                    fx -= nx * w
+                    fy -= ny * w
+        for q in self.mem.values():
+            if q.aid != m.aid and q.frame == m.frame:
+                qx, qy = m.x - q.x, m.y - q.y
+                dq = math.hypot(qx, qy)
+                if 0 < dq < 60:
+                    w = 0.3 / max(dq, 8.0) ** 2
+                    fx += qx / dq * w
+                    fy += qy / dq * w
+        if fx == 0 and fy == 0:
+            fx, fy = -math.cos(nearest[1]), -math.sin(nearest[1])
+        ang = math.atan2(fy, fx)
+        d0, b0, awake0, sees0 = nearest
+        if not awake0:
+            dist = min(m.speed, 5.0) if d0 < p["alert_rest"] else 0.0
+        elif d0 < p["charge_zone"]:
+            dist = m.speed
+            if m.speed < 15.5 and m.energy > m.max_energy / 5 + 15:
+                dist = m.sprint
+        elif d0 < p["keep_dist"]:
+            dist = m.speed
+        else:
+            dist = min(m.speed, p["drift_speed"])
+        # face the nearest awake predator: beyond 90 px this makes it circle instead of charging
+        rel = wrap(b0 - m.h)
+        turn = 0.0
+        if abs(rel) > p["face_tol"]:
+            turn = max(-1.2, min(1.2, rel))
+        return {"agent_id": m.aid, "move_distance": float(dist), "move_direction": float(wrap(ang - m.h)),
+                "turn_angle": float(turn), "spawn_agent": False}
+
+    def _go(self, m, tx, ty, stop=0.0, face_target=False):
+        dx, dy = tx - m.x, ty - m.y
+        d = math.hypot(dx, dy)
+        ang = math.atan2(dy, dx) if d > 1e-9 else m.h
+        dist = min(m.speed, max(0.0, d - stop))
+        turn = wrap(ang - m.h) if dist > 3.0 else 0.0
+        if abs(turn) < 0.05:
+            turn = 0.0
+        turn = max(-0.8, min(0.8, turn))
+        return {"agent_id": m.aid, "move_distance": float(dist), "move_direction": float(wrap(ang - m.h)),
+                "turn_angle": float(turn), "spawn_agent": False}
+
+    def _explore(self, m, fm):
+        if m.wander_dir is None or self.tick >= m.wander_until:
+            m.wander_dir = self.rng.uniform(-PI, PI)
+            m.wander_until = self.tick + int(self.rng.uniform(40, 160))
+        ang = m.wander_dir
+        if fm.world:
+            margin = 120.0
+            cx = 1.0 if m.x < margin else (-1.0 if m.x > WORLD_W - margin else 0.0)
+            cy = 1.0 if m.y < margin else (-1.0 if m.y > WORLD_H - margin else 0.0)
+            if cx or cy:
+                ang = math.atan2(cy + 0.3 * math.sin(ang), cx + 0.3 * math.cos(ang))
+                m.wander_dir = ang
+        turn = max(-0.5, min(0.5, wrap(ang - m.h)))
+        return {"agent_id": m.aid, "move_distance": float(min(m.speed, self.p["explore_speed"])),
+                "move_direction": float(wrap(ang - m.h)), "turn_angle": float(turn), "spawn_agent": False}
+
+
+# ----------------------------------------------------------------------------------------------------------
+_EMPTY_OBS = {"Fruit": [], "Agent": [], "Predator": [], "Tree": [], "Edge": []}
+
+
+def _split_obs(obs):
+    out = {"Fruit": [], "Agent": [], "Predator": [], "Tree": [], "Edge": []}
+    seen = set()
+    for o in obs:
+        typ = o.get("type")
+        if not isinstance(typ, str):
+            continue
+        typ = typ[:1].upper() + typ[1:].lower()
+        if typ == "Edge":
+            c = o.get("coords")
+            if not c:
+                continue
+            key = (c[0][0], c[0][1], c[1][0], c[1][1])
+            if key in seen:
+                continue
+            seen.add(key)
+            out["Edge"].append(c)
+        elif typ in out:
+            out[typ].append(o)
+    return out
+
+
+def _unique_pts(P, tol):
+    if len(P) <= 1:
+        return P
+    key = np.round(P / tol)
+    _, idx = np.unique(key, axis=0, return_index=True)
+    return P[np.sort(idx)]
+
+
+def _dedupe_fruit(b):
+    P = np.column_stack((b.fx, b.fy))
+    key = np.round(P / 2.0)
+    _, idx = np.unique(key, axis=0, return_index=True)
+    idx = np.sort(idx)
+    b.fx, b.fy, b.flo, b.fhi, b.flast = b.fx[idx], b.fy[idx], b.flo[idx], b.fhi[idx], b.flast[idx]
+
+
+def _dedupe_trees(b):
+    P = np.column_stack((b.tx, b.ty))
+    key = np.round(P / 4.0)
+    _, idx = np.unique(key, axis=0, return_index=True)
+    idx = np.sort(idx)
+    b.tx, b.ty, b.tfirst, b.tlast = b.tx[idx], b.ty[idx], b.tfirst[idx], b.tlast[idx]

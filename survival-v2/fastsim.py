@@ -294,6 +294,10 @@ class FastEnvironment(Environment):
         self._dirty_agents = self._dirty_fruits = self._dirty_trees = self._dirty_predators = True
         self._static = {}
         self.agent_observations = {}
+        self.kill_log = []
+        # counters for evaluation only (no effect on the simulation)
+        self.stat = {"fruit_n": 0, "fruit_e": 0.0, "kill_n": 0, "kill_e": 0.0, "starve_n": 0, "move_e": 0.0,
+                     "turn_e": 0.0, "live_e": 0.0, "old_e": 0.0, "spawn_e": 0.0, "wasted_e": 0.0, "old_death_n": 0}
         self._create_boundaries(thickness=30)
         self._update_spatial_grid()
 
@@ -447,9 +451,12 @@ class FastEnvironment(Environment):
         if entity.energy < entity.max_energy / 5 and distance > entity.speed:
             distance = entity.speed
         if distance <= entity.speed:
-            entity.energy -= distance * walking_cost
+            c = distance * walking_cost
         else:
-            entity.energy -= entity.speed * walking_cost + (distance - entity.speed) * sprinting_cost
+            c = entity.speed * walking_cost + (distance - entity.speed) * sprinting_cost
+        entity.energy -= c
+        if hasattr(entity, "max_age"):
+            self.stat["move_e"] += c
         if direction is None:
             direction = entity.direction
         else:
@@ -474,9 +481,11 @@ class FastEnvironment(Environment):
         self.update_entity_position(agent, move_distance, move_direction)
         self._dirty_agents = True
         self.update_entity_direction(agent, turn_angle)
+        self.stat["turn_e"] += min(math.pi, abs(turn_angle)) / (2 * math.pi)
         if spawn_agent and agent.energy > 100:
             self.spawn_agent(parent=agent)
             agent.energy -= 100
+            self.stat["spawn_e"] += 100
 
     # --- perception ----------------------------------------------------------------------------------------
     def _observe(self, c, skip_agent, agents, fruits, trees, predators):
@@ -572,12 +581,17 @@ class FastEnvironment(Environment):
         for agent in self.agents:
             agent.age += dt
             agent.energy -= dt * self.b_drain[min(max(int(agent.x), 0), W1), min(max(int(agent.y), 0), H1)]
+            self.stat["live_e"] += dt
             if agent.energy <= 0:
                 self.kill_agent(agent)
                 a_alive[a_index[id(agent)]] = False
+                self.stat["starve_n"] += 1
+                if agent.age > agent.max_age:
+                    self.stat["old_death_n"] += 1
                 continue
             if agent.age > agent.max_age:
                 agent.energy -= 0.01 * agent.age
+                self.stat["old_e"] += 0.01 * agent.age
             ai = a_index[id(agent)]
             self.agent_observations[agent.agent_id] = self._observe(agent, ai, A, F, T, P)
             if F[0]:
@@ -587,6 +601,8 @@ class FastEnvironment(Environment):
                     fruit = F[0][i]
                     agent.energy = min(agent.max_energy, agent.energy + fruit.energy)
                     self.score += fruit.energy / 1000
+                    self.stat["fruit_n"] += 1
+                    self.stat["fruit_e"] += fruit.energy
                     self.remove_fruit(fruit)
                     f_alive[i] = False
 
@@ -611,6 +627,9 @@ class FastEnvironment(Environment):
                     agent = A[0][i]
                     predator.energy = min(predator.max_energy, predator.energy + agent.energy)
                     self.score -= agent.energy / 100
+                    self.stat["kill_n"] += 1
+                    self.stat["kill_e"] += agent.energy
+                    self.kill_log.append((self.time, agent.agent_id, id(predator)))
                     self.kill_agent(agent)
                     a_alive[i] = False
             if predator.energy <= 0:
