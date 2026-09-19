@@ -51,7 +51,8 @@ DEFAULT_PARAMS = {
     "tree_stick": 100.0,           # keep the current tree unless another is this much nearer
     "tree_fresh_w": 120.0,         # px a tree with fruit seen in the last 30 s is worth
     "barren_watch": 20.0,          # s sitting at a tree without fruit before giving up on it
-    "tree_forget": 70.0,           # s unseen after which a tree is dropped (trees live ~58 s)
+    "tree_forget": 70.0,
+    "slow_tree_pen": 300.0,        # px-equivalent penalty per unit of speed lost at a tree's spot (swamp 0.5)           # s unseen after which a tree is dropped (trees live ~58 s)
     "breed_start": 25.0,           # no breeding before this (young trees do not fruit yet)
     "food_range_hungry": 200.0,
     "food_range_idle": 150.0,      # food radius for agents not sitting at a fruiting tree
@@ -141,6 +142,7 @@ class FrameMap:
         # exploration: last time each 100 px cell was looked at (world frame only)
         self.seen = np.zeros((16, 12)) if world else None
         self.preds = []            # [x, y, h, last_seen, last_moved, first_seen]
+        self.biome = {}            # (i, j) of 20 px cells -> move penalty observed there
         # hearing raster: tick when each 10 px cell was last well inside someone's hearing radius
         if world:
             self.r_off = (0.0, 0.0)
@@ -214,6 +216,35 @@ class FrameMap:
             elif abs(qx * uy - qy * ux) / ln < 5:
                 return True
         return False
+
+    def local_edges(self, x, y, reach):
+        """Array (n, 6) of the faces registered in cells within `reach` of (x, y)."""
+        i0, i1 = int(math.floor((x - reach) / EDGE_CELL)), int(math.floor((x + reach) / EDGE_CELL))
+        j0, j1 = int(math.floor((y - reach) / EDGE_CELL)), int(math.floor((y + reach) / EDGE_CELL))
+        idx = set()
+        for i in range(i0, i1 + 1):
+            for j in range(j0, j1 + 1):
+                idx.update(self.edge_cells.get((i, j), ()))
+        if not idx:
+            return None
+        return np.array([self.edges[k] for k in idx], float)
+
+    @staticmethod
+    def blocked_many(E, xs, ys):
+        """Vectorised `blocked` for points (xs, ys) against the faces E from `local_edges`."""
+        if E is None:
+            return np.zeros(xs.shape, bool)
+        x1, y1, x2, y2, nx, ny = (E[:, k][None, :] for k in range(6))
+        ux, uy = x2 - x1, y2 - y1
+        ln = np.hypot(ux, uy)
+        qx, qy = xs[:, None] - x1, ys[:, None] - y1
+        along = (qx * ux + qy * uy) / ln
+        inside = (along > -5) & (along < ln + 5)
+        known = (nx != 0) | (ny != 0)
+        depth = qx * nx + qy * ny
+        hit_known = known & (depth > -5) & (depth < 35)
+        hit_thin = (~known) & (np.abs(qx * uy - qy * ux) / ln < 5)
+        return (inside & (hit_known | hit_thin)).any(axis=1)
 
     # --- raster --------------------------------------------------------------------------------------------
     def stamp(self, x, y, r, tick):
@@ -344,6 +375,7 @@ class Hive:
             for m, _ in group:
                 if not m.stale:
                     fm.stamp(m.x, m.y, m.hear, self.tick)
+                    fm.biome[(int(m.x // 20), int(m.y // 20))] = BIOME_PENALTY.get(m.biome, 1.0)
         # frames nobody is in any more are dropped
         live_frames = set(by_frame)
         for fid in [f for f in self.maps if f not in live_frames]:
@@ -500,6 +532,9 @@ class Hive:
             b.tfirst, b.tlast = np.concatenate((b.tfirst, a.tfirst)), np.concatenate((b.tlast, a.tlast))
             b.tfruit, b.twatch = np.concatenate((b.tfruit, a.tfruit)), np.concatenate((b.twatch, a.twatch))
             _dedupe_trees(b)
+        for (i, j), pen in a.biome.items():
+            x, y = i * 20 + 10.0, j * 20 + 10.0
+            b.biome.setdefault((int((c * x - s * y + tx) // 20), int((s * x + c * y + ty) // 20)), pen)
         for pr in a.preds:
             b.preds.append([c * pr[0] - s * pr[1] + tx, s * pr[0] + c * pr[1] + ty, pr[2] + phi, pr[3], pr[4],
                             pr[5]])
@@ -953,7 +988,8 @@ class Hive:
                 k = int((np.abs(fm.tx - q.target[0]) + np.abs(fm.ty - q.target[1])).argmin())
                 if dq[k] < d[k]:
                     occ[k] = True
-        score = d - p["tree_fresh_w"] * fresh
+        slow = np.array([1.0 - fm.biome.get((int(x // 20), int(y // 20)), 1.0) for x, y in zip(fm.tx.tolist(), fm.ty.tolist())])
+        score = d - p["tree_fresh_w"] * fresh + p["slow_tree_pen"] * slow
         score[~ok | occ] = np.inf
         score[(~fresh) & (d > p["barren_reach"])] = np.inf
         j = int(score.argmin())
@@ -969,61 +1005,73 @@ class Hive:
         return float(fm.tx[j]), float(fm.ty[j])
 
     def _flee(self, m, fm, threats):
-        """Keep awake predators in front (|bearing| < 90 deg makes them circle instead of charge beyond 90 px)
-        and back off; inside 90 px it charges anyway, so get out at the best affordable speed."""
+        """Pick the escape direction by looking 6 ticks ahead: 16 headings, movement slowed by the terrain
+        the colony has walked (swamp 0.5, river 0.3) and stopped by known walls, each awake threat charging
+        straight at 15 px/tick. Face the nearest awake predator while doing it (beyond 90 px that makes it
+        circle instead of charge)."""
         m.mode = "flee"
         p = self.p
-        fx = fy = 0.0
         awake = [q for q in threats if q[2]]
         nearest = min(awake or threats, key=lambda q: q[0])
-        for d, bearing, is_awake, sees in threats:
-            w = (2.0 if is_awake else 1.0) / max(d - 10.0, 5.0) ** 2
-            fx -= math.cos(bearing) * w
-            fy -= math.sin(bearing) * w
-        for k in fm.near_edges(m.x, m.y):
-            x1, y1, x2, y2, nx, ny = fm.edges[k]
-            if not (nx or ny):
-                continue
-            ux, uy = x2 - x1, y2 - y1
-            ln = math.hypot(ux, uy)
-            qx, qy = m.x - x1, m.y - y1
-            along = (qx * ux + qy * uy) / ln
-            if -20 < along < ln + 20:
-                depth = qx * nx + qy * ny
-                if -60 < depth < 0:
-                    w = 0.5 / max(-depth, 6.0) ** 2
-                    fx -= nx * w
-                    fy -= ny * w
+        d0, b0, awake0, sees0 = nearest
+        if not awake0:
+            speed = min(m.speed, 5.0) if d0 < p["alert_rest"] else 0.0
+        elif d0 < p["charge_zone"]:
+            speed = m.speed
+            if m.speed < 15.5 and m.energy > m.max_energy / 5 + 15:
+                speed = m.sprint
+        elif d0 < p["keep_dist"]:
+            speed = min(m.speed, p["backoff_speed"])
+        else:
+            speed = min(m.speed, p["drift_speed"])
+        rel = wrap(b0 - m.h)
+        turn = max(-1.2, min(1.2, rel)) if abs(rel) > p["face_tol"] else 0.0
+        if speed <= 0.0:
+            return {"agent_id": m.aid, "move_distance": 0.0, "move_direction": 0.0, "turn_angle": float(turn),
+                    "spawn_agent": False}
+        K = 6
+        dirs = np.linspace(-PI, PI, 16, endpoint=False)
+        ux, uy = np.cos(dirs), np.sin(dirs)
+        px = np.full(16, m.x)
+        py = np.full(16, m.y)
+        stuck = np.zeros(16, bool)
+        blocked_pen = np.zeros(16)
+        thr = [(m.x + q[0] * math.cos(q[1]), m.y + q[0] * math.sin(q[1])) for q in threats if q[2]]
+        if not thr:
+            thr = [(m.x + d0 * math.cos(b0), m.y + d0 * math.sin(b0))]
+        T = np.array(thr, float)                       # (n_threats, 2), charging predators
+        tx = np.repeat(T[None, :, 0], 16, axis=0)
+        ty = np.repeat(T[None, :, 1], 16, axis=0)
+        dmin = np.full(16, np.inf)
+        E = fm.local_edges(m.x, m.y, speed * K + 45.0) if fm.edges else None
+        here = BIOME_PENALTY.get(m.biome, 1.0)
+        bget = fm.biome.get
+        for k in range(K):
+            pen = np.array([bget((int(x // 20), int(y // 20)), here) for x, y in zip(px.tolist(), py.tolist())])
+            nx = px + ux * speed * pen
+            ny = py + uy * speed * pen
+            blk = fm.blocked_many(E, nx, ny)
+            blocked_pen += blk
+            stuck |= blk
+            px = np.where(stuck, px, nx)
+            py = np.where(stuck, py, ny)
+            dx, dy = px[:, None] - tx, py[:, None] - ty
+            dd = np.hypot(dx, dy)
+            step = np.minimum(15.0, dd)
+            tx = tx + dx / np.maximum(dd, 1e-9) * step
+            ty = ty + dy / np.maximum(dd, 1e-9) * step
+            dmin = np.minimum(dmin, np.hypot(px[:, None] - tx, py[:, None] - ty).min(axis=1))
+        score = dmin - 30.0 * blocked_pen
+        # prefer staying out of swamps/rivers at the end of the look-ahead
+        end_pen = np.array([fm.biome.get((int(x // 20), int(y // 20)), 1.0) for x, y in zip(px.tolist(), py.tolist())])
+        score -= 40.0 * (1.0 - end_pen)
+        # do not run into other agents (a charging predator takes whoever is closest)
         for q in self.mem.values():
             if q.aid != m.aid and q.frame == m.frame:
-                qx, qy = m.x - q.x, m.y - q.y
-                dq = math.hypot(qx, qy)
-                if 0 < dq < 60:
-                    w = 0.3 / max(dq, 8.0) ** 2
-                    fx += qx / dq * w
-                    fy += qy / dq * w
-        if fx == 0 and fy == 0:
-            fx, fy = -math.cos(nearest[1]), -math.sin(nearest[1])
-        ang = math.atan2(fy, fx)
-        d0, b0, awake0, sees0 = nearest
-        # Walking costs 0.05/px whatever the speed, so move only as fast as the threat requires:
-        # a charging predator does 15 px/tick; one we face beyond 90 px circles in at ~10.6 px/tick.
-        if not awake0:
-            dist = min(m.speed, 5.0) if d0 < p["alert_rest"] else 0.0
-        elif d0 < p["charge_zone"]:
-            dist = min(m.speed, p["charge_speed"])
-            if m.speed < 15.5 and m.energy > m.max_energy / 5 + 15:     # cannot out-walk a sprinting predator
-                dist = min(m.sprint, p["charge_speed"])
-        elif d0 < p["keep_dist"]:
-            dist = min(m.speed, p["backoff_speed"])
-        else:
-            dist = min(m.speed, p["drift_speed"])
-        # face the nearest awake predator: beyond 90 px this makes it circle instead of charging
-        rel = wrap(b0 - m.h)
-        turn = 0.0
-        if abs(rel) > p["face_tol"]:
-            turn = max(-1.2, min(1.2, rel))
-        return {"agent_id": m.aid, "move_distance": float(dist), "move_direction": float(wrap(ang - m.h)),
+                dq = np.hypot(px - q.x, py - q.y)
+                score -= np.where(dq < 40.0, 20.0, 0.0)
+        j = int(score.argmax())
+        return {"agent_id": m.aid, "move_distance": float(speed), "move_direction": float(wrap(dirs[j] - m.h)),
                 "turn_angle": float(turn), "spawn_agent": False}
 
     def _retire(self, m, fm):
