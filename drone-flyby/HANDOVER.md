@@ -1301,3 +1301,35 @@ direct port to any tunnel.
   Two other attempts sent exactly one frame and then stopped, returning a 404
   to the submitter while our service answered 200. **Do not spend the one-shot
   evaluation while the service is behaving like that.**
+
+### Latency to the evaluator costs score through the CAMERA, not through frames
+
+Found 19 Sep after moving to a second rented box. The evaluator is **Hetzner
+Helsinki** (`46.62.240.126`, visible in `serve.log`). A camera command has a
+*tighter* deadline than a frame does: it must arrive before the evaluator
+renders the next frame, not merely inside the 333 ms budget. Miss it and the
+camera does not move, two consecutive frames arrive at the identical view, and
+the sweep loses coverage.
+
+| box | Helsinki RTT | stalled camera steps | score |
+|---|---|---|---|
+| first box | ~30 ms | 0.4 % / 1.2 % / 3.6 % | 0.5027 / 0.5065 / 0.5113 |
+| Bulgaria | 58-89 ms | **5.7 % / 7.8 %** | **0.4569 / 0.4235** |
+
+The Bulgarian box was *not* short of bandwidth (47.7 MB/s from Helsinki, 10x
+what the 1.5 MB-per-frame stream needs), *not* slow to answer (47-50 ms median,
+flat across the whole run, including the last frames) and on the second run not
+even short of frames (248/249). It simply could not get camera commands back in
+time, and that alone cost **0.05-0.08**.
+
+**Before spending any validation attempt on a new host**, run the gate in
+`tools/bootstrap_remote.sh`: 100 TCP connects to `hel1-speed.hetzner.com`,
+reject if the median is over 35 ms or the p95 is more than 2.5x the median.
+Jitter matters as much as the median -- one late packet is one missed deadline.
+Prefer hosts near Helsinki (Estonia, Finland, Sweden) and prefer server
+hardware over consumer boards, which are usually residential lines.
+
+This also re-reads the old "a rented box scores ~0.02 lower than the Mac" note:
+part of that was the Cloudflare tunnel, and part was almost certainly where the
+box was. A count of repeated consecutive views is the diagnostic; it takes
+seconds and needs only the recording.
