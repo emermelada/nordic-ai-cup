@@ -114,7 +114,8 @@ def run_episode(args):
                           "rank_hist": {}, "breeders": 0, "trait_n": 0,
                           "cap_sum": 0.0, "cap_max": 0.0, "vis_sum": 0.0, "vis_max": 0.0,
                           "pred_kills": 0.0, "pred_e_sum": 0.0, "npred": 0, "ticks": 0,
-                          "lockout": 0, "e_move": 0.0, "cmd": 0.0, "income": 0.0}
+                          "lockout": 0, "e_move": 0.0, "cmd": 0.0, "income": 0.0,
+                          "mode": {}, "mode_e": {}}
         return buckets[b]
 
     for i in range(horizon):
@@ -170,8 +171,27 @@ def run_episode(args):
             d = min(max(dist, 0.0), spr)
             if energy < max_e / 5.0 and d > spd:
                 d = spd
-            b["e_move"] += d * 0.05 if d <= spd else spd * 0.05 + (d - spd) * 0.5
+            _em = d * 0.05 if d <= spd else spd * 0.05 + (d - spd) * 0.5
+            b["e_move"] += _em
             b["cmd"] += dist
+
+            # MOVEMENT MODE, attributed the same way as the gates: read the latch the controller
+            # just set, otherwise recompute the branch conditions from the state.
+            _m = bc._MEM.get(aid) or {}
+            if _m.get("flee"):
+                mode = "flee"                      # preempts everything (early return)
+            elif float(P.get("forage_nearest", 0.0) or 0.0) > 0.0 and fruits:
+                mode = "forage"                    # direct-to-nearest-fruit override
+            elif fruits and min(f["distance"] for f in fruits) < 40.0:
+                mode = "close"
+            elif ef < float(P.get("low_energy_frac", 0.35) or 0.0):
+                mode = "low"
+            elif fruits:
+                mode = "walk"
+            else:
+                mode = "blind"                     # the 0.12 x speed crawl
+            b["mode"][mode] = b["mode"].get(mode, 0) + 1
+            b["mode_e"][mode] = b["mode_e"].get(mode, 0.0) + _em
 
             deficit = max(0.0, min(1.0, (TARGET - gpop) / TARGET)) if TARGET > 0 else 0.0
             rf = RF - (RF - RF_MIN) * deficit * URGENCY
@@ -302,6 +322,8 @@ def run_episode(args):
             "vis_mean": b["vis_sum"] / max(1, b["trait_n"]),
             "vis_max": b["vis_max"],
             "lockout_frac": b["lockout"] / max(1, b["n"]),
+            "mode_pct": {k: 100.0 * v / max(1, b["n"]) for k, v in b["mode"].items()},
+            "mode_e_pct": {k: 100.0 * v / max(1e-9, b["e_move"]) for k, v in b["mode_e"].items()},
             "e_move_per_tick": b["e_move"] / max(1, b["n"]),
             "cmd_per_tick": b["cmd"] / max(1, b["n"]),
             "income_per_tick": b["income"] / max(1, b["ticks"]),

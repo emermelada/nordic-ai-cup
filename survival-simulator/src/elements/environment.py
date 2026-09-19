@@ -664,7 +664,9 @@ class Environment:
                 # DETERMINISM: local_fruits is a set of objects (address-dependent iteration order),
                 # so the eat order -- and therefore the energy arithmetic and who eats what first --
                 # varied between otherwise-identical episodes. Sort for a reproducible order.
-                local_fruits = sorted(local_fruits, key=lambda f: (round(float(f.x), 6), round(float(f.y), 6)))
+                local_fruits = sorted(local_fruits, key=lambda f: (round(float(f.x), 6),
+                                                                   round(float(f.y), 6),
+                                                                   int(f.fruit_id)))
                 for fruit in reversed(local_fruits):
                     dx = agent.x - fruit.x
                     dy = agent.y - fruit.y
@@ -710,7 +712,17 @@ class Environment:
                 self.update_entity_direction(predator, angle)
 
             # Handle predator interactions with agents
-            local_agents = list(self._get_local_agents(predator)) # convert to list for indexing
+            # DETERMINISM (local measurement fix): this list is built from a SET of entity objects,
+            # whose iteration order depends on memory addresses and therefore differs between
+            # processes. `touching` is then indexed into it, so when a predator touches TWO agents
+            # in one tick, WHICH ONE IT EATS FIRST depended on the process. That is not a policy
+            # effect and it is not reproducible: it made identical configurations diverge on 3-5 of
+            # 40 seeds in this session, and is the same defect the fruit/observation sorts above
+            # already fix. Sorting by position (agent_id breaks ties) makes the eat order stable.
+            # This is a MEASUREMENT fix; it changes no logic and does not touch the served policy.
+            local_agents = sorted(self._get_local_agents(predator),
+                                  key=lambda a: (round(float(a.x), 6), round(float(a.y), 6),
+                                                 int(a.agent_id)))
             if local_agents:
                 agent_positions = np.array([[agent.x, agent.y] for agent in local_agents])
                 predator_position = np.array([predator.x, predator.y])

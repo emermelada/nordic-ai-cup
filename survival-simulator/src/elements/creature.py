@@ -125,7 +125,12 @@ class Creature:
             # diverged (same seed + same policy gave 601/626/611/678 across 4 runs). Sorting by
             # position makes the observation order stable, which also makes the policy's float
             # arithmetic (fruit vectors, edge repulsion sums) reproducible.
-            obj_list = sorted(obj_list, key=lambda o: (round(float(o.x), 6), round(float(o.y), 6)))
+            # `sorted` is STABLE, so equal keys keep the SET's iteration order, which is
+            # memory-address dependent. A position tie therefore reintroduced exactly the
+            # nondeterminism this sort exists to remove, so tie-break on a stable per-entity id.
+            obj_list = sorted(obj_list, key=lambda o: (round(float(o.x), 6), round(float(o.y), 6),
+                                                       getattr(o, "agent_id",
+                                                               getattr(o, "fruit_id", -1))))
 
             # Vectorize x and y
             xs = np.fromiter((o.x for o in obj_list), float) 

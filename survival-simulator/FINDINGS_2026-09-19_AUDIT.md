@@ -232,3 +232,82 @@ cancel. Only `flip_rate`, `away_frac` and the fruit histogram are per-agent-vali
 
 Run from `/opt/nac_h2h` with `/opt/nacv/bin/python` (64 cores; the repo's own params.json is the
 wrong baseline — see §1.3).
+
+---
+
+# 7. THE SIMULATOR WAS NOT DETERMINISTIC — ROOT CAUSE FOUND AND FIXED
+
+**This is the most consequential finding of the session, because it invalidates the error bars on
+every paired comparison this project has ever run.**
+
+Symptom: two arms with a PROVABLY identical policy (a byte-identical duplicate, and later a
+zero-head residual that provably adds exactly 0.0 to every action) produced different survival on
+3-5 of 40 seeds. The failing seed SET changed between runs.
+
+Cause: three places built a list from a SET of entity objects and then used the iteration order.
+Python set order for objects follows memory addresses, which differ per process, so the episodes
+were not reproducible across processes:
+
+1. `environment.py:713` `local_agents = list(self._get_local_agents(predator))` — `touching` is
+   indexed into this list, so when a predator touched TWO agents in one tick, **which one it ate
+   first depended on the process**.
+2. `creature.py:128` `sorted(obj_list, key=lambda o: (round(x,6), round(y,6)))` — `sorted` is
+   STABLE, so equal keys kept the set's address order.
+3. `environment.py:667` the same stable-sort tie problem on the fruit eat order.
+
+(The previous session had already patched the *outer* symptom — sorting fruits and observations —
+but left the tie-break and the predator path.)
+
+Fixes applied (all documented in-source as MEASUREMENT fixes; no logic changed, and the served
+`best_controller.py` is untouched):
+- sort the predator's local agents by `(x, y, agent_id)` before the eat loop
+- add a stable tie-breaker (`agent_id` / `fruit_id`) to the entity and fruit sorts
+
+**Verified:** an A/A control (identical policy, two independent arms, 40 seeds) went from **5/40
+differing to 0/40.** The simulator is now deterministic.
+
+Consequences:
+- The project's "A/A noise floor of 0.1-3%, occasionally 6 of 20" was **entirely this bug**.
+- Several arms that "reversed sign between screen and holdout" were partly measuring this.
+- A paired difference on a fixed seed block is now a REAL difference on those seeds, so cheap
+  screens carry information they previously did not.
+- The remaining, and now sole, methodological risk is **overfitting to the seed block**, which is
+  why the search below rotates screening blocks and reserves a held-out block.
+
+# 8. ML TRACK — WHAT WAS SETTLED, AND THE LOOP NOW RUNNING
+
+**Encoding adequacy probe** (`probe_enc.py`, 40 seeds, held-out, predicting the incumbent's OWN
+action):
+
+| encoder | dim | heading R^2 | blind-regime R^2 | blind MAE |
+|---|---|---|---|---|
+| V1 current | 31 | 0.086 | 0.029 | 1.48 rad |
+| V2 richer frame | 61 | 0.083 | 0.024 | 1.49 rad |
+| V3 = V2 + 5 memory scalars | 66 | **0.570** | **0.575** | **0.78 rad** |
+
+Fifty-nine extra world-state features bought NOTHING; five scalars of the incumbent's OWN internal
+state (held wander heading, last steer, flee latch) bought a 24x improvement. 82.4% of agent-ticks
+are blind, and in that regime the incumbent's heading is a function of its own history. **The
+missing capability is state, not width -> recurrent, not wider.** (`wander_weight` is also the most
+influential knob in the whole controller: zeroing it costs -35.2%.)
+
+**A BC-cloned recurrent net does NOT reproduce the incumbent** (`clone_rec.py`, 40 unseen paired
+seeds): mean 6,566 vs 7,892 = **-16.8%, W12/L28**, floor collapsing 3,649 -> 649. Compounding error.
+This is why the learned component must be a RESIDUAL and never a replacement.
+
+**Zero-change contract verified** (`rec_resid.py --stage zero`): with a zero-initialised head the
+residual reproduces BASE **bit-identically on 40/40 seeds.** The ML system structurally cannot
+silently replace the base policy.
+
+**Now running** (`ml_loop.py`, OpenAI-ES over residual GRUs, both boxes, ~24 h):
+- 64-core box: correction authority +/-0.50 rad; serving VPS: +/-0.15 rad (explicitly testing
+  whether the ML is handcuffed by its authority bound).
+- fitness = survival ticks, paired against candidate #0 (the exact incumbent) on the SAME seeds.
+- screening blocks ROTATE every generation; a held-out block is never used for selection.
+- correction AUTHORITY USE is monitored (mean and max |correction| as a fraction of the bound) so a
+  null result can be distinguished from "the net was clipped".
+- ledger is content-cached and resumable; a crashing candidate is recorded invalid and skipped.
+
+**Provenance warning:** `/opt/nac_scan` on the serving box held the PRE-C6 params
+(`evade_mode 1.0`, no `gs_*`) — the same trap as the repo. It was corrected to the deployed GS set
+before anything was launched there. Check `best_controller/params.json` on ANY host before use.
