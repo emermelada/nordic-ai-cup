@@ -43,8 +43,14 @@ def main() -> int:
     parser.add_argument('--url', default='http://localhost:9053/predict',
                         help='The /predict URL exactly as it will be submitted.')
     parser.add_argument('--frames', type=int, default=40, help='Recorded frames to replay.')
-    parser.add_argument('--expect-models', type=int, default=2,
-                        help='How many sets of weights should be loaded (2 = the pair).')
+    # Default None, not 2. It was 2 while three models were served, so the check
+    # passed with a model missing - the exact failure this tool exists to catch.
+    # /api already reports what was asked for; believe that, not a constant.
+    parser.add_argument('--expect-models', type=int, default=None,
+                        help='How many sets of weights should be loaded. '
+                             'Default: models_requested, as reported by /api.')
+    parser.add_argument('--expect-grow', action='store_true',
+                        help='Also require box growth to be configured (the served default).')
     args = parser.parse_args()
 
     failures = []
@@ -60,11 +66,30 @@ def main() -> int:
     print(f'          alt={status.get("model_alt")} device={status.get("device")} '
           f'camera={status.get("camera")} recording={status.get("recording")}')
     loaded = status.get('models_loaded')
+    requested = status.get('models_requested')
+    expected = args.expect_models if args.expect_models is not None else requested
     if loaded is None:
         failures.append('/api has no models_loaded: the service predates this check, rebuild it')
-    elif loaded != args.expect_models:
-        failures.append(f'models_loaded is {loaded}, expected {args.expect_models}')
-    print(f'          models_loaded={loaded} (expected {args.expect_models})')
+    elif expected is None:
+        failures.append('/api reports neither models_requested nor --expect-models given')
+    elif loaded != expected:
+        failures.append(f'models_loaded is {loaded}, expected {expected}')
+    print(f'          models_loaded={loaded} (expected {expected}) imgsz={status.get("imgsz")}')
+
+    # The answer policy, not just the weights. HANDOVER's pre-attempt protocol
+    # says to read these before every attempt; until now nothing checked them.
+    grow = status.get('box_grow')
+    print(f'          box_grow={len(grow) if grow else 0} classes '
+          f'cap={status.get("box_grow_cap")} level0={status.get("level0_weight")}')
+    print(f'          inspect={status.get("inspect")} det_conf={status.get("det_conf")} '
+          f'track_conf={status.get("new_track_confidence")} both_models={status.get("both_models")}')
+    print(f'          floor_zero={status.get("floor_zero")} '
+          f'miss_penalty={status.get("miss_penalty")}')
+    if args.expect_grow:
+        if not grow:
+            failures.append('box_grow is empty: the pre-growth baseline is being served')
+        elif len(grow) != 16:
+            failures.append(f'box_grow covers {len(grow)} classes, expected 16')
 
     # The longest recording, not whichever sorts last: most runs here are short
     # probes, and replaying one frame measures nothing but the cold start.

@@ -163,6 +163,16 @@ def hello():
         'level0_weight': flyby.LEVEL_WEIGHT[0],
         'unseen_decay': flyby.UNSEEN_DECAY,
         'new_track_confidence': flyby.NEW_TRACK_CONFIDENCE,
+        # Everything below is here because an arm that runs with the switch off
+        # looks exactly like an arm that ran with it on. DRONE_INSPECT in
+        # particular had no way to be confirmed from outside the process at all.
+        'inspect': flyby.INSPECT,
+        'det_conf': flyby.DETECTION_CONFIDENCE,
+        'both_models': bool(flyby.BOTH_MODELS),
+        'floor_zero': flyby.FLOOR_ZERO,
+        'floor_size_tol': flyby.FLOOR_SIZE_TOL if flyby.FLOOR_ZERO else None,
+        'floor_all': flyby.FLOOR_ALL_CLASSES or None,
+        'miss_penalty': flyby.MISS_PENALTY,
         'model_loaded': flyby._model is not None,
         'camera': flyby.CAMERA,
         'recording': bool(RECORD_DIR),

@@ -275,6 +275,56 @@ BOX_GROW = _parse_box_grow(os.environ.get('DRONE_BOX_GROW', ''))
 # enough that it can never outrank a real answer in any frame. That may be
 # worth one run; naming classes at 0.01 is not.
 FLOOR_ALL_CLASSES = float(os.environ.get('DRONE_FLOOR_ALL', '0'))
+# The floor variant the comment above calls unmeasured, built so that it cannot
+# do what FLOOR_ALL_CLASSES did. Every unnamed class gets a box at confidence
+# EXACTLY 0.0, which is strictly below every real answer we emit (measured on
+# the best v4 run: 3272 answers, none below 0.0015, none at the 0.001 clip).
+#
+# Probed against faster_coco_eval itself on 19 Sep, because this rests on the
+# scorer's exact semantics rather than on an argument about them:
+#   * maxDets is 100 PER IMAGE PER CATEGORY, and we emit at most 8 of one class
+#     in a frame, so the band has room;
+#   * 150 junk boxes a frame at score 0.0 left a perfect class at AP 1.000 -
+#     detections ranked strictly below every real one cannot lower AP;
+#   * a class with no answers at all went 0.000 -> 0.121 when ten true boxes
+#     rode in on such a band.
+# Both conditions are load-bearing: tied at 0.0 and listed AFTER the junk, the
+# true box was truncated away by maxDets and the class fell back to 0.000. So
+# the band is appended after the real answers are sorted, never sorted with
+# them, and the 0.0 must not pass through the np.clip(..., 0.001, ...) that
+# every other confidence here does.
+#
+# What it is for: small_launcher was emitted 8 times in 247 frames. Its AP of
+# 0.000 is a no-answer problem, and no re-ranking can fix a class we never
+# answer for. The score is a mean over the classes present in the truth, so a
+# class we never name is a free zero -- which matters more on the evaluation
+# flight, whose class mix is unknown, than on validation.
+FLOOR_ZERO = os.environ.get('DRONE_FLOOR_ZERO', '0') == '1'
+# A track only gets floor boxes for classes whose size is plausible for it:
+# emitting hangar on a 30 px track spends precision for nothing, and AP is
+# precision at the recall achieved. The tolerance is deliberately loose because
+# the validation flight renders objects at roughly 0.5-0.9x their Helsinki size
+# -- too tight a filter drops the very class the band exists to answer.
+# Lowering it raises the band's precision; 1.8 is the value to try second.
+FLOOR_SIZE_TOL = float(os.environ.get('DRONE_FLOOR_SIZE_TOL', '2.5'))
+# Median official box size per class, sqrt(w*h) in source pixels, measured on
+# the 25 official Helsinki frames (src/helsinki/annotations) on 19 Sep. Used as
+# a size prior only, never as a box.
+CLASS_SIZE = {
+    'condor': 169.5, 'hangar': 154.3, 'helicopter': 104.4, 'jammer': 37.7,
+    'jet_plane': 79.5, 'large_launcher': 128.0, 'large_tower': 63.0,
+    'medium_launcher': 46.0, 'medium_plane': 52.4, 'mine_roller': 56.4,
+    'small_launcher': 25.7, 'small_plane': 46.4, 'small_tower': 58.5,
+    'spacecraft': 46.4, 'ta-ta': 23.3, 'tank': 48.5,
+}
+# Average precision is ranking and nothing else, and two signals the tracker
+# already holds never reach the reported confidence: best_confidence is a
+# running maximum over sightings that never falls, and `misses` -- the number of
+# times the camera looked straight at a track and did not find it -- only ever
+# deletes the track at MAX_MISSES. So a track refuted five times is ranked
+# exactly as high as one just seen. 1.0 is the served behaviour; 0.85 is the
+# value to try.
+MISS_PENALTY = float(os.environ.get('DRONE_MISS_PENALTY', '1.0'))
 # A box partly outside the view is a guess at the object's size: report it
 # lower, and let any whole sighting replace it.
 TRUNCATED_WEIGHT = 0.5
@@ -718,6 +768,9 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
 
 def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlybyPredictionDto]:
     annotations = []
+    # Kept apart from `annotations` on purpose: the floor band is appended after
+    # the real answers are sorted, never sorted together with them. See FLOOR_ZERO.
+    floor = []
 
     def scaled(box):
         if BOX_SCALE == 1.0:
@@ -766,6 +819,10 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         # one, and a negative exponent would *raise* the confidence above
         # best_confidence instead of decaying it.
         base *= UNSEEN_DECAY ** max(0, frame - track.last_seen)
+        # Times the camera looked at this track and did not find it. At the served
+        # MISS_PENALTY of 1.0 this is a no-op, byte for byte.
+        if MISS_PENALTY != 1.0 and track.misses:
+            base *= MISS_PENALTY ** track.misses
         if track.truncated:
             base *= TRUNCATED_WEIGHT
         # A track can hold only zero-weight votes (LEVEL_WEIGHT of 0 for the
@@ -800,7 +857,30 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
                         bbox=[round(c, 6) for c in bbox],
                         confidence=round(float(np.clip(base * FLOOR_ALL_CLASSES, 0.001, 1.0)), 4),
                     ))
+        if FLOOR_ZERO:
+            # sqrt(w*h) of the track box, against the class's Helsinki size prior.
+            side = math.sqrt(max(1e-6, float((box[2] - box[0]) * (box[3] - box[1]))))
+            for name in OBJECT_CLASSES:
+                if name in named:
+                    continue
+                prior = CLASS_SIZE.get(name)
+                if prior and not (1 / FLOOR_SIZE_TOL <= side / prior <= FLOOR_SIZE_TOL):
+                    continue
+                bbox = reported(box, name)
+                if bbox is None:
+                    continue
+                # Exactly 0.0, and deliberately NOT through the np.clip above:
+                # clipping it to 0.001 would put it back in the band our own
+                # faint answers live in, which is what cost 0.009 last time.
+                floor.append(DroneFlybyPredictionDto(
+                    object_id=name,
+                    bbox=[round(c, 6) for c in bbox],
+                    confidence=0.0,
+                ))
     annotations.sort(key=lambda a: -a.confidence)
+    # After the sort: every real answer outranks the whole band, and the 500 cap
+    # then drops floor boxes rather than anything we actually believe.
+    annotations.extend(floor)
     return annotations[:500]
 
 
