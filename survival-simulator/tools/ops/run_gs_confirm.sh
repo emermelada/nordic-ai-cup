@@ -23,17 +23,26 @@ sys.path.insert(0, '/opt/nac_gs/experiments')
 sys.path.insert(0, '/opt/nac_gs')
 import mechanism_screen as ms
 
-base = ms.load_params()
+base = json.load(open('/opt/nac_gs/best_controller/params.json'))
 out = [{"id": "BASE_gs", "params": dict(base)}, {"id": "BASE_dup", "params": dict(base)}]
 for k in ("en_top2", "en_top3", "en_top4", "en_top3_late", "en_top3_rescue3", "vis_ctrl"):
-    if k in ms.ARMS:
-        p = dict(base)
-        p.update(ms.ARMS[k])
-        out.append({"id": k, "params": p})
-    else:
-        print(f"  (arm {k} not defined in mechanism_screen.ARMS - skipped)")
+    if k not in ms.ARMS:
+        print(f"  (arm {k} not in mechanism_screen.ARMS - skipped)")
+        continue
+    out.append({"id": k, "params": ms.arm_params(k)})
+
+# HARD GUARD: the previous version of this script called a non-existent function, produced a candidate
+# file with ZERO arms, and the lane ran happily as "1 candidate (baseline only)" - a completely useless
+# 40-seed run that looked successful. Refuse to launch unless the arms are real and actually differ.
+keys = set(base)
+inert = [c["id"] for c in out[2:]
+         if all(c["params"].get(k) == base.get(k) for k in keys | set(c["params"]))]
+if inert:
+    raise SystemExit(f"ABORT: these arms are byte-identical to the baseline (silently inert): {inert}")
+if len(out) < 7:
+    raise SystemExit(f"ABORT: built only {len(out)} candidates; expected >= 7 - not launching")
 json.dump(out, open('/opt/nac_gs/experiments/par_gs_confirm.json', 'w'), indent=1)
-print(f"wrote par_gs_confirm.json: {len(out)} arms (2 baselines incl. A/A + {len(out)-2} candidates)")
+print(f"wrote par_gs_confirm.json: {len(out)} arms (2 baselines incl. A/A + {len(out)-2} real candidates)")
 PY
 
 tmux kill-session -t gsconfirm 2>/dev/null || true
