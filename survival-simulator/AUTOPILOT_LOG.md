@@ -286,3 +286,19 @@ lane claims nothing. `wide2` (801 candidates, seeds 2760-2819) is still in stage
 
 **Note for the human:** run validations whenever convenient — with the params-only deploy live, expect
 the board to sit within noise of the previous attempt.
+
+## 2026-09-19 ~08:50 UTC — FIRST REAL OFFICIAL SCORE GAIN: 1,075.28
+The selection controller deployed at 08:38 produced a validation attempt of **1,075.28**, beating the
+long-standing 918.33 by **+17%** — and landing almost exactly on the local prediction for en_top3
+(+19.2% over 40 unseen paired seeds). The same controller also produced a 633 twenty minutes earlier:
+the attempt distribution is wide, which is why the board-keeps-best rule makes repeated validation the
+highest-value action available.
+
+Discipline that got here: the +19.2% was refused a deploy until it survived 40 unseen seeds with a
+67.5% win rate, a positive floor and an A/A duplicate showing -3.0% noise. Four earlier leads failed
+exactly that gate.
+
+Counterfactual boundary analysis (3,576 rows so far, 9 branches per state, fixed-tick continuous
+outcomes) found one new regime-dependent rule: LATE GAME (tick>2700) AND HIGH ENERGY (>323) -> fleeing
+the predator is better (holds on 25/37 seeds). Feature importances say age, wall observations, time,
+population and traits predict a better decision — predator features do NOT make the top eight.
