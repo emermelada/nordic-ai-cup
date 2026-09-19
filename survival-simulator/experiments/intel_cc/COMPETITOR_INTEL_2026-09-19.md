@@ -209,7 +209,32 @@ when reproduction is the binder?", not "choose a different percentile".
 **Do NOT do:** widen a search radius (there isn't one) · sprint to distant fruit (net-negative) ·
 gate on "within X of best" (already impossible here) · copy 90→500 px (no analogue).
 
-## 7. Limits
+## 7. Cross-check against the other agent's independent ablation
+
+After my runs finished, the parallel agent's `HANDOFF.md` disclosed the kills above and published its own
+single-constraint ablation (different harness `bottleneck.py`, 4 seeds, control 9,420 ticks, an older
+param set). The two experiments were built independently and agree where they overlap:
+
+| intervention | their ablation (4 seeds) | my arms (12-16 paired seeds) | agree? |
+|---|---|---|---|
+| perfect vision (they set `vision_radius=5000`; my true 360° oracle) | **−17.8%** | ORACLE_FRUIT **−35%** | **yes, same sign** |
+| no predators | +8.4% | ORACLE_NOPRED −4% (8W/8L, ~neutral) | weak conflict (their n=4) |
+| block reproduction | **−82.5%** | aging-OFF **+17%** (the mirror image: both say the birth/age economy binds) | **yes, same mechanism** |
+| lower movement cost | **+33.5% (their largest gain)** | break-even analysis: walking is the profitable mode, sprinting to distance is net-negative | **yes** |
+
+Their summary — *"movement/travel economics is the binding constraint; reproduction is the survival
+MECHANISM (not the disease); predators are minor"* — is consistent with everything measured here, with
+one refinement this session adds: the movement problem is **not** "our agents don't travel far enough"
+(travel/fruit is already 263 units, inside the profitable 333–1000 band). It is that **the speed rule
+spends energy the agent cannot afford whenever food is continuously visible** — the defect the oracle
+exposed, and the reason their 5,000 px "perfect vision" cell came out *negative* while the legal 400 px
+cap came out positive (+1,052).
+
+Also worth carrying forward from their handoff: **the official score is the MEAN of 3 runs** (board keeps
+the best attempt), so the floor matters as much as the peak — which is why the p10 columns above are
+reported next to the means.
+
+## 8. Limits
 
 Local x86 and macOS both ran and agreed on ordering and signs, but magnitudes differ ~10–20%, and the
 grader's seeds are harder than ours — treat these as **ranking evidence**, not predicted board points.
