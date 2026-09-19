@@ -38,6 +38,16 @@ Start a lane with:
 `tmux new-session -d -s NAME "cd /opt/nac/experiments && SDL_VIDEODRIVER=dummy /opt/nacv/bin/python <cmd> 2>&1 | tee run_NAME.log"`
 **Always export `PYTHONHASHSEED=0`** (sched.py and replay.py set it themselves; other scripts may not).
 
+**SEED-BOOKKEEPING GOTCHA (cost a whole report its seed labels on 2026-09-19).** In `sched.py` the LAST
+stage always runs on `--holdout` (default `1301-1340`) and ignores `--seeds`, so a one-stage lane
+(`--stages 40:18000`) runs wherever `--holdout` points, no matter what `--seeds` says. Always pass
+`--holdout` explicitly, and afterwards VERIFY the seeds actually used, from the cache, before writing
+any verdict down:
+`/opt/nacv/bin/python -c "import json;d=set();[d.add(json.loads(l)['seed']) for l in open('/opt/nac/results/cache.jsonl') if json.loads(l).get('cand')=='ARM'];"` — or see `experiments/calib_check.py`.
+Also: the injected `BASE` arm is the *deployed* controller, so after a deploy `BASE` and a candidate
+parameterised exactly like the deployment are the SAME arm (they will tie on ~34/40 seeds) — that is an
+A/A noise floor, not a result.
+
 ## THE WAKE-UP LOOP
 
 1. **Status sweep** (one ssh per box):
@@ -85,6 +95,13 @@ on unseen seeds before it means anything.
   disagreed on up to 6 of 20 seeds. So: (a) always include a duplicate baseline in a run to MEASURE the
   noise floor for that run, (b) 20 seeds screens only, (c) 40-80 seeds to claim, (d) prefer the FLOOR
   (p10) over the mean, because the official score is a mean of 3 runs and the bad tail dominates.
+  **MEASURED 2026-09-19 (three parameter-identical arms in one 40-seed batch, `calib_check.py`):**
+  per-seed paired noise sd ≈ **50 board pts**, mean offset ±10, and only **5-6 of 40 seeds disagree at
+  all** (the rest tie exactly). So at 40 seeds a claimed gain below ~±25 board pts is noise; and a
+  candidate whose per-seed paired sd is 5x that (e.g. M_no_tree, sd 250) is genuinely jittery, not merely
+  noisy: its 3-seed board mean swings ±145 (sd/√3), and P(net loss on a validation) ≈ 40% even at a
+  +32-pt mean gain. Use score units everywhere: **official points == `score` field in the cache**
+  (`score = ticks/10 + fruit_energy/1000`); the ledger's `mean`/`p10` columns are raw TICKS.
 * **Mechanism before score.** An arm must move the mechanism it claims to move (travel per fruit, fleet
   max_energy, lockout fraction) before its survival number is believed. `mechanism_screen.py`,
   `ledger_analysis.py`, `winner_signature.py`, `survival_autopsy.py` exist for this.

@@ -1,4 +1,54 @@
 
+## 2026-09-19 05:32 UTC — M_no_tree does not replicate; tree-attraction DOSE CURVE found (0.1 is the peak)
+(status sweep 05:06-05:32 UTC; all times UTC)
+
+**Serving box:** container up, in-container `best_controller.py` = `f90cb4e3…` = the sha256 file,
+`params.json` still the C6 parameters, `https://survival.zaitzev.com/` **200 in 15 ms**, no tmux lanes,
+load 0.05. Nothing touched.
+
+**Seed bookkeeping was wrong in the last two reports (now fixed in AUTOPILOT.md).** `sched.py` runs its LAST
+stage on `--holdout` and IGNORES `--seeds`, so a one-stage lane runs wherever `--holdout` points. Verified
+the REAL seed sets from `results/cache.jsonl`: c6conf actually ran seeds **2960-2999** (not 2880-2919 as
+reported), c6minus stage 2 ran **2700-2739** (not 2700-2759), the deploy gate ran 2580-2619 (not
+2580-2639). The *results* stand (the sets were disjoint and unseen as claimed); only the labels were wrong.
+Also confirmed: `BASE` (the injected baseline) is the *deployed* controller, so in `c6conf`/`c6conf2` the
+arms `BASE`, `BASE_C6` and `BASE_C6_dup` are three PARAMETER-IDENTICAL arms — a free triple A/A.
+
+**MEASURED NOISE FLOOR (this is the calibration the project was missing).** Three identical arms, 40 seeds,
+two independent batches (`experiments/calib_check.py`, score units == official points):
+mean offsets **+10.4 / −10.1** and **+9.6 / +3.7**, per-seed paired **sd 44-52**, min −50…−122, and only
+**5-7 of 40 seeds disagree at all** (the rest tie exactly). So a 40-seed claim below ~±25 board points is
+noise, and this is *why* C6's +1.0%/+1.2% over the old controller is 0 ± noise: the deploy was effectively
+neutral, as predicted.
+
+**M_no_tree (tree_weight 0.25→0) FAILS replication — do not carry it further.** Three independent fresh
+40-seed sets, paired vs the deployed controller: **+50.3** (seeds 2960-2999, W24/L16), **+14.7** (2700-2739,
+W21/L19), **+4.3** (3000-3039, W23/L17) — the effect decays set by set. Pooled 120 seeds: mean **+23.1**,
+win **68/52 = 57%**, but paired p10 **−275** and per-seed sd **238** (5x the A/A sd) → **P(net LOSS on a
+3-seed board validation) = 43%**. Not deployable; its earlier +7.6% was a favourable seed set.
+
+**NEW LEAD — tree_weight dose curve, coherent on TWO instruments.** `c6conf2` (seeds 3000-3039, 40 paired,
+24 workers, 16.2 min) ran tree_weight 0.0/0.1/0.5/−0.25 against the deployed 0.25:
+`M_tree01` (0.1) **+42.7 board pts (W23/L17 = 58%)**, `M_no_tree` (0.0) +4.3, `M_tree05` (0.5) −4.6,
+`M_tree_neg` (−0.25) **−21.5** (W19/L20). Independently, the mechanism screen (`tree_mech.py`, 3 traced
+seeds, ~550 agent-observations/arm) says travel-per-fruit: **0.1 → 0.92x** (better), 0.0 → 0.99x,
+0.25 → 1.00x (base), 0.5 → 1.14x, **−0.25 → 1.15x** (worse). Survival and the mechanism peak at the SAME
+place (0.1) and the wrong-direction control degrades BOTH — that is a dose response, not a fluke, and it
+also explains why "delete tree attraction entirely" (M_no_tree) was a mirage: 0.0 is not the optimum.
+Caveat kept in view: M_tree01's paired p10 is still **−209** (fat losing tail), so no deploy.
+
+**Also closed:** `M_no_disperse` **flipped sign** on fresh seeds — −48.5 board pts (W13/L26) vs its earlier
++8.7% (W24/L16): a coin-flip arm, strike it from the shortlist. `M_no_flee` −77.0 (W13/L26). `wide2` still
+in stage 1 (2350/2403 episodes), so no wide verdict yet.
+
+**LAUNCHED: `c6conf3`** (exp box, 24 workers, seeds **3050-3089** = 4th fresh set, ~14 min): deployed
+`BASE_C6` + A/A duplicate + a finer dose around the peak — tree_weight **0.05 / 0.1 / 0.15**. If the 0.1
+peak holds here (i.e. M_tree01 ≥55% wins on 80 pooled fresh seeds) the deploy question moves to the floor,
+not the mean. `wide2` still holds ~26 workers (load 18-50).
+
+**Human:** nothing is blocked on you; no DNS change needed. Running a validation whenever convenient is
+still worthwhile (the board keeps our best attempt) but expect it within noise of the previous one.
+
 ## 2026-09-19 ~05:30 UTC — FIRST QUALIFIED DEPLOY (C6)
 - 40-seed held-out gate (seeds 2580-2639, never screened on): **C6_blind_noreserve_noevade +18.1%**
   (W27/L13 = 67.5% wins, floor p10 +1,977, variance 3.35M vs BASE 4.69M); **C3_no_reserve +13.7%**
