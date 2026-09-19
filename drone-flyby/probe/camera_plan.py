@@ -45,7 +45,7 @@ def _flyby_patterns():
     import importlib
     import os
     out = {}
-    for name in ('full', 'top', 'toprow', 'top_mostly', 'full0', 'quad0'):
+    for name in ('full', 'top_mostly', 'full0', 'quad0', 'entry_ring', 'entry_ring_late'):
         os.environ['DRONE_CAMERA'] = name
         import flyby
         importlib.reload(flyby)
@@ -101,8 +101,13 @@ DIVISOR = {0: 4.0, 1: 2.0, 2: 1.0}
 # Measured on real detections (probe/carry_test.py, affine_fitted column): the
 # chance a carried box still overlaps the truth at IoU 0.5, by frames since the
 # last sighting. A camera that never looks back is only as good as this curve.
-CARRY_HIT = {0: 0.97, 1: 0.956, 3: 0.961, 6: 0.926, 10: 0.916, 15: 0.871,
-             20: 0.858, 25: 0.768, 30: 0.481, 40: 0.30, 60: 0.15}
+CARRY_HIT_FITTED = {0: 0.97, 1: 0.956, 3: 0.961, 6: 0.926, 10: 0.916, 15: 0.871,
+                    20: 0.858, 25: 0.768, 30: 0.481, 40: 0.30, 60: 0.15}
+# probe/carry_test.py, model3d+oracle_z column: what an exact carry with the
+# object's own elevation delivers. This is the precondition the L2 ring rests on.
+CARRY_HIT_EXACT = {0: 0.98, 1: 0.961, 3: 0.967, 6: 0.956, 10: 0.963, 15: 0.930,
+                   20: 0.915, 25: 0.884, 30: 0.556, 40: 0.40, 60: 0.20}
+CARRY_HIT = CARRY_HIT_FITTED
 
 
 def carry_hit(gap):
@@ -192,6 +197,7 @@ def main():
     ap.add_argument('--frames', type=int, default=249)
     ap.add_argument('--margin', type=float, default=0.6)
     ap.add_argument('--curve', default=str(ROOT / 'data/probe/detect_curve.json'))
+    ap.add_argument('--carry', default='fitted', choices=['fitted', 'exact'])
     a = ap.parse_args()
 
     data = json.loads(Path(a.fit).read_text())['objects']
@@ -205,6 +211,8 @@ def main():
     names = a.pattern or list(PATTERNS)
     print(f'{len(objects)} fitted objects, {len(frames)} frames\n')
     print(f'{"pattern":12s} {"never":>6s} {"lag med":>8s} {"shown":>7s} {"ceiling":>8s} {"expected":>9s}')
+    global CARRY_HIT
+    CARRY_HIT = CARRY_HIT_EXACT if a.carry == 'exact' else CARRY_HIT_FITTED
     curve = load_curve(a.curve) if Path(a.curve).exists() else None
     rows = [evaluate(n, objects, frames, a.margin, curve) for n in names]
     for r in sorted(rows, key=lambda r: -r['expected']):

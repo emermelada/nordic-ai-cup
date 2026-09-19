@@ -174,6 +174,12 @@ UNSEEN_DECAY = 0.97
 # 4 (share 0.03) 0.132.
 RUNNER_UPS = 4
 RUNNER_UP_SHARE = 0.03
+# How much a track's reported confidence is scaled by how CLEANLY its class
+# votes agree. Average precision reads ordering only, so two tracks with the
+# same peak detection confidence rank identically today even when one has a
+# clean 0.95 vote share for its class and the other is split 0.35/0.33/0.32.
+# base *= share ** CLASS_SHARE_POWER, so 0.0 is exactly the served behaviour.
+CLASS_SHARE_POWER = float(os.environ.get('DRONE_SHARE_POWER', '0'))
 # Class scores below this are not counted as votes.
 MIN_VOTE_SCORE = 0.02
 # Every reported box is scaled about its centre by this. Objects in the
@@ -410,6 +416,36 @@ SWEEPS = {
     # Top row mostly, with an occasional look back at the bottom middle for
     # objects the first pass missed. TM -> BM is 1080 px, just inside the limit.
     'top_mostly': FULL_SWEEP + [TL, TM, TR, TM, TL, TM, TR, TM, BM, TM] * 80,
+    # Level-2 entry band: every new object at NATIVE resolution.
+    #
+    # The L2 move limit is 551 px and adjacent L2 centres 480 px apart tile the
+    # full width, so a pure-L2 sweep of the entry band is legal at one step per
+    # frame -- seven frames for the whole width, against the ~7.8 frames an
+    # object spends inside y in [0, 540]. That matters because the object's
+    # size in the transmitted view is what decides detection: measured on real
+    # detections, an object arriving under 10 px is found 30 % of the time and
+    # one arriving at 20-30 px is found 95 % (probe/detect_curve.py). A ta-ta
+    # arrives at ~8 px at L1 and at ~16-23 px at L2.
+    #
+    # The wrap is the cost: 3360 -> 480 is 2880 px, so the ring returns through
+    # two L1 bridges, which are useful looks in their own right. Everything
+    # below the band is then answered from memory, so this rests on the carry
+    # holding up (85.8 % of boxes still hit after a 20-frame gap once the
+    # motion is fitted). Idea from NORDIC_DRONE_PLAN.md section 7.1.
+    'entry_ring': FULL_SWEEP + [TL] + [
+        (2, 480, 270), (2, 960, 270), (2, 1440, 270), (2, 1920, 270),
+        (2, 2400, 270), (2, 2880, 270), (2, 3360, 270),
+        (1, 2880, 540),          # 3360,270 -> 2880,540 is 550.7, inside 551
+        (2, 1920, 270),          # 2880,540 -> 1920,270 is 996.9, inside 1102
+        (1, 1440, 540),          # 1920,270 -> 1440,540 is 550.7, inside 551
+    ] * 80,
+    # The same ring, entered only after several full sweeps, so objects already
+    # on screen at frame 1 are acquired before the camera commits to the band.
+    'entry_ring_late': FULL_SWEEP * 5 + [TL] + [
+        (2, 480, 270), (2, 960, 270), (2, 1440, 270), (2, 1920, 270),
+        (2, 2400, 270), (2, 2880, 270), (2, 3360, 270),
+        (1, 2880, 540), (2, 1920, 270), (1, 1440, 540),
+    ] * 80,
 }
 # Chosen on validation runs with v3 (same flight, same model):
 # full 0.130, quad0 0.126, full0 0.119, dwell 0.117, top 0.108.
@@ -902,13 +938,16 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         # and its camera command -- a silent, total loss that looks like a
         # quiet frame. Fall back to equal shares instead.
         top_vote = ranked[0][1] or 1.0
+        total_vote = sum(v for _, v in ranked) or 1.0
+        # How much of this track's evidence points at its winning class.
+        clean = (ranked[0][1] / total_vote) ** CLASS_SHARE_POWER if CLASS_SHARE_POWER else 1.0
         named = set()
         for rank, (name, vote) in enumerate(ranked[:1 + RUNNER_UPS]):
             share = vote / top_vote
             if rank and share < RUNNER_UP_SHARE:
                 break
             named.add(name)
-            confidence = base if rank == 0 else base * 0.9 * share
+            confidence = base * clean if rank == 0 else base * clean * 0.9 * share
             bbox = reported(box, name)
             if bbox is None:
                 continue
