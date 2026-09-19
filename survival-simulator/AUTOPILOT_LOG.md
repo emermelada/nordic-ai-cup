@@ -302,3 +302,78 @@ Counterfactual boundary analysis (3,576 rows so far, 9 branches per state, fixed
 outcomes) found one new regime-dependent rule: LATE GAME (tick>2700) AND HIGH ENERGY (>323) -> fleeing
 the predator is better (holds on 25/37 seeds). Feature importances say age, wall observations, time,
 population and traits predict a better decision — predator features do NOT make the top eight.
+
+## 2026-09-19 ~10:05 UTC — discovery family CLOSED (3/3 rules dead); the LIVE deploy's edge does NOT replicate; the serving tree is stale
+
+**Status sweep.** Serving box healthy and idle: container up since 08:36, in-container controller
+`252f0ba1`, `GET /` 200 in 9-35 ms, `POST /predict` 422 (correct for empty payload) in 8.9 ms, load 0.07,
+no experiments on it. Experiment box was nearly idle (one 1-core corpus replay) — 63 cores free, so I
+launched. `wide2`, `neuro`, `roles`, `revert160`, `wide1` had all completed earlier; `c6conf*` results
+were already folded into the 08:50 entry. **Verdicts closed this cycle:**
+
+**The counterfactual-boundary direction is dead (3 rules, 3 rejections).** The 4,864-row / ~940-state
+decision-boundary analysis produced exactly three leaves that held on a majority of seeds, and all three
+have now been tested as rule arms at 40 paired seeds with an in-run A/A duplicate:
+* phase-speed (`psp_mode`: WALK while tick<=900, SPRINT 900-2700, "fruit in sight"): **+0.35%, W20/L20,
+  p10 -467** vs that run's A/A floor (+0.69% / +1.68%). Indistinguishable from zero -> **no deploy**, and
+  the knob stays default-OFF in `best_controller.py`.
+* late-game flee (tick>3900 & energy>345 & e_frac<=0.79): `A1_evade_wealthy` **-0.52%, W21/L19, p10 -746**;
+  its high-energy and short-energy variants -9.5% and -1.16% — against A/A -0.10%.
+* (the earlier late-flee-at-2700 boundary: -0.5%, W21/L19, floor -746, reported in the 10:53 CEST commit.)
+So a single-agent counterfactual advantage of +300 ticks does **not compose into a fleet advantage** — the
+same failure mode the oracle found (fleet-level "winning" there is a lockout/knockout threshold, not a
+behaviour). This is a mechanism finding, not bad luck: the last four discovery-derived leads all died at
+the fleet level. **Do not re-open the discovery/boundary family.**
+
+**INTEGRITY FINDING — fix before any further deploy.** The live artifact exists ONLY inside the running
+container. `/opt/nac/best_controller.py` on BOTH boxes is the OLD C6 controller `f90cb4e3` (43,308 B,
+mtime 2026-09-18 22:45), and `nac-survival-vps:latest` was built 2026-09-18 22:46 from exactly that file +
+the old params (no `genome_select`). The serving controller `252f0ba1` + `DEPLOY_GS_params` were
+`docker cp`'d into the container at **08:36:44** by `deploy_when_idle.sh`; the host tree and the image were
+never updated, so `/opt/nac/best_controller.sha256` now *lies about what is being served*. Two live
+consequences: (a) any `docker rm/run`, image rebuild or compose-up silently **reverts the fleet to C6**
+(the rule-3 trap, and the boards would quietly stop seeing the selection controller); (b) the repo
+controller `d6e2041e` is AHEAD of the served one and adds `gs_min_known/gs_rescue_pop/gs_phase_tick/
+gs_late_energy_mult/gs_ttl` — these are NOT inert for `genome_select=1`, so a "no-change redeploy" from the
+repo would silently CHANGE the served policy. I archived the served pair verbatim as
+`experiments/served_controller_252f0ba1.py` + `experiments/served_params_252f0ba1.json` (sha256 verified)
+so the artifact that scored 1,075.28 is recoverable. I did **not** touch either box's served artifact.
+
+**THE HEAD-TO-HEAD: is the live deploy actually better than what it replaced? (160 fresh paired seeds)**
+Because `/opt/nac` holds the stale C6 controller, running "BASE = deployed params" in that tree silently
+ignores `genome_select`/`gs_*` (rule 7). So the lane ran in an **isolated tree `/opt/nac_h2h`** holding the
+TRUE in-container controller + params: arms `BASE`(=live deploy) / `DEP_dup`(A/A) / `C6_pre`(=live params
+minus `genome_select`+`gs_*`) / `C6_pre_dup`, seeds **4000-4159** (verified contiguous and fresh from the
+cache), 18000 ticks, 640 episodes @56 workers, 20.4 min, plus SEED CHECK after.
+* live deploy: mean **7990 ticks (799.0 board pts)**, p10 **424.6**, var 7.52M
+* `C6_pre`: **7711 (-3.5%)**, W78/L82 (49%), p10 **502.9**, var 5.45M; `C6_pre_dup` -4.6%, W76/L84, p10 502.9
+* A/A `DEP_dup`: **-0.8% (60 ticks), only 8/160 seeds disagree** -> this run's noise floor is tiny (sd ~37
+  board pts/seed), so the comparison is well powered.
+* paired: **+28.5 board pts, sd 346, se 53, t = 1.05**, 51% wins -> **NOT significant**. Bootstrapped 3-run
+  board mean (what the official attempt samples): p10 **-230**, p50 **+29**, p90 **+283**; P(live better)
+  = **0.56**.
+**Consequences.** (1) The deploy gate's own headline (+19.2%, W27/L13, ~6x its noise floor) does **not**
+replicate: the real edge over the controller it replaced is ~+29 board pts +/- 53, i.e. ~0. (2) The board's
+1,075.28 is **not** evidence of a real improvement over 918.33: a +157-pt board move is well inside the
+single-attempt 3-run sd of ~200 pts, so it is mostly attempt variance, and the honest expectation is a
+board number indistinguishable from the old one. (3) The live controller has the **fatter right tail**
+(p90 +283) but the **worse floor** (p10 424.6 vs 502.9). Since the board **keeps our best attempt**, tail
+beats floor: **keep it deployed** and put the remaining effort into *repeated validation*, not into more
+controller churn. That also matches the user's rule — a claimed gain below ~25 board pts at 40 seeds is noise.
+
+**Launched:** `dephead2` in the same isolated tree — identical arms, seeds **4200-4359** (fresh), 28 workers
+(exp box was already carrying the parallel agent's `orac` + `res2` lanes; total ~60 workers). It doubles the
+head-to-head to 320 paired seeds, halving the SE to ~37 board pts, and is the cheapest measurement that can
+still overturn a decision. ETA ~35-45 min; harvest next cycle.
+
+**Two warnings for whoever wakes next.** (i) **TREE STALENESS:** never run a lane in `/opt/nac` believing
+`BASE` is the deployed controller — it is the old C6 code; use `/opt/nac_h2h`, which is pinned to the
+in-container `252f0ba1`. (ii) The parallel agent's `res1`/`res2` lane (`par_res.json`: `R_zero`, `R_s0.02_*`)
+is screening **reserve_frac**, which this project closed on 2026-09-19 ("reserve/repro floors"). Its stage-1
+numbers look exciting (`R_s0.02_03` +204 board pts over BASE) but they are **10-seed screens** and its rows
+are landing in the shared cache at `/opt/nac_h2h/results/cache.jsonl` (my verdict is unaffected: I verified
+my four arms used exactly 4000-4159). A 10-seed screen must not become a deploy.
+
+**Human actions:** run validations whenever convenient — repeatedly, this is the only lever with expected
+value now. No DNS change needed, nothing is blocked on you. Expect a board number in the 900-1,150 band.
+
