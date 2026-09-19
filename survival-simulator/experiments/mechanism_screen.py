@@ -145,7 +145,7 @@ def main():
                     tpf.append(a["travel"] / a["fruits"])
                     lock_fracs.append(a["lockout_frac"])
                     per_agent.append(a["fruits"] / max(1, a["ticks"]) * 1000)
-                    e_caps.append(a["e_max"])
+                    e_caps.append(a.get("max_e_trait") or a["e_max"])
             rows.append({"arm": "base (deployed)", "seeds": len(seeds),
                          "travel_per_fruit": st.median(tpf) if tpf else None,
                          "lockout_frac": st.median(lock_fracs) if lock_fracs else None,
