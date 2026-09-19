@@ -60,6 +60,7 @@ DEFAULT_PARAMS = {
     "t_mid": 900.0, "t_late": 1800.0,
     "pop_min": 6,                  # below this anyone may breed
     "breed_colony_e": 100.0,       # no births (except old-age dumps) while the colony's mean energy is below
+    "brake_min_pop": 15,           # ... applied only to colonies at least this big (the early boom)
     "weak_food_w": 0.3,            # fruit value for agents that will not breed (weak genome / old and poor)
     "endgame_t": 2926.0,           # a child born now (75 energy) lives idle to t=3000
     # foraging
@@ -864,7 +865,7 @@ class Hive:
         # colony brake: while the average agent is poor the colony is at its food limit; more mouths now
         # means everybody starves together a minute later (boom and bust)
         mean_e = sum(m.energy for m, _ in order) / max(n, 1)
-        brake = mean_e < p["breed_colony_e"] and n >= p["pop_min"]
+        brake = mean_e < p["breed_colony_e"] and n >= p["brake_min_pop"]
         for pri, _, aid, reserve in cands:
             m = alive[aid][0]
             if pri >= 2 and preds_seen and m.speed < 15.5:   # slower than a predator: keep the sprint unlocked

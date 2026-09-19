@@ -48,6 +48,12 @@ SPACE = {
     "scan_rate": (0.0, 0.5, False),
     "spread_pen": (0.0, 400.0, False),
     "barren_watch": (5.0, 60.0, True),
+    "breed_colony_e": (40.0, 200.0, False),
+    "charge_zone": (80.0, 140.0, False),
+    "face_tol": (0.2, 1.5, False),
+    "tree_stick": (0.0, 300.0, False),
+    "slow_tree_pen": (0.0, 600.0, False),
+    "alert_always": (40.0, 120.0, False),
 }
 INT_KEYS = {"pop_min", "pop_cap_early", "pop_cap_mid"}
 NAMES = list(SPACE)
