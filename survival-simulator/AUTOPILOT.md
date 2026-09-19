@@ -119,6 +119,13 @@ the next seed block, and the wrong-direction control scored *positive*: sign doe
 the 800-candidate C6 neighbourhood (`wide2`, best +4.0% at W20/L20, reversals from stage 2 → 3);
 the counterfactual oracle even when re-conditioned on healthy snapshots (no consistent winner: flat tally
 over six behaviours, gaps ≤1.2 SE, and 53% of healthy states lose *every* branch to fleet extinction).
+**Added 2026-09-19 08:45:** `gs_energy` breeder selection (`genome_select`>0 with `gs_w_energy` 3.0 —
+`en_top3/4`, `en_top3_late`, `en_top3_rescue3`) plus its vision-weighted control `vis_ctrl`, on the
+86-param controller in `/opt/nac_gs`: pooled over **3 independent 40-seed blocks (120 seeds)** `en_top3`
+= +46.5 board pts, **54% wins**, **p10 −285**, P(3-run board loss) 40%; `vis_ctrl` (control) pooled
++71.8 / 60% — the *control* beats the energy arms, so the trait choice is not the mechanism, and the
++effects are block-dependent (−6.4% on 3420-3459, +19.2% on 2960-3039, +4.5% on 3460-3499). Its 4-seed
++screen read 1.42x ticks — a 4-seed mechanism screen is not a result.
 **The 2026-09-19 C6 deploy is NOT in this list — it was re-validated on 160 fresh seeds: it beats the
 pre-C6 controller on 65% of them (104/160) and every single-delta revert is worse. Keep it deployed.**
 **The shared mechanism behind every failure: each idea cut income or mobility in an access-limited world

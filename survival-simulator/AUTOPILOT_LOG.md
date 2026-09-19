@@ -1,4 +1,74 @@
 
+## 2026-09-19 08:45 UTC — `gs_energy` (energy-capacity breeder selection) REFUTED at 3 independent 40-seed blocks: pooled +46 pts, 54% wins, p10 −285 → NO DEPLOY
+(status sweep 08:03-08:45 UTC; exp box only; three lanes on seeds 3420-3459, 3460-3499 + a read of a parallel agent's 2960-3039 lane)
+
+**Serving box (untouched):** container up since 03:21, in-container `best_controller.py` = `f90cb4e3…` =
+`best_controller.sha256`, `https://survival.zaitzev.com/` **200 in 14 ms**, no tmux lanes, load 0.10.
+Exp box was **completely idle** on arrival (no tmux server, load 0.24) — every lane from the 07:20 cycle
+had already been harvested.
+
+**The lever under test.** `experiments/mechanism_screen.py` (in the parallel agent's `/opt/nac_gs` tree,
+commit `3f36641`) screened `genome_select`-based arms on the 86-param controller: `en_top3/4`,
+`en_top3_late`, `en_top3_rescue3` (breeder ranking weighted to `gs_w_energy` 3.0 vs 0.4 default) and
+`vis_ctrl` (the same selection weighted to VISION — the discriminating CONTROL, reproducing V2's
+weighting). Hypothesis: sprint lockout is `energy < max_energy/5`, so a lineage bred for a bigger energy
+bank is locked out less often (86% of predation deaths are inside lockout). Its 4-seed mechanism screens
+read **1.3-1.5x the baseline's mean ticks** (`en_top3` 8,392 vs base 5,924) — the largest raw signal seen
+in this project, and the reason it was worth a real test.
+
+**First, the harness was verified before anything else (this is what the whole conclusion rests on).**
+`/opt/nac_gs/best_controller/params.json` md5 == `/opt/nac/best_controller/params.json` (77f1b16e…), and
+the 86-param controller with `genome_select` 0.0 (default) is **byte-identical in outcome to the deployed
+controller on seeds 3420-3423** (ticks/scores 6992/718.58, 7365/735.20, 7918/783.39, 8063/803.62 — all
+four match exactly). So "base" in these lanes IS the deployed controller. Every arm's overrides were also
+confirmed to differ from BASE on 8-9 keys (`sched.py` warns on unknown knobs).
+
+**Lane 1 (`gsconf`, seeds 3420-3459, 40 paired, 18000 ticks, 20 workers, /opt/nac_gsc — an isolated copy
+with an empty cache so nothing was recycled):** `en_top4` **−416 (−5.1%), W17/L23, floor −1303**;
+`en_top3` **−517 (−6.4%), W15/L25**; `en_top3_rescue3` **−535 (−6.6%), W14/L26**. A/A duplicate
+`GS_BASE_dup` +37 (+0.5%), **W2/L2/T36 of 40** → only 4 of 40 seeds disagree, per-seed sd ≈50 pts.
+*(First attempt at this lane was killed 08:10 by a tmux `kill-server` from the parallel agent's cleanup —
+25 episodes survived in the cache and were reused. Relaunched on a private tmux socket `-L nacgsc` so no
+cleanup can kill it again.)*
+
+**Lane 2 (`gsconf2`, seeds 3460-3499 = third fresh block, 24 workers, 7.8 min):** `en_top3` **+362
+(+4.5%), W25/L15, floor p10 −692**; `vis_ctrl` +58 (+0.7%), W20/L20, floor −1799; A/A `GS_BASE_dup2`
++10 (+0.1%), W4/L5/T31.
+
+**Lane 3 (parallel agent, `/opt/nac_gs`, `gs_confirm`, seeds 2960-3039, 40 seeds, 26 workers, 15.2 min) —
+read-only, and it CONTRADICTS the two above:** `en_top3` **+1431 (+19.2%), W27/L13, floor +342**,
+`en_top3_rescue3` +1400 (+18.8%), `en_top3_late` +1300 (+17.4%), **`vis_ctrl` +1298 (+17.4%), W29/L11**,
+`en_top4` +1013 (+13.6%). Its own A/A: `BASE_gs` −47, `BASE_dup` −221 (W0/L6/T34).
+
+**Pooled, per-seed, all three blocks (`deploy_gate` logic applied by hand, score units = official points):**
+`en_top3` over **120 seeds** → mean **+46.5 pts**, win **65/120 = 54%**, **p10 −285**, per-seed sd 282,
+**P(net loss on a mean-of-3 board validation) = 40%** via bootstrap. `vis_ctrl` over 80 seeds → mean
+**+71.8**, win **60%**, p10 −291, P(board loss) 33%. **Fails HARD RULE 1 twice** (win <55%, floor <0) —
+and the *vision-only control does better than the energy arms*, so the trait choice is not the mechanism.
+This is the same failure shape as `M_no_tree`, `tree_weight`, `M_no_disperse`: a favourable 40-seed block
+(W27/L13) that reverses elsewhere.
+
+**Mechanism checks all negative too.** (a) The arms did not lower travel/fruit in their own screen
+(`en_top3` 1.03x, `en_top3_late` 0.98x, `rescue3` 0.95x, `en_top4` 0.94x). (b) If the story were "energy
+bank beats the lockout", the gain should concentrate in high-predation seeds — it does not: on the
+parallel agent's block the gain is **+231 pts in the LOW-loss half vs +67 in the high-loss half** (median
+split on BASE `lost`), and on mine the sign is negative in both halves (−60 / −28). (c) The 4-seed screen
+said 1.42x ticks; the paired 40-seed test says −6.4%. **A 4-seed mechanism screen is not a result either.**
+
+**Decision: NO DEPLOY. No revert.** The deployed C6 stays as it is (it was re-validated at 160 fresh
+seeds in the 07:20 cycle). ⚠️ **Warning for whoever wakes next: the `gs_confirm` block alone would PASS
+HARD RULE 1 (+19.2%, W27/L13, floor +342) and a `DEPLOY_GS_params.json` already exists in the repo — do
+NOT deploy off that single block; two independent blocks (3420-3459, 3460-3499) fail it, and the pooled
+120-seed verdict is 54% wins with a negative floor.**
+
+**Launched / left running:** nothing. All three lanes finished; the exp box is idle (the A/A duplicates
+cost 4 arms x 40 seeds and bought the run's noise floor: 4-9 disagreements per 40 seeds, ±50 pts).
+Artifacts committed: `experiments/par_gsconf.json`, `experiments/par_gsconf2.json`,
+`experiments/gsconf_ledger.json`, `experiments/gsconf2_ledger.json`.
+
+**Human:** nothing is blocked on you and no DNS change is needed. The value of a board validation is
+unchanged (best-attempt-wins) but the expectation is still ≈918±noise, i.e. around the previous attempt.
+
 ## 2026-09-19 07:20 UTC — M_no_tree REFUTED at 160 fresh seeds; the C6 DEPLOY is now properly validated (it beats the pre-C6 controller on 65% of 160 fresh seeds)
 (status sweep 06:17-07:19 UTC; all times UTC; two lanes, exp box only)
 
