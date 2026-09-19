@@ -10,6 +10,15 @@ in STATUS_LOCKIN §4 is closed.
 
 ## HARD RULES (violating these has already cost real score)
 
+0. **NEVER RUN EXPERIMENTS OR PARALLEL WORKERS ON THE USER'S MAC.** The Mac is for editing, git and
+   short (<60s) checks ONLY. All compute goes to the remote boxes over ssh:
+       training box: `root@212.147.236.122`  (64 cores; trees /opt/nac, /opt/nac_gs; venv /opt/nacv)
+       serving box:  `root@94.237.34.245`   (32 cores; SERVES ONLY - never experiments unless the
+                     latency guard is armed AND no validation is running)
+   Launch long work with tmux on those hosts and poll log files. Never local multiprocessing.
+   INCIDENT 2026-09-19: a cron-driven run launched `gs_diversity.py` (8 workers, 100% CPU each) on the
+   Mac and RELAUNCHED IT after being killed - the user had to intervene three times.
+
 1. **Never deploy** a controller unless it has (a) ≥40 paired seeds on seeds it was never screened on,
    (b) win rate ≥55%, and (c) a non-negative floor gain (p10 vs baseline). A 20-seed screen is a screen,
    NOT a result. Four headlines in this project died on fresh seeds.

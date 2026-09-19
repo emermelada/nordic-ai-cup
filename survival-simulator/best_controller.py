@@ -60,6 +60,25 @@ DEFAULT_PARAMS = {
     "repro_safe_radius": 330.0,# no predator within this radius to allow spawn
     "repro_popcap": 2,         # max OTHER agents observed before refusing to spawn (dispersion)
     "repro_global_target": 10, # cooperative: don't spawn while estimated global population >= this
+    # --- CARRYING-CAPACITY PHASE SCALING (OFF by default: cc_k0 = 0.0) ---
+    # The receipt for mid-game death (measured, budget.py): production per 1k ticks falls
+    # 9,983 -> 6,963 -> 4,882 while spawns stay 12.5-16.0 per 1k, so the fleet ends up ~75% over the
+    # measured sustainable N (7.2 agents vs 5.9 at 6-9k; 6.3 vs 3.6 at 9-12k) and drains its standing
+    # stock (+1,288 early, then -435, -213, -194). Production halves every 3,000 ticks, so the
+    # reproduction TARGET must halve on the same schedule. cc_k0 = the target at tick 0 (12 matches
+    # the fleet's current early size); cc_floor keeps a lineage alive when the target decays.
+    "cc_k0": 0.0,              # 0 = OFF. Set to ~12 to enable the carrying-capacity schedule.
+    "cc_halflife": 3000.0,     # ticks for the target to halve (= the world's production halflife)
+    "cc_floor": 2.0,           # never drive the reproduction target below this
+    "cc_margin": 1.0,          # safety margin on the measured sustainable population
+    # --- BIOME-AWARE TERRAIN HANDLING (OFF by default: bio_mode = 0.0) ---
+    # The observation payload carries `biome` (src/utils/DTOs.py: "biome: str") and this controller has
+    # never used it. MEASURED map mix: desert 27.9% + river 5.9% produce ZERO fruit; grassland 16.9% is
+    # the best (0.1 fruit/s per 100x100). With agents blind 76-87% of ticks and starvation our largest
+    # death category (32-51%), bio_mode stops paying 100 energy to spawn a body into dead terrain, and
+    # crosses dead terrain fast when nothing is visible.
+    "bio_mode": 0.0,           # 0 = OFF. Set to 1.0 to enable biome-aware spawning + dead-terrain transit.
+    "bio_sprint_frac": 0.85,   # speed fraction used to cross zero-production terrain with nothing visible
     "spawn_cooldown": 400,     # ticks between spawns (anti-overpopulation)
     "spawn_cap": 14,           # hard cap: never spawn while local(other) agents >= this
     # --- population-maintaining reproduction (2026-09-17 survival fix) ---
@@ -733,6 +752,25 @@ def potential_controller(state, P):
         if _lo <= _SIM_TICK <= _hi:
             dist = max(dist, sprint * float(P.get("psp_mid_frac", 1.0) or 0.0))
 
+    # ---- FREE-ROTATION SCAN AT FRUIT (OFF by default: scan_mode = 0.0) ----
+    # Rotation is NOT free but it is CHEAP: turning costs |turn|/(2pi) energy (a 180 deg sweep = 0.5)
+    # versus ~5.5/tick ...[truncated]
+
+    # ---- BIOME-AWARE TERRAIN HANDLING (OFF by default: bio_mode=0) ----
+    # MEASURED: the world is 27.9% desert + 5.9% river, BOTH producing ZERO fruit, while only 16.9% is
+    # grassland at the best rate (0.1 fruit/s/100x100). The observation carries `biome` (see
+    # src/utils/DTOs.py: "biome: str") and this controller has NEVER read it. Agents are blind 76-87%
+    # of ticks and STARVATION is our largest death category (32-51%), so (a) spawning 12-16 agents per
+    # 1k ticks into dead terrain pays 100 energy for a body born where no food is produced, and
+    # (b) idling in dead terrain is pure energy loss. Both facts use information already in the payload.
+    _bio_mode = float(P.get("bio_mode", 0.0) or 0.0) > 0.0
+    _bio_name = str(state.get("biome", "") or "").lower()
+    _bio_dead = _bio_mode and (("desert" in _bio_name) or ("river" in _bio_name))
+    _bio_ok = not _bio_dead
+    # cross zero-production terrain quickly when nothing is visible to eat
+    if _bio_dead and best_fruit is None:
+        dist = max(dist, sprint * float(P.get("bio_sprint_frac", 0.85) or 0.85))
+
     # ---- PHASE policy on movement: in famine, travel energy is unaffordable. With food visible we
     # still approach it (at a reduced rate -- finding food is the whole income), but with NOTHING
     # visible we stop dead rather than wander: walking is 0.05/unit per tick against 0.1/tick
@@ -765,6 +803,21 @@ def potential_controller(state, P):
     spawn = 0.0
     use_repro = P.get("use_repro", True)
     target = P.get("repro_global_target", 10)
+    # ---- CARRYING-CAPACITY PHASE SCALING (OFF by default: cc_k0=0 leaves everything unchanged) ----
+    # MEASURED (budget.py, live controller, x86, 1k-tick windows): production falls 9,983 -> 6,963 ->
+    # 4,882 energy/1k while spawns stay 12.5-16.0/1k, and the standing stock drains (+1,288 early,
+    # then -435, -213, -194). Measured sustainable N: 28.3 -> 10.4 -> 5.9 -> 3.6. Actual N: 10.2 ->
+    # 8.0 -> 7.2 -> 6.3 => the fleet is ~75% OVER carrying capacity at 9-12k ticks, which is the modal
+    # death window. Carrying capacity tracks production, and production halves every 3,000 ticks, so
+    # the reproduction target must halve on the same schedule.
+    # This gates POPULATION GROWTH only - not movement, not income - which is why it is NOT the
+    # refuted thrift/reserve/repro-floor family: those cut per-agent income and lose in an
+    # access-limited world; this stops the fleet from spending its bank on excess bodies.
+    if float(P.get("cc_k0", 0.0) or 0.0) > 0.0:
+        _hl = max(1.0, float(P.get("cc_halflife", 3000.0) or 3000.0))
+        _k = float(P.get("cc_k0", 0.0) or 0.0) * (0.5 ** (_SIM_TICK / _hl))
+        target = max(float(P.get("cc_floor", 2.0) or 0.0),
+                     _k * float(P.get("cc_margin", 1.0) or 1.0))
     # Population-maintaining gate: the energy bar drops toward repro_frac_min as the alive count
     # falls below target, so a depleted team spawns as soon as it can afford it (sim hard-requires
     # energy > 100 at the moment of spawning, so repro_frac_min is kept safely above that).
@@ -833,6 +886,7 @@ def potential_controller(state, P):
             and m["spawn_clock"] <= 0
             and pop_ok
             and crowd_ok
+            and _bio_ok
             and _thin_room
             and gs_ok):
         safe = all(p["distance"] >= P.get("repro_safe_radius", 330.0) for p in preds)
