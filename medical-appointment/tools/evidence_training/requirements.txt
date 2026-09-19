@@ -1,0 +1,8 @@
+# Install into a dedicated venv; retain the host's working CUDA PyTorch build.
+# No Trainer/datasets/accelerate dependency is needed for this small corpus.
+torch>=2.7
+transformers>=4.51,<6
+sentencepiece>=0.2
+protobuf>=4
+numpy>=1.26
+safetensors>=0.4
