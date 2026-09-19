@@ -71,7 +71,19 @@ logger = logging.getLogger(__name__)
 
 MODEL_PATH = Path(os.environ.get('DRONE_MODEL', Path.home() / 'models' / 'drone-yolo11n-v4.pt'))
 # A second set of weights, taking alternate frames. See detect().
-ALT_MODEL_PATH = Path(os.environ['DRONE_MODEL_ALT']) if os.environ.get('DRONE_MODEL_ALT') else None
+# One or more extra sets of weights, comma separated like DRONE_IMGSZ:
+#   DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt
+#   DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt
+# Every model's detections meet in the same object memory, so a run sees the
+# union of what all of them find. Measured offline on the loose truth with box
+# growth on: v4+v6 0.488, v4+v6+v8 0.497. The +0.010 is at the real-run noise
+# floor; the better argument for a third model is that v6 and v8 fail on
+# opposite classes (v8 helicopter 0.659 against v6's 0.527 and spacecraft 0.107
+# against 0.003; v6 hangar 0.871 against v8's 0.505), and the final evaluation
+# is a different flight whose class mix is unknown.
+ALT_MODEL_PATHS = [Path(v) for v in os.environ.get('DRONE_MODEL_ALT', '').split(',') if v.strip()]
+# Kept for the tools and /api, which report a single alternate.
+ALT_MODEL_PATH = ALT_MODEL_PATHS[0] if ALT_MODEL_PATHS else None
 DEVICE = os.environ.get('DRONE_DEVICE', 'cpu')
 # One size, or one per model ("960,1280"). Input size trades big objects for
 # small ones: the same v4 weights at 1280 instead of 960 moved tank 0.043 ->
@@ -399,14 +411,19 @@ def load_model():
         raw_detections(np.zeros((540, 960, 3), np.uint8))
     logger.info('Loaded %s on %s', MODEL_PATH, DEVICE)
 
-    if ALT_MODEL_PATH is not None:
-        if not ALT_MODEL_PATH.exists():
-            logger.error('No alternate model at %s: running one model only', ALT_MODEL_PATH)
-        else:
-            _models.append(_load_one(ALT_MODEL_PATH, size_for(1)))
-            for _ in range(2):
-                raw_detections(np.zeros((540, 960, 3), np.uint8), 1)
-            logger.info('Loaded alternate %s; models alternate per frame', ALT_MODEL_PATH)
+    for index, path in enumerate(ALT_MODEL_PATHS, start=1):
+        if not path.exists():
+            # Do not quietly serve fewer models than asked for: a half-loaded
+            # pair answers 200s with plausible boxes and has cost an attempt.
+            logger.error('No alternate model at %s: running %d model(s) only', path, len(_models))
+            continue
+        _models.append(_load_one(path, size_for(index)))
+        for _ in range(2):
+            raw_detections(np.zeros((540, 960, 3), np.uint8), index)
+        logger.info('Loaded alternate %s at imgsz %d', path, size_for(index))
+    if len(_models) > 1:
+        logger.info('%d models loaded; %s', len(_models),
+                    'all run on every frame' if BOTH_MODELS else 'they take alternate frames')
     return _model
 
 

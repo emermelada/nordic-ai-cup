@@ -67,9 +67,10 @@ def warm_up():
     # Same reasoning for the pair: asking for two models and silently getting one
     # is a working-looking service that quietly serves a different configuration
     # than the one measured. Refuse rather than degrade.
-    if flyby.ALT_MODEL_PATH is not None and len(flyby._models) < 2:
+    if flyby.ALT_MODEL_PATHS and len(flyby._models) < 1 + len(flyby.ALT_MODEL_PATHS):
         raise RuntimeError(
-            f'No alternate model at {flyby.ALT_MODEL_PATH} - check DRONE_MODEL_ALT and the mount')
+            f'Asked for {1 + len(flyby.ALT_MODEL_PATHS)} models, loaded {len(flyby._models)} '
+            f'({", ".join(str(p) for p in flyby.ALT_MODEL_PATHS)}) - check DRONE_MODEL_ALT and the mount')
 
 
 @app.post('/predict', response_model=DroneFlybyPredictResponseDto)
@@ -146,6 +147,8 @@ def hello():
         'uptime': '{}'.format(datetime.timedelta(seconds=time.time() - start_time)),
         'model': str(flyby.MODEL_PATH),
         'model_alt': str(flyby.ALT_MODEL_PATH) if flyby.ALT_MODEL_PATH else None,
+        'models': [str(flyby.MODEL_PATH)] + [str(p) for p in flyby.ALT_MODEL_PATHS],
+        'models_requested': 1 + len(flyby.ALT_MODEL_PATHS),
         # 2 means the pair is really alternating; 1 means one model is serving
         # every frame, whatever DRONE_MODEL_ALT was set to.
         'models_loaded': len(flyby._models),
