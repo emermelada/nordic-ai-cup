@@ -165,3 +165,95 @@ objects corrupt precision and AP, but cannot turn a real object into a miss.
 `--carry` interpolates each object's own trajectory (quadratic, 2.6 px RMS over
 21-31 frame spans) to score the carried frames too, which is where the misses
 turned out to be. **Never quote a precision or an AP from it.**
+
+---
+
+# Handover: what a fresh session needs to do this
+
+Written for whoever implements this on a new box. Read this section top to
+bottom; it is self-contained. `flyby.py` is unmodified, `BEST-WORKING-VERSION`
+is intact, nothing is committed.
+
+## New files in this repo (untracked)
+
+| file | what it is |
+|---|---|
+| `tools/recall_replay.py` | replays a recording through `flyby.predict` from a cached detection set; reports RECALL ONLY, with the miss broken into hit / near miss / nothing. `--carry` also scores the frames between observations. |
+| `tools/camera_sim.py` | simulates a whole 249-frame flight closed-loop through the served code, rendering views out of `data/scene`. `--camera NAME` or `--pattern "0:1920,1080 1:960,540 ..."` (injects `flyby.SWEEP`, does not edit `flyby.py`). |
+| `tools/mine_scene.py` | mines a complete truth file from `data/scene` at native resolution, keeping only chains of >= 6 consecutive sightings linked by the ground motion. |
+
+## What a mined truth CAN and CANNOT settle
+
+`tools/mine_scene.py` fixes completeness, not convention. Its boxes are still
+*our* boxes, so it is blind to box growth in exactly the way `score_offline.py`
+already was -- growing the answers and the truth by the same factor cancels.
+
+It does unlock three things that were unmeasurable before:
+
+* **precision and ranking** -- how many of the ~59 boxes we send per frame are
+  real objects, and where our real detections sit in the global per-class order;
+* **which classes we miss entirely**, which is the macro average's real currency
+  (every class is 1/12 of the score whatever its volume);
+* **AP for the camera cadence**, so the ordering inside the L0 family can be
+  settled instead of left at "inside noise".
+
+Calibrate it before trusting it: score a recorded run whose REAL score is known
+(0.5270 for the served config, `b5544ad3` / `89f751a2`) and see how far the
+offline AP sits from it. The old truth read 0.226 against a real 0.1445.
+
+## The one rule that governs all of this
+
+`training/validation_objects.json` has 32 objects and the scene holds many more,
+so **offline precision and AP are measurement error, and recall is not**. An
+unlabelled object corrupts precision; it cannot turn a real object into a miss.
+Every number in this document is recall for that reason. If `mine_scene.py` has
+produced `training/scene_objects.json`, check its calibration against a known
+real score BEFORE trusting any AP from it.
+
+## Order of work on the new box
+
+```bash
+# 0. sanity: the service must serve what you asked for
+tools/arm.sh ...                      # refuses to hand over a wrong service
+curl -s localhost:PORT/api            # models_loaded, imgsz, box_grow
+
+# 1. the paired camera A/B -- this is the recommendation
+DRONE_CAMERA=full   <served command>  # 3 complete runs
+DRONE_CAMERA=full0  <served command>  # 3 complete runs
+# 249/249 or discard the run. Two missing frames cost 0.026.
+
+# 2. only if full0 wins: the best measured cadence, one line in SWEEPS
+#    'row0': [TL, TM, TR, (0, 1920, 1080), BR, BM, BL, (0, 1920, 1080)]
+
+# 3. v9, when it exists: as an ADDITION to the stack, never a replacement.
+#    v8 failed as a replacement and paid as an addition; so did imgsz 1600.
+#    A 5th pass at 1280 is ~8 ms and safe; a 5th at 3200 blew the 333 ms
+#    budget (514 ms, score 0.264, 115 frames never answered).
+```
+
+## Do not spend runs re-deriving these
+
+Measured today, all negative:
+
+| idea | result |
+|---|---|
+| per-pass box growth | the 4 passes size boxes identically (1.050/1.038/1.061/1.078) |
+| refitting the `MOTION` prior | offline recall 0.873 -> 0.873; the online fit already converges |
+| the near-miss band | ~1.3x artifact of the truth file being tighter than the grader |
+| per-pass class-vote weighting | recall 0.834 -> 0.834; zeroing the weak passes *hurts* (0.704) |
+| runner-up confidence ceiling | the boxes outranking real ones are top-1 answers, not runner-ups |
+| camera policy as a non-issue | wrong: it was the one real lever, see the top of this file |
+
+Previously measured dead and still dead: Level 2 / hybrid camera, the 0.0 floor
+band, growth cap > 1.3, `AGREEMENT_WEIGHT`, `MISS_PENALTY`, `HITS_BASE`,
+`DRONE_DET_CONF=0.003`, a 5th pass at 3200.
+
+## The structure of the problem, for whoever tunes next
+
+* Ground moves ~60 px/frame down; objects enter at the top and live ~33 frames.
+* A Level-1 view is exactly a quarter of the frame, so coverage is ~25 %
+  whatever the pattern. An object is inside a view ~10 of its 33 frames.
+* **When an object is in view we answer it 70 times out of 71.** Detection is
+  not the constraint; coverage is. Every genuine miss is a carried frame.
+* Carried boxes are centred to 0.08 box sides, so the motion model is fine.
+* We send ~59 boxes per frame against a 500 cap, so the answer budget is free.
