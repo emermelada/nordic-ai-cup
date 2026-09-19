@@ -79,6 +79,8 @@ DEFAULT_PARAMS = {
     # crosses dead terrain fast when nothing is visible.
     "bio_mode": 0.0,           # 0 = OFF. Set to 1.0 to enable biome-aware spawning + dead-terrain transit.
     "bio_sprint_frac": 0.85,   # speed fraction used to cross zero-production terrain with nothing visible
+    "scan_mode": 0.0,          # OFF. 1.0 = sweep-while-approaching fruit (cheap LOCAL information)
+    "scan_period": 10.0, "scan_ticks": 4.0, "scan_slow": 0.25, "scan_turn": 0.45,
     "spawn_cooldown": 400,     # ticks between spawns (anti-overpopulation)
     "spawn_cap": 14,           # hard cap: never spawn while local(other) agents >= this
     # --- population-maintaining reproduction (2026-09-17 survival fix) ---
@@ -756,6 +758,13 @@ def potential_controller(state, P):
     # Rotation is NOT free but it is CHEAP: turning costs |turn|/(2pi) energy (a 180 deg sweep = 0.5)
     # versus ~5.5/tick ...[truncated]
 
+    _scan_add = 0.0
+    if float(P.get("scan_mode", 0.0) or 0.0) > 0.0 and best_fruit is not None:
+        _sper = max(2.0, float(P.get("scan_period", 10.0) or 10.0))
+        if (_SIM_TICK % _sper) < float(P.get("scan_ticks", 4.0) or 0.0):
+            dist = dist * float(P.get("scan_slow", 0.25) or 0.25)
+            _scan_add = float(P.get("scan_turn", 0.45) or 0.45)
+
     # ---- BIOME-AWARE TERRAIN HANDLING (OFF by default: bio_mode=0) ----
     # MEASURED: the world is 27.9% desert + 5.9% river, BOTH producing ZERO fruit, while only 16.9% is
     # grassland at the best rate (0.1 fruit/s/100x100). The observation carries `biome` (see
@@ -913,7 +922,7 @@ def potential_controller(state, P):
         if not (_rescue or _invest):
             spawn = 0.0
 
-    return [float(dist), float(steer), float(_facing_turn(P, preds)), float(spawn)]
+    return [float(dist), float(steer), float(_facing_turn(P, preds)) + _scan_add, float(spawn)]
 
 
 def _load_params():
