@@ -42,6 +42,7 @@ CANDIDATE FILE FORMAT
 import argparse
 import hashlib
 import json
+import math
 import os
 
 # MUST be set before any worker interpreter starts: PYTHONHASHSEED is read at interpreter startup, so
@@ -154,6 +155,39 @@ def make_policy(params):
             return fns[k](s)
 
         return fn, bc.reset_memory
+    if kind == "residual":
+        # RESIDUAL POLICY: a small MLP adds bounded offsets to the DEPLOYED controller's action.
+        # Why residual: a from-scratch net starts far below the heuristic (measured: 300 random MLPs
+        # = -38% at 40 seeds). A residual starts AT the incumbent (zero weights = exact baseline) and
+        # only has to learn a correction, which is the sample-efficient way to learn decision-making
+        # against a simulator in the time available.
+        import best_controller as bc
+        import numpy as np
+        from env_wrapper import build_obs
+        base_fn = bc.make_policy(dict(params.get("__base__") or {}))
+        net = params["__net__"]
+        h = int(net["h"])
+        W1 = np.array(net["w1"], np.float32).reshape(h, -1)
+        b1 = np.array(net["b1"], np.float32).reshape(h)
+        W2 = np.array(net["w2"], np.float32).reshape(-1, h)
+        b2 = np.array(net["b2"], np.float32).reshape(-1)
+        sd = float(params.get("__scale_dir__", 0.5))
+        ss = float(params.get("__scale_speed__", 0.3))
+
+        def fn(state):
+            dist, dr, turn, spawn = base_fn(state)
+            o = build_obs(state)
+            hh = np.tanh(W1 @ o + b1)
+            out = np.tanh(W2 @ hh + b2)
+            sprint = float(state.get("sprint_speed", 20.0) or 20.0)
+            # wrap the corrected heading into [-pi, pi] (no _wrap helper in this module)
+            nd = dr + float(out[0]) * sd
+            nd = (nd + math.pi) % (2.0 * math.pi) - math.pi
+            return (float(np.clip(dist + out[1] * ss * sprint, 0.0, sprint)),
+                    float(nd), float(turn), float(spawn))
+
+        return fn, bc.reset_memory
+
     if kind == "net":
         import numpy as np
         from env_wrapper import build_obs, OBS_DIM
@@ -353,7 +387,7 @@ def main():
                 from best_controller import DEFAULT_PARAMS as _DP
             except Exception:
                 _DP = {}
-            unknown = [k for k in c["params"] if k != "id" and k not in _DP]
+            unknown = [k for k in c["params"] if k != "id" and not k.startswith("__") and k not in _DP]
             if unknown:
                 print(f"WARNING {c['id']}: {len(unknown)} override key(s) NOT in the controller and will "
                       f"be IGNORED: {unknown[:6]}", flush=True)
