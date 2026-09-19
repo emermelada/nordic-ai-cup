@@ -1498,3 +1498,36 @@ wrong is one run.
 
 If a fifth pass is tried again, prefer a cheap model: measured on a 5090,
 v4@2560 is 15.6 ms and v6@2560 17.5 ms against v8@2560's 26.3 ms.
+
+### The "false positives" are largely REAL OBJECTS nobody labelled
+
+Cropped the 24 highest-confidence answers (conf >= 0.30, one per spatial
+cluster) that match neither a confirmed object nor an ignore region, from the
+rebuilt 4K scene. Several are unmistakable rendered assets: a helicopter with
+visible rotor blades at 0.88, aircraft with cast shadows at 0.84 and 0.74
+(more than one in frame), and at least three green launcher vehicles at 0.81,
+0.80 and 0.72. 1104 unmatched answers above 0.30 in a single run.
+
+Three consequences, and they matter more than any single arm:
+
+1. **It explains the AGREEMENT_WEIGHT failure.** The hypothesis was that our
+   three models agree on false positives. They were not agreeing on errors --
+   they were agreeing on **real objects the truth file does not contain**.
+   Demoting single-model-unique tracks demoted genuine detections. The measured
+   result stands; the explanation given for it at the time was wrong.
+2. **The 0.168 "ranking loss" is substantially an artifact of incomplete
+   truth.** An unmatched detection scores as a false positive offline and as a
+   true positive in the real evaluation -- which is exactly why offline read
+   0.494 on the run that really scored 0.5113. Do not spend runs chasing that
+   gap, and do not trust per-class AP from `score_offline.py` as a target list.
+3. **"Mining is exhausted" (earlier in this file) is wrong.** 24 distinct
+   unlabelled objects at >= 0.30 confidence in one run, several of them obvious
+   by eye. The earlier mining passes used cross-model agreement at high
+   confidence and a truth file mined by v2; today's four-model stack at 2560
+   sees much more. `data/unmatched_sheet.png` is the review sheet.
+
+**The practical rule that follows: stop trying to suppress detections.** Every
+mechanism aimed at demoting weak tracks -- AGREEMENT_WEIGHT, MISS_PENALTY,
+HITS_BASE, the 0.0 floor band's filter -- is attacking a problem that is mostly
+measurement error. What has actually paid all day is *detecting more*: box
+growth, a lower track threshold, and a fourth model at 2560.
