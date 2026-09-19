@@ -195,11 +195,21 @@ BOX_SCALE = 1.0
 # NOT confirmed on a real run yet. The offline case rests on a truth file grown
 # by these same factors, which cannot be fully independent. One validation run
 # decides it, and the effect should be far outside the +/-0.01 noise either way.
-# (width, height) separately: the convention is not isotropic. small_launcher
-# is 1.75 wide against 2.14 tall, helicopter 1.38 against 1.70 -- a rotor disc
-# and a tail boom grow the box in one axis more than the other, and one average
-# factor cannot match a box stretched that way.
+# ISOTROPIC, and deliberately so: these are the exact values that scored 0.4618
+# on validation (branch BEST-WORKING-VERSION, commit 945e89b). The convention is
+# really anisotropic -- small_launcher measures 1.75 wide against 2.14 tall,
+# helicopter 1.38 against 1.70 -- and DRONE_BOX_GROW_WH=1 switches to the
+# measured per-dimension factors below. That form is NOT validated and showed no
+# offline gain (0.488 either way, because cap 1.3 clamps almost everything), so
+# it stays off. Do not make it the default without a real run that beats 0.4618.
 HELSINKI_BOX_FACTORS = {
+    'condor': 1.496, 'hangar': 1.152, 'helicopter': 1.531, 'jammer': 1.078,
+    'jet_plane': 1.489, 'large_launcher': 1.115, 'large_tower': 1.078,
+    'medium_launcher': 2.302, 'medium_plane': 1.320, 'mine_roller': 1.077,
+    'small_launcher': 1.936, 'small_plane': 1.075, 'small_tower': 1.184,
+    'spacecraft': 1.104, 'ta-ta': 1.147, 'tank': 1.309,
+}
+HELSINKI_BOX_FACTORS_WH = {
     'condor': (1.57, 1.43), 'hangar': (1.08, 1.23), 'helicopter': (1.38, 1.70),
     'jammer': (1.07, 1.09), 'jet_plane': (1.41, 1.57), 'large_launcher': (1.23, 1.01),
     'large_tower': (1.07, 1.08), 'medium_launcher': (2.24, 2.37), 'medium_plane': (1.49, 1.17),
@@ -207,6 +217,7 @@ HELSINKI_BOX_FACTORS = {
     'small_tower': (1.10, 1.28), 'spacecraft': (1.07, 1.14), 'ta-ta': (1.16, 1.13),
     'tank': (1.30, 1.32),
 }
+BOX_GROW_WH = os.environ.get('DRONE_BOX_GROW_WH', '') == '1'
 BOX_GROW_CAP = float(os.environ.get('DRONE_BOX_GROW_CAP', '1.3'))
 
 
@@ -221,7 +232,9 @@ def _parse_box_grow(spec: str):
         return {}
     cap = lambda f: min(f, BOX_GROW_CAP)
     if spec == 'helsinki':
-        return {n: (cap(w), cap(h)) for n, (w, h) in HELSINKI_BOX_FACTORS.items()}
+        if BOX_GROW_WH:
+            return {n: (cap(w), cap(h)) for n, (w, h) in HELSINKI_BOX_FACTORS_WH.items()}
+        return {n: (cap(f), cap(f)) for n, f in HELSINKI_BOX_FACTORS.items()}
     try:
         both = cap(float(spec))
         return {n: (both, both) for n in OBJECT_CLASSES}

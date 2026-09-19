@@ -909,3 +909,99 @@ one striking candidate turned out to be the lower section of the confirmed
 `large_tower`, split into its own cluster. **Cross-model agreement was doing all
 the work** — loosening it only adds false alarms. Review sheets are in
 `data/mining/` (gitignored).
+
+---
+
+## 2026-09-19, 03:02 CEST: 0.4618 — the box convention
+
+**New best on validation: 0.4618, up from 0.3048.** The largest single gain this
+project has had — bigger than model pairing (+0.09) or the resolution fix
+(+0.06). It came from neither a model nor a tracker setting.
+
+The evaluator's boxes are the **projected 3D box** of each object: rotor span,
+wingtips and height included. `make_dataset.py` labels every pasted cut-out with
+the **tight box around its alpha mask**, so our models learned tight boxes and
+were scored against loose ones for the entire competition. Growing the reported
+boxes per class toward the official convention closes the gap.
+
+The evidence was in this file all along and nobody chased it: `BOX_SCALE=0.8`
+collapsed a real run from 0.143 to **0.017**. Shrinking a well-matched box by
+20 % gives IoU ~0.64, over the 0.50 threshold, worth a couple of points at most.
+An 88 % collapse only happens if the boxes were already sitting just above
+threshold — which is exactly what a systematic size mismatch looks like.
+
+### The exact configuration that scored it
+
+Branch **`BEST-WORKING-VERSION`**, commit **`945e89b`**. Do not move that branch
+unless a real validation run beats 0.4618.
+
+```bash
+DRONE_BOX_GROW=helsinki DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt \
+DRONE_IMGSZ=960,1280 DRONE_DEVICE=mps DRONE_RECORD_DIR=data/recordings \
+DRONE_SET=BOTH_MODELS=1 .venv/bin/python api.py
+```
+
+`/api` must show `models_loaded: 2`, `imgsz: [960, 1280]`, `box_grow` filled
+with 16 classes, `box_grow_cap: 1.3`. An empty `box_grow` means the baseline is
+being served and the attempt teaches nothing.
+
+Note the run also carried `LEVEL_WEIGHT[0]=1.0`, so strictly two things changed
+at once. Growth dominates (predicted +0.085 against +0.01), but a run with
+`DRONE_LEVEL0_WEIGHT=0.4` would attribute it cleanly.
+
+### Keep the cap at 1.3
+
+A correction to advice given earlier the same night: raising the cap was
+suggested on the reasoning that reality had beaten the offline prediction. It
+had not — reality came in **under** it (0.4618 against a predicted 0.488). Swept
+properly on the loose truth: cap 1.3 → 0.488, 1.5 → 0.480, 1.8 → 0.474,
+2.4 → 0.474. **1.3 is the optimum.**
+
+### The scorer's default changed
+
+`tools/score_offline.py --truth-boxes loose` is now the default. The tight truth
+got the **direction** wrong: it predicted growth would cost 0.083 where reality
+gained 0.157. Loose truth reads ~0.026 high with growth on, ~0.098 high with it
+off, and gets the sign right. `--truth-boxes tight` restores the old behaviour.
+
+`training/measure_box_convention.py` reproduces the factors and reports mask
+fill per class: a class whose GrabCut mask fell back to a filled ellipse reports
+a ratio of 1.0 that is a mask failure, not evidence the object is already loose.
+No class on this machine's cut-outs exceeds 0.60 fill, so all sixteen ratios
+are trustworthy.
+
+### v8 (yolo11m, 40 epochs, imgsz 1280) — trained, judged, not served
+
+Offline on the loose truth with growth on, against the served pair at 0.488:
+
+| configuration | score |
+|---|---|
+| v4@960 + v6@1280 (served, real 0.4618) | 0.488 |
+| v8@1280 alone | 0.442 |
+| v4@960 + v8@1280 | 0.461 |
+| v6@1280 + v8@1280 | 0.473 |
+| **v4@960 + v6@1280 + v8@1280** | **0.497** |
+
+v8 did what its recipe aimed at and paid what the recipe risked: helicopter
+0.527 → 0.659, **spacecraft 0.003 → 0.107** (non-zero for the first time in this
+project), jammer and tank up; hangar 0.871 → 0.505, small_plane, large_tower and
+large_launcher down. Those are exactly the classes its weights cut to 0.4–0.7.
+**The down-weighting was too aggressive** — a repeat should not go below ~0.8 on
+a class already scoring well.
+
+Only the three-model ensemble beats the served pair, by +0.010, which is at the
+real-run noise floor. The better argument for it is hedging: v8 and v6 are close
+to complementary, and the final evaluation is a different flight whose class mix
+is unknown.
+
+### The pattern worth carrying forward
+
+Four attempts to improve the **model** — v5, v7, v8, rotation TTA — all failed or
+came in marginal. Two fixes to **conventions and measurement** — the ignore
+regions and the box convention — gained +0.157 between them. The leverage in
+this project has been in what we compare against, not in the detector.
+
+That makes the next training run **v9: the v6 recipe with official-convention
+labels** (`--box-convention official`, paste scale corrected), not another
+backbone. A model trained on official labels needs no report-time growth at all.
