@@ -1005,3 +1005,79 @@ this project has been in what we compare against, not in the detector.
 That makes the next training run **v9: the v6 recipe with official-convention
 labels** (`--box-convention official`, paste scale corrected), not another
 backbone. A model trained on official labels needs no report-time growth at all.
+
+---
+
+## 2026-09-19, 04:05 CEST: 0.4788 — three models, and frames matter more than models
+
+**New best: 0.4788** (mean of complete runs 0.4753), from `v4@960 + v6@1280 +
+v8@1280`. Branch `BEST-WORKING-VERSION` now points here.
+
+```bash
+DRONE_BOX_GROW=helsinki DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt \
+DRONE_IMGSZ=960,1280,1280 DRONE_DEVICE=mps DRONE_RECORD_DIR=data/recordings \
+DRONE_SET=BOTH_MODELS=1 .venv/bin/python api.py
+```
+
+`/api` must show `models_loaded: 3`, `models_requested: 3`,
+`imgsz: [960, 1280, 1280]`, `box_grow` with 16 classes, `box_grow_cap: 1.3`.
+
+### Six runs, three per configuration
+
+| score | config | frames |
+|---|---|---|
+| 0.4788 | three | 249/249 |
+| 0.4718 | three | 249/249 |
+| 0.4580 | two | 249/249 |
+| 0.4544 | two | 249/249 |
+| 0.4497 | three | **247**/249 |
+| 0.4461 | two | **247**/249 |
+
+Both complete three-model runs beat both complete two-model runs with no
+overlap: **+0.0191**, against a within-arm sd of 0.005 (three) and 0.0025 (two).
+
+### The noise floor is tighter than this document says, once frames are complete
+
+±0.01 is the figure recorded above, and an earlier reading of these same six
+runs put it at ±0.015. Both are wrong. **Among runs that answered 249/249 the
+standard deviation is about 0.005.** The apparent noise was one frame-losing run
+in each arm. Judge a configuration only on complete runs; a short run is not a
+noisy sample of the same thing.
+
+### Two missing frames cost more than the model choice
+
+| | complete mean | with 2 frames missing | cost |
+|---|---|---|---|
+| three models | 0.4753 | 0.4497 | **−0.0256** |
+| two models | 0.4562 | 0.4461 | −0.0101 |
+
+Two frames out of 249 — under 1 % — cost up to 0.026, more than the entire
+three-model gain. **The named Cloudflare tunnel is now the highest-value
+remaining work, ahead of any further modelling.** The quick tunnel has already
+logged QUIC timeouts and reconnects tonight, and the final evaluation is one
+attempt.
+
+Add to the pre-attempt protocol: after every run, count the frames.
+
+```bash
+for d in data/recordings/*/; do printf "%s  %s\n" "$(basename $d)" "$(ls $d/*.png | wc -l)"; done | tail -5
+```
+
+**249/249, or the score does not count.**
+
+### Where the score has come from
+
+| | score | what changed |
+|---|---|---|
+| v4 alone | 0.1445 | |
+| v4+v6 pair | 0.2450 | two models, one object memory |
+| v4@960+v6@1280 | 0.3048 | per-model inference size |
+| + box growth | 0.4618 | **the official box convention** |
+| + v8 as a third model | **0.4788** | class coverage, mainly spacecraft and helicopter |
+
+The two largest steps — box growth (+0.157) and pairing (+0.10) — were not
+better detectors. Four attempts at a better detector (v5, v7, rotation TTA, and
+v8 *as a replacement*) all failed; v8 only paid as an *addition*. The leverage
+has been in the scoring convention and in class coverage, not in the backbone.
