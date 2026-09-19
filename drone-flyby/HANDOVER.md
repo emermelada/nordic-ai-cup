@@ -1629,3 +1629,20 @@ the boxes are geometrically more accurate and might need less inflation. They
 do not. **1.3 remains the optimum on the 4-model stack**, unchanged from the
 3-model one, which makes the growth factor look like a property of the
 evaluator's box convention rather than of our detector's precision.
+
+### Ultralytics never overwrites a run directory — it appends a suffix
+
+Restarting a training run with the same `NAME` does **not** reuse the folder.
+The aborted first attempt left `/workspace/runs/drone-yolo11m-p2-v9/weights/
+best.pt` (22 MB, the nano model from the scale bug above) and the real run wrote
+to `drone-yolo11m-p2-v9-2/` (166 MB). A ship script pointing at the first path
+copies the wrong checkpoint, and it loads and serves perfectly cleanly.
+
+Check the **size** before serving anything: yolo11m-p2 is ~166 MB, the nano
+variant ~22 MB. Same lesson as the scale bug and the stale container: the
+dangerous failures here all look like successes.
+
+Also: a liveness check of the form `until ! ssh box 'pgrep -f x'; do ...` fires
+a false "process ended" the first time ssh itself fails ("Network is
+unreachable"). Distinguish "ssh failed" from "process gone", or the alert cries
+wolf.
