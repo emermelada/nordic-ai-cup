@@ -325,6 +325,30 @@ CLASS_SIZE = {
 # exactly as high as one just seen. 1.0 is the served behaviour; 0.85 is the
 # value to try.
 MISS_PENALTY = float(os.environ.get('DRONE_MISS_PENALTY', '1.0'))
+# How much a track is trusted when only SOME of the loaded models have ever
+# found it. With BOTH_MODELS every model sees every frame, so a real object is
+# normally found by several of them and a false alarm on a bush or a rooftop
+# often by one -- and until now detect() concatenated all their detections and
+# threw the model index away, so that signal was never used.
+#
+# Why it matters, measured 19 Sep on the best recorded run: mean recall over
+# the twelve scored classes is 0.661 while mean AP is 0.494. We are not failing
+# to FIND objects -- large_launcher is detected in 100 % of its frames,
+# large_tower 93 %, mine_roller 84 % -- we bury them under our own false
+# positives. 0.168 of score is pure ranking loss, concentrated in mine_roller
+# (0.398), tank (0.338), small_plane (0.310) and large_launcher (0.275).
+#
+# base is multiplied by AGREEMENT_WEIGHT once per model that has NEVER matched
+# the track, so a track all three models have seen is untouched and a
+# single-model track is scaled by AGREEMENT_WEIGHT ** 2. 1.0 is the served
+# behaviour; 0.7 is the value to try.
+AGREEMENT_WEIGHT = 1.0
+# The confidence of a track with few sightings. base *= min(1, HITS_BASE +
+# HITS_STEP * hits), so the defaults give 0.8 at one hit and saturate at three.
+# Phantom tracks are mostly one- and two-hit tracks, so lowering HITS_BASE
+# demotes them; these are the served values.
+HITS_BASE = 0.7
+HITS_STEP = 0.1
 # A box partly outside the view is a guess at the object's size: report it
 # lower, and let any whole sighting replace it.
 TRUNCATED_WEIGHT = 0.5
@@ -535,15 +559,19 @@ def detect(image: np.ndarray, source_region, frame: int = 0) -> list:
             parts = [raw_detections(image, which) for which in range(len(_models))]
             xyxy = np.concatenate([part[0] for part in parts])
             probabilities = np.concatenate([part[1] for part in parts])
+            # Which model produced each box. Concatenating threw this away.
+            source = np.concatenate([np.full(len(part[0]), i, np.int8)
+                                     for i, part in enumerate(parts)])
         else:
             xyxy, probabilities = raw_detections(image, frame)
+            source = np.full(len(xyxy), frame % max(1, len(_models)), np.int8)
     rx1, ry1, rx2, ry2 = source_region
     height, width = image.shape[:2]
     scale = np.array([(rx2 - rx1) / width, (ry2 - ry1) / height] * 2)
     boxes = xyxy * scale + [rx1, ry1, rx1, ry1]
     return [
-        (OBJECT_CLASSES[int(p.argmax())], float(p.max()), box, p)
-        for box, p in zip(boxes, probabilities)
+        (OBJECT_CLASSES[int(p.argmax())], float(p.max()), box, p, int(m))
+        for box, p, m in zip(boxes, probabilities, source)
     ]
 
 
@@ -639,6 +667,8 @@ class Track:
     misses: int = 0
     inspected: bool = False
     truncated: bool = False
+    # Indices of the models that have ever matched this track. See AGREEMENT_WEIGHT.
+    models: set = field(default_factory=set)
     # The last box as actually *observed*, not carried: one half of a motion sample.
     seen_box: Optional[np.ndarray] = None
     seen_frame: int = -1
@@ -689,6 +719,7 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
     for detection in sorted(detections, key=lambda d: -d[1]):
         name, confidence, box = detection[:3]
         probabilities = detection[3] if len(detection) > 3 else None
+        source = detection[4] if len(detection) > 4 else 0
         # Cut short by the view edge (the frame edge cuts the true box too).
         truncated = (
             (box[0] <= rx1 + cut_off and rx1 > 0) or (box[1] <= ry1 + cut_off and ry1 > 0)
@@ -709,12 +740,17 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
                 transient.append((name, confidence * TRANSIENT_WEIGHT * (TRUNCATED_WEIGHT if truncated else 1), box))
                 continue
             best = Track(box=box, frame=frame, best_level=level, truncated=truncated)
+            best.models.add(source)
             if not truncated:
                 best.seen_box, best.seen_frame = box.copy(), frame
             state.tracks.append(best)
         elif id(best) in matched:
             # A second detection of an object already handled this frame is a
-            # class vote only; the first (most confident) one set the box.
+            # class vote only; the first (most confident) one set the box. It is
+            # also where model agreement shows up -- this is another model
+            # finding the same object -- so the source is recorded before the
+            # early return.
+            best.models.add(source)
             add_votes(best, name, confidence, probabilities, weight)
             continue
         elif truncated:
@@ -730,6 +766,7 @@ def update_tracks(state: Sequence, frame: int, level: int, region, detections) -
         else:
             best.box = 0.7 * best.box + 0.3 * box
         matched.add(id(best))
+        best.models.add(source)
         # Seeing the same object twice measures how far the ground really moved
         # between those frames. Only whole sightings: a box the view edge cut
         # short has a centre that says more about the edge than the object.
@@ -817,7 +854,11 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             continue
         ranked = sorted(track.votes.items(), key=lambda item: -item[1])
         base = track.best_confidence
-        base *= min(1.0, 0.7 + 0.1 * track.hits)
+        base *= min(1.0, HITS_BASE + HITS_STEP * track.hits)
+        # Models that have never found this track. At the served
+        # AGREEMENT_WEIGHT of 1.0 this is a no-op, byte for byte.
+        if AGREEMENT_WEIGHT != 1.0 and len(_models) > 1:
+            base *= AGREEMENT_WEIGHT ** max(0, len(_models) - len(track.models))
         # max(0, ...): a stale frame is behind tracks already moved to a later
         # one, and a negative exponent would *raise* the confidence above
         # best_confidence instead of decaying it.

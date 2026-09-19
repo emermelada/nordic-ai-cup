@@ -86,7 +86,8 @@ except Exception as exc:
 grow = s.get('box_grow') or {}
 for k in ('models_loaded', 'models_requested', 'imgsz', 'device', 'box_grow_cap',
           'new_track_confidence', 'inspect', 'floor_zero', 'floor_size_tol',
-          'miss_penalty', 'camera', 'recording'):
+          'miss_penalty', 'agreement_weight', 'hits_base', 'hits_step',
+          'runner_ups', 'camera', 'recording'):
     print(f'   {k:22s} {s.get(k)}')
 print(f'   {"box_grow":22s} {len(grow)} classes')
 bad = []
