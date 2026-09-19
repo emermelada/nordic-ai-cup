@@ -85,7 +85,8 @@ def main():
 
     gaps = [1, 3, 6, 10, 15, 20, 25, 30]
     fitted = tuple(json.loads(Path(ROOT / 'data/probe/fitted_motion.json').read_text()))
-    results = {name: collections.defaultdict(list) for name in ('affine_prior', 'affine_fitted', 'model3d', 'model3d+z', 'model3d+oracle_z')}
+    GLOBAL_Z = 6.6   # the flight's own ground level, median of the fitted objects
+    results = {name: collections.defaultdict(list) for name in ('affine_prior', 'affine_fitted', 'model3d_z0', 'model3d_global', 'model3d+oracle_z')}
     for i, o in enumerate(objects):
         frames = sorted(sightings[i])
         if not frames:
@@ -120,7 +121,7 @@ def main():
                     G.iou(truth, G.shrink(flyby.advance(box0, gap, flyby.MOTION), a.grow)))
                 results['affine_fitted'][gap].append(
                     G.iou(truth, G.shrink(flyby.advance(box0, gap, fitted), a.grow)))
-                for name, z in (('model3d', 0.0), ('model3d+z', z_fit), ('model3d+oracle_z', o['params'][2])):
+                for name, z in (('model3d_z0', 0.0), ('model3d_global', GLOBAL_Z), ('model3d+oracle_z', o['params'][2])):
                     results[name][gap].append(G.iou(truth, G.shrink(_carry3d(box0, start, target, dims, z), a.grow)))
 
     print(f'{"gap":>5s} {"n":>6s} ' + ' '.join(f'{k:>22s}' for k in results))
