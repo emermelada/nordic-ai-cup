@@ -1,3 +1,55 @@
+# START HERE (2026-09-19, 18:30 CEST) — read this block, then skip to the end
+
+**Best configuration, validated, mean 0.5211 over complete runs (best 0.5271).**
+It is `BEST-WORKING-VERSION`, and it needs NO code beyond what is committed:
+
+```bash
+DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-v8.pt \
+DRONE_IMGSZ=960,1280,1280,2560 \
+DRONE_DEVICE=cuda DRONE_RECORD_DIR=data/recordings \
+DRONE_SET=BOTH_MODELS=1,NEW_TRACK_CONFIDENCE=0.10 python3 api.py
+```
+
+Start it with `tools/arm.sh`, which verifies `/api` and refuses to hand over a
+service that is not serving what you asked for. Set up a fresh rented box with
+`tools/bootstrap_remote.sh` — it gates on latency AND sustained bandwidth to
+the evaluator (Hetzner Helsinki), which is worth more than any config change:
+a bad host cost 0.05–0.30 today, three times what a day of tuning gained.
+
+**The day: 0.4788 → 0.5211.** Four things did it, and none was a better model:
+
+| change | gain | why it was missed before |
+|---|---|---|
+| `DRONE_BOX_GROW=1.3` flat | +0.017 | the per-class profile measured mask spindliness, not box error |
+| `NEW_TRACK_CONFIDENCE=0.10` | +0.013 | tuned against v3 at score 0.132, two generations stale |
+| a 4th model at `imgsz 2560` | +0.014 | 1600 had lost as a *replacement*; as an *addition* it wins |
+| the endpoint | up to +0.30 | latency and bandwidth to Helsinki, never previously checked |
+
+`small_launcher` went **0.000 → 0.512**. It had been dead all project.
+
+**The single most important thing to know:** the truth file
+(`training/validation_objects.json`, 32 objects) is badly incomplete. Many of
+our "false positives" are real rendered assets nobody labelled — see
+`data/unmatched_sheet.png`. So **`tools/score_offline.py` per-class AP is not a
+target list**, the apparent "ranking loss" is largely measurement error, and
+every mechanism that suppresses weak detections has failed. What pays is
+detecting MORE.
+
+**Measured dead today — do not re-run:** Level 2 / hybrid camera (−0.049 even
+with its bug fixed), the 0.0 floor band (+0.0015), growth cap >1.3 (−0.019 at
+1.45), `AGREEMENT_WEIGHT` (−0.005), a 5th pass at 3200 (blows the 333 ms
+budget: 514 ms, 0.264), a 5th model v4@2560 (0.4994).
+
+**Protocol that made the day work:** three complete runs per arm, 249/249 or
+discard, one change at a time, and check `/api` before every attempt. Runs are
+deterministic given the camera path — hash the view sequence and identical
+paths give identical scores to 16 digits, so a matched pair beats six unpaired
+runs.
+
+---
+
 # Drone Flyby — where the work stands (2026-09-18, evening)
 
 Everything needed to continue on another machine is in this repo, including the
