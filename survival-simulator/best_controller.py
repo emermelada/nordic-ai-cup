@@ -42,6 +42,14 @@ DEFAULT_PARAMS = {
     # forage
     "fruit_risk_penalty": 1.2, # fraction weighting: avoid fruit in predator direction
     "walk_frac": 1.0,          # walking move distance = walk_frac*speed (<=1 => walking)
+    # --- DISCOVERY-DERIVED PHASE SPEED RULE (OFF by default; see the move-distance block) ---
+    # Counterfactual boundary analysis found: with fruit in sight, WALK before tick 900 and SPRINT in the
+    # mid-game (900-2700). A state-dependent rule, not a tunable value - no single walk_frac beats the
+    # baseline, which is why the phase gate exists.
+    "psp_mode": 0.0,           # 0 = current behaviour; 1 = enable the phase speed rule
+    "psp_lo": 900.0,           # tick at which the mid-game sprint window opens
+    "psp_hi": 2700.0,          # tick at which it closes
+    "psp_mid_frac": 1.0,       # speed as a fraction of sprint_speed inside the window
     "explore_frac": 0.55,      # wandering speed fraction
     # energy
     "reserve_frac": 0.15,      # below this single-agent fraction of max: no sprint, minimal walk
@@ -710,6 +718,20 @@ def potential_controller(state, P):
         dist = min(dist, speed * _ars)
     if use_energy and ef < P["reserve_frac"]:
         dist = min(dist, speed * 0.25)
+
+    # ---- DISCOVERY-DERIVED PHASE SPEED RULE (psp_mode, OFF by default) ----
+    # From the counterfactual boundary analysis (8,440 branch rows = ~940 states x 9 actions, fixed-tick
+    # continuous outcomes, agent-visible features only). The boundary found with fruit in sight:
+    #     tick <= 900                 -> WALK   (fruit abundant, conserve energy)      62% consistent
+    #     900 < tick <= 2700          -> SPRINT (time is scarce; travel cost dominates) 65% consistent
+    # This is a STATE-DEPENDENT rule, not a parameter: no single walk_frac value beats the baseline
+    # (the 800-candidate search sampled walk_frac and found nothing), which is precisely why the phase
+    # gate is required. Only ever raises the speed, so it cannot slow an agent down.
+    if float(P.get("psp_mode", 0.0) or 0.0) and best_fruit is not None:
+        _lo = float(P.get("psp_lo", 900.0) or 0.0)
+        _hi = float(P.get("psp_hi", 2700.0) or 0.0)
+        if _lo <= _SIM_TICK <= _hi:
+            dist = max(dist, sprint * float(P.get("psp_mid_frac", 1.0) or 0.0))
 
     # ---- PHASE policy on movement: in famine, travel energy is unaffordable. With food visible we
     # still approach it (at a reduced rate -- finding food is the whole income), but with NOTHING
