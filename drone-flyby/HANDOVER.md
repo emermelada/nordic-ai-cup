@@ -1777,3 +1777,55 @@ matches the simulation that preceded it (row0 +0.0082, v9 +0.0023).
 **So the open question is `row0` WITHOUT v9** -- likely as good, with one fewer
 model, ~15 ms less latency and less failure surface on a one-shot attempt.
 Three complete runs decides it. It is the first thing to do with spare runs.
+
+### 2026-09-20, 01:30 CEST: LEVEL_WEIGHT[0] retuned for the row0 camera
+
+**`DRONE_LEVEL0_WEIGHT=1.5` is the live candidate**, one complete run at 0.5432
+plus a 247-frame run at **0.5681** (the highest number this project has seen,
+discarded under the frames rule but recorded here).
+
+**Why it was worth retuning.** `LEVEL_WEIGHT[0]` weights a Level-0 sighting's
+class votes. It was set to 1.0 on runs containing **two or three L0 views**, and
+this file's own note says the measurement was noise-dominated and that 2.0 was
+rejected for that reason. `row0` changes the regime completely:
+
+| camera | L0 views | L1 views |
+|---|---|---|
+| `full` (old served) | **2** | 247 |
+| `row0` | **67** | 182 |
+
+A 33x increase. The parameter went from nearly irrelevant to governing a quarter
+of all sightings, and it had never been tuned in that regime. This is the same
+pattern that paid for `NEW_TRACK_CONFIDENCE` (+0.013) and flat box growth
+(+0.017): **a threshold set against a configuration that no longer exists.**
+
+### `MISS_PENALTY` — measured, negative, and the third suppression failure
+
+`DRONE_MISS_PENALTY=0.85` on the identical `row0` + LW1.5 base:
+
+| arm | complete runs | mean | all runs | mean |
+|---|---|---|---|---|
+| row0 + v9, LW 1.5 | 0.5432 | **0.5432** | 4 | 0.5483 |
+| + MISS_PENALTY 0.85 | 0.5253 / 0.5322 | **0.5288** | 3 | 0.5322 |
+
+Both ways of counting agree it costs ~0.01-0.015.
+
+**The reason it was tried, and why the reasoning was wrong.** After
+`AGREEMENT_WEIGHT` failed it was argued that misses are a *different* signal --
+agreement asks which models saw a track, misses asks whether the camera looked
+closer and stopped seeing it -- and that `row0`'s 67 L0 views would make
+L0-artifact false positives common enough for the signal to bite. The
+measurement says the two are not different enough to matter.
+
+**Three suppression mechanisms have now failed for the same reason**:
+`AGREEMENT_WEIGHT` (-0.005), the 0.0 floor band (+0.0015), `MISS_PENALTY`
+(-0.013). Most of what looks like a false positive is a **real object the truth
+file does not contain** (`data/unmatched_sheet.png`), so any rule that demotes
+weakly-supported tracks demotes real detections too. `HITS_BASE` is the last
+member of this family and should be assumed dead without spending runs on it.
+
+**The exception is `tank`**, whose unmatched boxes really are spurious (bare
+grass, dirt, containers, boats -- see the tank section above). But no *global*
+suppression rule can separate it, because the same rule hits the eleven classes
+where the unmatched boxes are real. Fixing `tank` needs training data, not a
+serving knob.
