@@ -3,6 +3,7 @@
 import json
 import logging
 import multiprocessing
+import os
 import socket
 import struct
 import threading
@@ -16,6 +17,8 @@ from pipeline.core import (
     words_from_transcript,
 )
 from pipeline.evidence import primary_evidence_response, refine_evidence
+from pipeline.rescue import apply_rescue
+from pipeline.stage_b import apply_evidence, draft_quotes, lexical_span
 from utils import decode_audio, validate_response
 
 logger = logging.getLogger(__name__)
@@ -74,7 +77,49 @@ def _receive_frame(channel, deadline=None, cancel=None):
     return message
 
 
+def _primary(words, questions, raw, transcript):
+    """The answer pass's own decisions and spans, in the transcript's timing convention."""
+    return refine_evidence(
+        answer_response(raw, words, questions, transcript['duration'], alignment='numeric'),
+        words, transcript.get('energy_db'), extend_replies=not transcript.get('exact_timestamps'),
+    )
+
+
+def _rescue(backend, words, questions, raw, transcript, request_started):
+    """P(yes) for the questions answered no; failure leaves every answer as it was."""
+    complete_rescue = getattr(backend, 'complete_rescue', None)
+    if not raw or complete_rescue is None:
+        return None
+    try:
+        primary = _primary(words, questions, raw, transcript)
+        return complete_rescue(words, questions, primary.answers, request_started)
+    except Exception as exc:
+        logger.exception('Rescue pass failed; keeping the original answers')
+        return {'error': f'{type(exc).__name__}: {exc}'}
+
+
+def _stage_b(backend, words, questions, raw, transcript, request_started, rescue=None):
+    """Evidence re-selection over the primary answers; its failure never costs the answers."""
+    complete_evidence = getattr(backend, 'complete_evidence', None)
+    if not raw or complete_evidence is None:
+        return None
+    try:
+        primary = _primary(words, questions, raw, transcript)
+        if isinstance(rescue, dict):
+            primary, _ = apply_rescue(primary, {k: v for k, v in rescue.items() if k != 'error'})
+        anchors = list(zip(primary.evidence_start, primary.evidence_end))
+        return complete_evidence(words, questions, primary.answers, draft_quotes(raw, len(questions)),
+                                 anchors, request_started)
+    except Exception as exc:
+        logger.exception('Stage B failed; keeping primary evidence')
+        return {'error': f'{type(exc).__name__}: {exc}'}
+
+
 def _make_backend():
+    if os.environ.get('MEDICAL_BACKEND') == 'vllm':
+        from pipeline.vllm_backend import VLLMBackend
+
+        return VLLMBackend()
     from pipeline.mlx_backend import MLXBackend
 
     return MLXBackend()
@@ -100,6 +145,7 @@ def _worker_main(channel, generation, backend_factory):
                 raise ValueError('Unexpected worker request')
             identity = {'generation': generation, 'request_id': message['request_id']}
             try:
+                request_started = time.monotonic()
                 transcript = backend.transcribe(decode_audio(message['audio_base64']))
                 _send_frame(channel, {
                     **identity, 'kind': 'transcript', 'transcript': transcript,
@@ -108,9 +154,12 @@ def _worker_main(channel, generation, backend_factory):
                 started = time.monotonic()
                 raw = backend.complete(words, message['questions']) if words else ''
                 second = backend.complete_second(words, message['questions']) if raw else ''
+                rescue = _rescue(backend, words, message['questions'], raw, transcript, request_started)
+                evidence = _stage_b(backend, words, message['questions'], raw, transcript,
+                                    request_started, rescue)
                 _send_frame(channel, {
-                    **identity, 'kind': 'result', 'raw': raw, 'second': second,
-                    'generation_seconds': time.monotonic() - started,
+                    **identity, 'kind': 'result', 'raw': raw, 'second': second, 'rescue': rescue,
+                    'evidence': evidence, 'generation_seconds': time.monotonic() - started,
                 })
             except Exception as exc:
                 logger.exception('Inference request failed')
@@ -279,13 +328,15 @@ class Pipeline:
             self._request_id += 1
             identity = {'generation': self._generation, 'request_id': self._request_id}
             if trace is not None:
-                trace.update(identity, evidence_policy='primary-with-secondary-veto')
+                trace.update(identity, evidence_policy='primary-with-stage-b-and-secondary-veto')
             _send_frame(self._channel, {
                 **identity, 'kind': 'predict', 'audio_base64': request.audio_base64,
                 'questions': request.questions,
             }, deadline, self._closed)
             words = []
             envelope = None
+            extend_replies = True
+            rescued_numbers = []
             while True:
                 message = _receive_frame(self._channel, deadline, self._closed)
                 if any(message.get(key) != value for key, value in identity.items()):
@@ -301,8 +352,9 @@ class Pipeline:
                     duration = transcript['duration']
                     asr_seconds = transcript.get('seconds')
                     envelope = transcript.get('energy_db')
+                    extend_replies = not transcript.get('exact_timestamps')
                     fallback = refine_evidence(
-                        retrieval_response(words, request.questions, duration), words, envelope,
+                        retrieval_response(words, request.questions, duration), words, envelope, extend_replies,
                     )
                 elif kind == 'result':
                     if trace is not None:
@@ -312,10 +364,38 @@ class Pipeline:
                         message['raw'], words, request.questions, duration,
                         fallback=fallback, deadline=deadline, alignment='numeric',
                     )
-                    response = refine_evidence(response, words, envelope)
+                    response = refine_evidence(response, words, envelope, extend_replies)
                     if trace is not None:
                         trace['primary'] = response.model_dump()
                         trace['referee'] = fallback.model_dump()
+                    rescue = message.get('rescue')
+                    if isinstance(rescue, dict):
+                        if trace is not None:
+                            trace['rescue'] = rescue
+                        response, rescued = apply_rescue(
+                            response, {k: v for k, v in rescue.items() if k != 'error'})
+                        rescued_numbers = rescued
+                        # A rescued question has no span of its own yet. Stage B normally
+                        # supplies one; seed it from retrieval so that a skipped or failed
+                        # evidence stage cannot leave a yes pointing at nothing.
+                        for number in rescued:
+                            index = number - 1
+                            if fallback.evidence_start[index] is not None:
+                                response.evidence_start[index] = fallback.evidence_start[index]
+                                response.evidence_end[index] = fallback.evidence_end[index]
+                        if rescued:
+                            logger.info('Rescued %d answer(s) from no to yes: %s', len(rescued), rescued)
+                    evidence = message.get('evidence')
+                    if evidence:
+                        if trace is not None:
+                            trace['evidence'] = evidence
+                        if isinstance(evidence, dict) and (evidence.get('skipped') or evidence.get('error')):
+                            logger.warning('Evidence stage did not run (%s): spans are the answer '
+                                           'pass\'s own quotes for this conversation',
+                                           evidence.get('skipped') or evidence.get('error'))
+                        response = apply_evidence(evidence, response, words, duration, envelope, deadline, extend_replies)
+                        if trace is not None:
+                            trace['selected'] = response.model_dump()
                     if message.get('second'):
                         secondary_fallback = fallback.model_copy(deep=True)
                         # Missing or invalid secondary answers cannot veto the primary.
@@ -325,8 +405,20 @@ class Pipeline:
                             fallback=secondary_fallback, deadline=deadline, alignment='numeric',
                         )
                         if trace is not None:
-                            trace['secondary'] = refine_evidence(alternative, words, envelope).model_dump()
-                        response = primary_evidence_response(response, alternative)
+                            trace['secondary'] = refine_evidence(alternative, words, envelope, extend_replies).model_dump()
+                        response = primary_evidence_response(response, alternative, rescued_numbers)
+                    # Every yes carries a span: a null one scores nothing on the larger
+                    # half, so the best word-overlap sentence is strictly better.
+                    placed = 0
+                    for index, answer in enumerate(response.answers):
+                        if not answer or response.evidence_start[index] is not None:
+                            continue
+                        span = lexical_span(words, request.questions[index])
+                        if span:
+                            response.evidence_start[index], response.evidence_end[index] = span
+                            placed += 1
+                    if placed:
+                        logger.info('Placed %d yes answer(s) on the best matching sentence', placed)
                     response = sanitize_response(response, len(request.questions), duration)
                     validate_response(response, len(request.questions))
                     # Both platform sets are exactly half yes; the rate is a label-free sanity check.

@@ -48,6 +48,12 @@ class CaptureTests(unittest.TestCase):
         self.assertFalse((self.directory.parent / 'outside.mp3').exists())
         self.assertEqual(list(self.directory.glob('*.tmp')), [])
 
+    def test_serving_backends_are_fingerprinted_without_loading_models(self):
+        for name in ('pipeline/vllm_backend.py', 'pipeline/base_asr.py',
+                     'pipeline/span_examples.py', 'pipeline/span_examples.json', 'pipeline/locate.py'):
+            self.assertIn(name, capture.SOURCE_HASHES)
+            self.assertEqual(len(capture.SOURCE_HASHES[name]), 64)
+
     def test_requests_not_sent_to_worker_are_not_captured(self):
         capture.save_capture(self.request, self.response, {})
         self.assertFalse(self.directory.exists())

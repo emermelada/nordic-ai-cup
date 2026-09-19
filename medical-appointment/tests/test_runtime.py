@@ -76,6 +76,28 @@ class SecondaryAnswerBackend(FakeBackend):
         return self.raw
 
 
+class EvidenceBackend(FakeBackend):
+    def __init__(self, evidence):
+        self.evidence = evidence
+        self.calls = []
+
+    def complete_evidence(self, words, questions, answers, drafts, anchors, request_started):
+        self.calls.append((answers, drafts, anchors))
+        return self.evidence
+
+
+class RescueBackend(FakeBackend):
+    """Scores every question answered no as a confident yes."""
+
+    def complete_rescue(self, words, questions, answers, request_started):
+        return {index + 1: 0.95 for index, answer in enumerate(answers) if not answer}
+
+
+class BrokenRescueBackend(FakeBackend):
+    def complete_rescue(self, words, questions, answers, request_started):
+        raise RuntimeError('scorer unavailable')
+
+
 class FailedStartupBackend(FakeBackend):
     def warmup(self):
         raise RuntimeError('Missing local weights')
@@ -229,6 +251,94 @@ class RuntimeTests(unittest.TestCase):
                 self.assertEqual(actual.evidence_start, [0.0])
                 self.assert_valid(actual, 1)
                 pipeline.close()
+
+    def test_stage_b_quote_replaces_retained_yes_span_only(self):
+        evidence = {'mode': 'refine', 'raw': json.dumps({'results': [
+            {'q': 1, 'quote': 'You should take it after a meal.'},
+            {'q': 2, 'quote': 'You should take it after a meal.'},
+            {'q': 3, 'quote': 'no such words anywhere'},
+        ]})}
+        pipeline = self.make_pipeline(backend_factory=functools.partial(EvidenceBackend, evidence))
+        trace = {}
+        actual = pipeline.predict(request(), trace=trace)
+        self.assertEqual(actual.answers, [True, False, True])
+        self.assertAlmostEqual(actual.evidence_start[0], 1.8)
+        self.assertAlmostEqual(actual.evidence_end[0], 3.9)
+        self.assertIsNone(actual.evidence_start[1])
+        self.assertEqual((actual.evidence_start[2], actual.evidence_end[2]), (0.0, trace['primary']['evidence_end'][2]))
+        self.assertEqual(trace['evidence'], evidence)
+        self.assertEqual(trace['selected']['evidence_start'], actual.evidence_start)
+        self.assertEqual(trace['evidence_policy'], 'primary-with-stage-b-and-secondary-veto')
+        self.assert_valid(actual, 3)
+
+    def test_window_evidence_and_skipped_or_broken_stage_b_keep_answers(self):
+        window = {'mode': 'window', 'outputs': {'1': '"You should take it after a meal."', '3': ''}}
+        for evidence, moved in ((window, True), ({'mode': 'refine', 'skipped': 'budget'}, False),
+                                ({'error': 'RuntimeError: boom'}, False), (None, False), ('junk', False)):
+            with self.subTest(evidence=evidence):
+                pipeline = self.make_pipeline(backend_factory=functools.partial(EvidenceBackend, evidence))
+                actual = pipeline.predict(request())
+                self.assertEqual(actual.answers, [True, False, True])
+                self.assertAlmostEqual(actual.evidence_start[0], 1.8 if moved else 0.0)
+                self.assertEqual(actual.evidence_start[2], 0.0)
+                self.assert_valid(actual, 3)
+                pipeline.close()
+
+    def test_stage_b_receives_primary_answers_drafts_and_anchors(self):
+        backend = EvidenceBackend(None)
+        # The worker is a separate process, so exercise the helper directly.
+        from pipeline.runtime import _stage_b
+        words = words_from_transcript(transcript())
+        raw = backend.complete(words, request().questions)
+        self.assertIsNone(_stage_b(backend, words, request().questions, raw, transcript(), time.monotonic()))
+        answers, drafts, anchors = backend.calls[0]
+        self.assertEqual(answers, [True, False, True])
+        self.assertEqual(drafts, {1: 'The daily dose is 100 mg.', 2: 'The daily dose is 100 mg.', 3: 'The daily dose is 100 mg.'})
+        self.assertEqual(anchors[1], (None, None))
+        self.assertEqual(anchors[0][0], 0.0)
+        self.assertIsNone(_stage_b(backend, words, request().questions, '', transcript(), time.monotonic()))
+        self.assertIsNone(_stage_b(FakeBackend(), words, request().questions, raw, transcript(), time.monotonic()))
+        broken = EvidenceBackend(None)
+        broken.complete_evidence = mock.Mock(side_effect=RuntimeError('boom'))
+        self.assertEqual(_stage_b(broken, words, request().questions, raw, transcript(), time.monotonic()),
+                         {'error': 'RuntimeError: boom'})
+
+    def test_a_confident_no_is_rescued_and_always_carries_a_span(self):
+        pipeline = self.make_pipeline(backend_factory=RescueBackend)
+        trace = {}
+        # FakeBackend answers yes, no, yes, so the middle question is the rescued one.
+        actual = pipeline.predict(request(questions=[
+            'Should the daily dose be 100 mg?', 'Does the heart sound normal?',
+            'Should the tablets be taken after a meal?']), trace=trace)
+        self.assertEqual(actual.answers, [True, True, True])
+        self.assertEqual({int(k) for k in trace['rescue']}, {2})
+        # This backend has no evidence stage, so the span is the best matching sentence.
+        self.assertIsNotNone(actual.evidence_start[1])
+        self.assertLess(actual.evidence_start[1], actual.evidence_end[1])
+        self.assert_valid(actual, 3)
+
+    def test_a_rescued_off_topic_question_still_returns_a_valid_body(self):
+        pipeline = self.make_pipeline(backend_factory=RescueBackend)
+        actual = pipeline.predict(request())
+        self.assertEqual(actual.answers, [True, True, True])
+        self.assertIsNone(actual.evidence_start[1])
+        self.assert_valid(actual, 3)
+
+    def test_a_failing_rescue_leaves_every_answer_as_it_was(self):
+        pipeline = self.make_pipeline(backend_factory=BrokenRescueBackend)
+        trace = {}
+        actual = pipeline.predict(request(), trace=trace)
+        self.assertEqual(actual.answers, [True, False, True])
+        self.assertIn('error', trace['rescue'])
+        self.assert_valid(actual, 3)
+
+    def test_a_backend_without_a_scorer_changes_nothing(self):
+        pipeline = self.make_pipeline()
+        trace = {}
+        actual = pipeline.predict(request(), trace=trace)
+        self.assertEqual(actual.answers, [True, False, True])
+        self.assertIsNone(trace.get('rescue'))
+        self.assert_valid(actual, 3)
 
     def test_invalid_audio_returns_floor_and_next_request_works(self):
         pipeline = self.make_pipeline()

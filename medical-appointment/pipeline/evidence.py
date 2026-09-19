@@ -33,6 +33,26 @@ def build_compact_messages(words, questions):
     return messages
 
 
+# Whisper writes drug and brand names by sound, and the near-miss questions often turn on
+# exactly those names, so the answerer is told to match them by sound rather than spelling.
+# The pairs are the ones the training transcripts actually produce.
+PHONETIC_RULE = (
+    '- Drug, brand and condition names are written by sound in the transcript: "Aromere"/"Aromir" is '
+    'Airomir, "Ibu Medin"/"Ibumedin" is Ibumetin, "Active L"/"Activel" is Activelle, "Isomeprazole" is '
+    'Esomeprazole, "panadil" is Panodil, "pan top resolve" is pantoprazole, "patelli" is patellae, '
+    '"molluscs" is molluscum. Match a name in the question to one that sounds like it; a name spelled '
+    'differently but pronounced the same is the SAME thing, not a near-miss.\n'
+)
+NAMED_SYSTEM = COMPACT_SYSTEM.replace('- For every "yes"', PHONETIC_RULE + '- For every "yes"')
+
+
+def build_named_messages(words, questions):
+    """The compact prompt plus the phonetic-name rule."""
+    messages = build_messages(words, questions)
+    messages[0] = {'role': 'system', 'content': NAMED_SYSTEM}
+    return messages
+
+
 # Qwen3.5 sometimes enumerated every unit id on "no" answers until the token limit.
 MINIMAL_SYSTEM = COMPACT_SYSTEM.replace(
     'Respond with minified JSON',
@@ -138,13 +158,18 @@ def _reply_end(words, start, end):
     return end
 
 
-def refine_evidence(response, words, envelope=None):
-    """Extend a quoted question to its short reply, then start the span at audible speech."""
+def refine_evidence(response, words, envelope=None, extend_replies=True):
+    """Extend a quoted question to its short reply, then start the span at audible speech.
+
+    Both steps are for Whisper-turbo timings; with the annotators' own word boundaries
+    (``exact_timestamps``) neither is applied, so a quoted word keeps its exact times.
+    """
     result = response.model_copy(deep=True)
     for i, (start, end) in enumerate(zip(result.evidence_start, result.evidence_end)):
         if start is None or end is None:
             continue
-        end = _reply_end(words, start, end)
+        if extend_replies:
+            end = _reply_end(words, start, end)
         if envelope:
             onset_end = next((min(end, word['end']) for word in words
                               if word['start'] < end
@@ -161,10 +186,18 @@ def _span_overlap(a, b):
     return max(0.0, min(a[1], b[1]) - max(a[0], b[0])) / union if union > 0 else 0.0
 
 
-def primary_evidence_response(primary, secondary):
-    """Keep primary evidence, but reject a primary yes on a secondary no."""
+def primary_evidence_response(primary, secondary, exempt=()):
+    """Keep primary evidence, but reject a primary yes on a secondary no.
+
+    ``exempt`` holds 1-based question numbers the rescue pass deliberately turned into a
+    yes at a low confidence threshold. That decision already prices in the uncertainty a
+    second opinion would express, so it is not put to the vote again.
+    """
+    exempt = {int(number) for number in exempt}
     result = primary.model_copy(deep=True)
     for i, answer in enumerate(result.answers):
+        if i + 1 in exempt:
+            continue
         if answer and not secondary.answers[i]:
             result.answers[i] = False
             result.evidence_start[i] = result.evidence_end[i] = None

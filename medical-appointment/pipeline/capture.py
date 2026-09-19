@@ -18,7 +18,9 @@ try:
     SOURCE_HASHES = {
         name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
         for name in ('api.py', 'example.py', 'pipeline/capture.py', 'pipeline/core.py',
-                     'pipeline/evidence.py', 'pipeline/runtime.py', 'pipeline/mlx_backend.py')
+                     'pipeline/evidence.py', 'pipeline/runtime.py', 'pipeline/mlx_backend.py',
+                     'pipeline/stage_b.py', 'pipeline/vllm_backend.py', 'pipeline/base_asr.py',
+                     'pipeline/span_examples.py', 'pipeline/span_examples.json', 'pipeline/locate.py')
     }
 except OSError:
     logger.exception('Could not fingerprint the capture build')

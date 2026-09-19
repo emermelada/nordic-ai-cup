@@ -4,6 +4,7 @@ import io
 import json
 import os
 import subprocess
+import time
 import sys
 import tempfile
 import unittest
@@ -146,11 +147,60 @@ class BackendTests(unittest.TestCase):
         backend = mlx_backend.MLXBackend()
         zeros = Mock(return_value='silence')
         with patch.dict(sys.modules, {'numpy': SimpleNamespace(zeros=zeros, float32='float32')}), \
-                patch.object(backend, '_transcribe') as asr, patch.object(backend, '_generate') as llm:
+                patch.object(backend, '_transcribe') as asr, patch.object(backend, '_generate') as llm, \
+                patch.object(backend, 'generate_messages') as evidence, \
+                patch.object(mlx_backend, 'EVIDENCE_MODEL', 'evidence/model'), \
+                patch.object(mlx_backend, 'EVIDENCE_ADAPTER', '/adapter'):
             backend.warmup()
         zeros.assert_called_once_with(16000, dtype='float32')
         asr.assert_called_once_with('silence')
         self.assertEqual(llm.call_args.kwargs['max_tokens'], 1)
+        self.assertEqual(evidence.call_args.args[1:], (1, 'evidence/model', '/adapter'))
+        self.assertIsNone(backend.last_generation_seconds)
+
+    def test_stage_b_modes_budget_and_adapter_loading(self):
+        backend = mlx_backend.MLXBackend()
+        words = WORDS
+        questions = ['Dose?', 'Concert?', 'Meal?']
+        answers = [True, False, True]
+        anchors = [(0.0, 1.0), (None, None), (0.0, 1.0)]
+        with patch.object(backend, 'generate_messages', return_value='OUT') as generate, \
+                patch.object(mlx_backend, 'EVIDENCE_MODEL', 'evidence/model'), \
+                patch.object(mlx_backend, 'EVIDENCE_MODE', 'refine'):
+            result = backend.complete_evidence(words, questions, answers, {1: 'draft'}, anchors, time.monotonic())
+            self.assertEqual(result['mode'], 'refine')
+            self.assertEqual(result['raw'], 'OUT')
+            self.assertEqual(generate.call_args.args[1:], (mlx_backend.EVIDENCE_MAX_TOKENS['refine'], 'evidence/model', None))
+            self.assertIn('1. Dose?\n   draft: "draft"', generate.call_args.args[0][1]['content'])
+            self.assertNotIn('2. Concert?', generate.call_args.args[0][1]['content'])
+            late = backend.complete_evidence(words, questions, answers, {}, anchors,
+                                             time.monotonic() - mlx_backend.EVIDENCE_BUDGET_SECONDS - 1)
+            self.assertEqual(late, {'mode': 'refine', 'skipped': 'budget'})
+            self.assertIsNone(backend.complete_evidence(words, questions, [False, False, False], {}, anchors, time.monotonic()))
+        with patch.object(backend, 'generate_messages', return_value='"quote"') as generate, \
+                patch.object(mlx_backend, 'EVIDENCE_MODEL', 'evidence/model'), \
+                patch.object(mlx_backend, 'EVIDENCE_MODE', 'window'), \
+                patch.object(mlx_backend, 'EVIDENCE_ADAPTER', '/adapter'):
+            result = backend.complete_evidence(words, questions, answers, {}, anchors, time.monotonic())
+            self.assertEqual(result['mode'], 'window')
+            self.assertEqual(result['outputs'], {1: '"quote"', 3: '"quote"'})
+            self.assertEqual(generate.call_count, 2)
+            self.assertEqual(generate.call_args.args[1:], (mlx_backend.EVIDENCE_MAX_TOKENS['window'], 'evidence/model', '/adapter'))
+            self.assertTrue(generate.call_args.args[0][1]['content'].startswith('QUESTION: Meal?'))
+        with patch.object(mlx_backend, 'EVIDENCE_MODEL', None):
+            self.assertIsNone(backend.complete_evidence(words, questions, answers, {}, anchors, time.monotonic()))
+        tokenizer = Mock()
+        tokenizer.apply_chat_template.return_value = 'prompt'
+        load = Mock(return_value=('model', tokenizer))
+        modules = {'mlx_lm': SimpleNamespace(load=load, generate=Mock(return_value='x')),
+                   'mlx_lm.sample_utils': SimpleNamespace(make_sampler=Mock(return_value='sampler'))}
+        with patch.dict(sys.modules, modules), patch.object(mlx_backend, 'resolve_snapshot', return_value='/cached'):
+            backend.generate_messages(['m'], 1, 'evidence/model', '/adapter')
+            backend.generate_messages(['m'], 1, 'evidence/model', '/adapter')
+            backend.generate_messages(['m'], 1, 'evidence/model')
+        self.assertEqual(load.call_args_list[0].kwargs, {'tokenizer_config': {'local_files_only': True}, 'adapter_path': '/adapter'})
+        self.assertEqual(load.call_args_list[1].kwargs, {'tokenizer_config': {'local_files_only': True}})
+        self.assertEqual(load.call_count, 2)
 
     def test_decode_uses_sample_count_and_mono_float32(self):
         audio = io.BytesIO()

@@ -10,13 +10,30 @@ from pathlib import Path
 WHISPER_MODEL = 'mlx-community/whisper-large-v3-turbo'
 # A 16 GB answering model leaves no room for idle ASR weights on a 24 GB machine.
 RELEASE_ASR_AFTER_TRANSCRIBE = True
-LLM_MODEL = 'mlx-community/Qwen3.5-9B-4bit'
+# The 19B MoE refines evidence far better than the 9B (0.675 vs 0.628 tIoU on the
+# training set) but its 14 GB leaves no room for a second dense model beside it.
+LLM_MODEL = 'mlx-community/Qwen3.6-35B-A3B-OptiQ-4bit-REAP-19B'
 # The second model can reject a primary yes; its evidence is diagnostic only.
 # None disables the second pass.
-SECOND_LLM_MODEL = 'mlx-community/Qwen3-8B-4bit'
+SECOND_LLM_MODEL = None
 # Skip the second pass when the first already ran long, so it cannot cost the deadline.
 SECOND_PASS_BUDGET_SECONDS = 25.0
-DEFAULT_PROMPT = 'compact'
+# Stage B re-selects the evidence of retained yes answers over a sentence table.
+# None disables it. 'refine' is one batched call with the annotation conventions;
+# 'perq' is one call per yes over the whole transcript (parallel on a server backend);
+# 'window' is one bare call per yes over a local window, for an adapter trained on it;
+# 'locate' finds sentences globally, then selects word boundaries within that passage.
+EVIDENCE_MODEL = LLM_MODEL
+EVIDENCE_MODE = os.environ.get('MEDICAL_EVIDENCE_MODE', 'refine')
+EVIDENCE_ADAPTER = None
+# Stage B starts only while the request is young enough to finish inside the deadline. The
+# clean path reaches it at about 11 s, so this is a wide margin; it was 32 s, which a
+# validation run alongside an offline experiment crossed on 6 of 19 conversations, silently
+# dropping the evidence stage and about 0.017 raw. Keep it well under the 52 s watchdog.
+EVIDENCE_BUDGET_SECONDS = float(os.environ.get('MEDICAL_EVIDENCE_BUDGET', '40'))
+# Refine outputs are 90 tokens on median and under 160 except when the model loops.
+EVIDENCE_MAX_TOKENS = {'refine': 320, 'window': 60, 'perq': 120, 'locate': 64}
+DEFAULT_PROMPT = os.environ.get('MEDICAL_ANSWER_PROMPT', 'compact')
 SAMPLE_RATE = 16000
 BACKEND_VERSION = 1
 ASR_SETTINGS = {
@@ -79,7 +96,7 @@ def release_asr():
 
 class MLXBackend:
     def __init__(self, prompt=DEFAULT_PROMPT):
-        if prompt not in ('legacy', 'focused', 'compact', 'minimal'):
+        if prompt not in ('legacy', 'focused', 'compact', 'minimal', 'named'):
             raise ValueError(f'Unknown answer prompt: {prompt}')
         self.prompt = prompt
         self._whisper_path = None
@@ -138,25 +155,29 @@ class MLXBackend:
         from pipeline.core import build_messages
         from pipeline.evidence import (
             build_compact_messages, build_focused_messages, build_minimal_messages,
+            build_named_messages,
         )
 
         builder = {'legacy': build_messages, 'focused': build_focused_messages,
-                   'compact': build_compact_messages, 'minimal': build_minimal_messages}[self.prompt]
+                   'compact': build_compact_messages, 'minimal': build_minimal_messages,
+                   'named': build_named_messages}[self.prompt]
         return self.generate_messages(builder(words, questions), max_tokens, model_id)
 
     def generate_messages(self, messages: list[dict], max_tokens: int = 900,
-                          model_id: str | None = None) -> str:
+                          model_id: str | None = None, adapter: str | None = None) -> str:
         model_id = model_id or LLM_MODEL
-        if model_id not in self._models:
+        key = (model_id, adapter)
+        if key not in self._models:
             snapshot = resolve_snapshot(model_id)
             from mlx_lm import load
             from mlx_lm.sample_utils import make_sampler
 
-            self._models[model_id] = load(
-                snapshot, tokenizer_config={'local_files_only': True}
-            )
+            options = {'tokenizer_config': {'local_files_only': True}}
+            if adapter:
+                options['adapter_path'] = adapter
+            self._models[key] = load(snapshot, **options)
             self._sampler = make_sampler(temp=0.0)
-        model, tokenizer = self._models[model_id]
+        model, tokenizer = self._models[key]
         from mlx_lm import generate
 
         prompt = tokenizer.apply_chat_template(
@@ -187,6 +208,81 @@ class MLXBackend:
             return ''
         return self._generate(words, questions, max_tokens=1200, model_id=SECOND_LLM_MODEL)
 
+    def complete_evidence(self, words, questions, answers, drafts, anchors, request_started):
+        """Stage-B output for the parent to apply, or None when disabled or out of budget."""
+        if not EVIDENCE_MODEL or not any(answers):
+            return None
+        started = time.monotonic()
+        if started - request_started > EVIDENCE_BUDGET_SECONDS:
+            return {'mode': EVIDENCE_MODE, 'skipped': 'budget'}
+        if EVIDENCE_MODE == 'locate':
+            from pipeline.locate import locate_evidence
+
+            frame = locate_evidence(
+                words, questions, answers,
+                lambda phase, prompts: self.generate_many(prompts, EVIDENCE_MAX_TOKENS['locate'], request_started),
+                deadline=request_started + EVIDENCE_BUDGET_SECONDS,
+            )
+            return {**frame, 'seconds': time.monotonic() - started}
+        from pipeline.stage_b import (
+            build_perq_messages, build_refine_messages, build_window_messages,
+            render_sentences, sentence_ranges,
+        )
+
+        if EVIDENCE_MODE == 'refine':
+            messages = build_refine_messages(words, questions, answers, drafts)
+            raw = self.generate_messages(messages, EVIDENCE_MAX_TOKENS['refine'],
+                                         EVIDENCE_MODEL, EVIDENCE_ADAPTER)
+            return {'mode': 'refine', 'raw': raw, 'seconds': time.monotonic() - started}
+
+        sentences = sentence_ranges(words)
+        if EVIDENCE_MODE == 'perq':
+            from pipeline.span_examples import examples_for
+
+            retrieved = os.environ.get('MEDICAL_EVIDENCE_PROMPT') == 'retrieved'
+            transcript = render_sentences(words, sentences)
+            prompts = [(i + 1, build_perq_messages(
+                transcript, question, drafts.get(i + 1, ''),
+                examples=examples_for(questions, question) if retrieved else None,
+            )) for i, question in enumerate(questions) if answers[i]]
+        else:
+            from rank_bm25 import BM25Okapi
+            from pipeline.stage_b import _content, sentence_text
+
+            ranker = BM25Okapi([_content(sentence_text(words, span)) for span in sentences])
+            prompts = [(i + 1, build_window_messages(words, question, anchors[i], sentences, ranker))
+                       for i, question in enumerate(questions) if answers[i]]
+        outputs = self.generate_many(prompts, EVIDENCE_MAX_TOKENS[EVIDENCE_MODE], request_started)
+        return {'mode': EVIDENCE_MODE, 'outputs': outputs, 'seconds': time.monotonic() - started}
+
+    def complete_rescue(self, words, questions, answers, request_started):
+        """P(yes) for each question currently answered no, or {} without token probabilities."""
+        from pipeline.rescue import build_rescue_messages, pending
+        from pipeline.stage_b import render_sentences
+
+        numbers = pending(answers)
+        if not EVIDENCE_MODEL or not numbers:
+            return {}
+        # A re-ask over the same garbled text repeats the same mistake, so the backend may
+        # offer a more accurate reading of the audio; the spans still come from `words`.
+        transcript = getattr(self, 'rescue_reading', None) or render_sentences(words)
+        prompts = [(number, build_rescue_messages(transcript, questions[number - 1]))
+                   for number in numbers]
+        return self.score_yes(prompts, request_started)
+
+    def score_yes(self, prompts, request_started):
+        """P(yes) per prompt. Needs token probabilities, which only the server backend exposes."""
+        return {}
+
+    def generate_many(self, prompts, max_tokens, request_started):
+        """One generation per prompt, in order, stopping at the stage-B budget."""
+        outputs = {}
+        for key, messages in prompts:
+            if time.monotonic() - request_started > EVIDENCE_BUDGET_SECONDS:
+                break
+            outputs[key] = self.generate_messages(messages, max_tokens, EVIDENCE_MODEL, EVIDENCE_ADAPTER)
+        return outputs
+
     def warmup(self) -> None:
         import numpy as np
 
@@ -194,4 +290,7 @@ class MLXBackend:
         self._generate([], ['Was fever discussed?'], max_tokens=1)
         if SECOND_LLM_MODEL:
             self._generate([], ['Was fever discussed?'], max_tokens=1, model_id=SECOND_LLM_MODEL)
+        if EVIDENCE_MODEL:
+            self.generate_messages([{'role': 'user', 'content': 'Warm up.'}], 1,
+                                   EVIDENCE_MODEL, EVIDENCE_ADAPTER)
         self.last_generation_seconds = None
