@@ -1,6 +1,7 @@
 # START HERE (2026-09-19, 18:30 CEST) — read this block, then skip to the end
 
-**Best configuration, validated, mean 0.5211 over complete runs (best 0.5271).**
+**Best configuration, validated, mean 0.5270 over FOUR complete runs
+(0.5187 / 0.5234 / 0.5320 / 0.5339, sd 0.0072; best 0.5339).**
 It is `BEST-WORKING-VERSION`, and it needs NO code beyond what is committed:
 
 ```bash
@@ -1604,3 +1605,14 @@ has now been measured: box growth (flat 1.3), the growth cap (1.3),
 `DRONE_DET_CONF` (0.01), the camera (`full`), `AGREEMENT_WEIGHT`/`MISS_PENALTY`/
 `HITS_BASE` (all suppression, all dead), the floor band, and `RUNNER_UPS`
 (saturated). The next real lever is a better detector.
+
+### The served configuration, confirmed on four complete runs
+
+`v4@960 + v6@1280 + v8@1280 + v8@2560`, flat growth 1.3, track-conf 0.10:
+**0.5187 / 0.5234 / 0.5320 / 0.5339 — mean 0.5270, sd 0.0072, best 0.5339.**
+Compute 72 ms median of a 333 ms budget on a 5090. That is the day's endpoint:
+0.4788 -> 0.5270, and `small_launcher` 0.000 -> 0.512.
+
+The sd of 0.0072 across four complete runs is consistent with the 0.005 figure
+measured this morning on a three-model stack, so the extra model has not made
+the configuration noisier.
