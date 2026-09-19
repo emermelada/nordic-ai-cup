@@ -49,6 +49,7 @@ DEFAULT_PARAMS = {
     "tree_prod_w": 60.0,           # px of walking one known fruit / known-fruiting tree is worth
     "barren_reach": 250.0,         # do not walk farther than this to a tree not seen fruiting
     "tree_stick": 100.0,           # keep the current tree unless another is this much nearer
+    "camp_spacing": 60.0,          # a tree counts as taken if another camper sits within this distance
     "tree_fresh_w": 120.0,         # px a tree with fruit seen in the last 30 s is worth
     "barren_watch": 20.0,          # s sitting at a tree without fruit before giving up on it
     "tree_forget": 70.0,
@@ -1014,7 +1015,7 @@ class Hive:
             if q.mode != "camp":
                 continue
             dq = np.hypot(fm.tx - q.x, fm.ty - q.y)
-            occ |= dq < 20.0
+            occ |= dq < self.p["camp_spacing"]   # no clusters: one predator would eat them in a row
             if q.target is not None:
                 k = int((np.abs(fm.tx - q.target[0]) + np.abs(fm.ty - q.target[1])).argmin())
                 if dq[k] < d[k]:
