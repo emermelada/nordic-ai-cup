@@ -85,7 +85,8 @@ DEFAULT_PARAMS = {
     "wait_w": 0.8,                 # energy-equivalent cost per second spent waiting for a fruit to ripen
     "undated_wait": 16.0,          # an undated fruit is treated as ripe this long after it was first seen
     "wait_margin": 12.0,           # an agent waits for ripeness only if it keeps this much energy meanwhile
-    "avoid_young": 1.0,            # 1 = steer so that no move ends on a young fruit (touching eats it)
+    "avoid_young": 1.0,
+    "old_eat_rule": 1.0,           # 1 = old agents eat only fruit that lets them spawn at once            # 1 = steer so that no move ends on a young fruit (touching eats it)
     # threats
     "alert_awake": 190.0,          # react to awake predators whose track is this uncertain/close
     "alert_close": 110.0,          # react to an awake predator this close (it charges under 90) ...
@@ -101,7 +102,8 @@ DEFAULT_PARAMS = {
     "track_memory": 1.5,           # seconds an unseen predator heading our way stays a threat
     # exploration
     "explore_speed": 8.0,
-    "plan_paths": 1.0,             # 1 = walk around known walls on the cheapest grid path (terrain-weighted)
+    "plan_paths": 1.0,
+    "peer_fix": 1.0,               # 1 = a recently confirmed agent that sees an unverified one sets its position             # 1 = walk around known walls on the cheapest grid path (terrain-weighted)
 }
 
 
@@ -136,7 +138,7 @@ class Mem:
     """What the hive remembers about one agent."""
     __slots__ = ("aid", "frame", "x", "y", "h", "energy", "max_energy", "speed", "sprint", "hear", "vis", "cone",
                  "age", "biome", "last", "old", "born", "fit", "mode", "target", "wander_dir", "wander_until",
-                 "expected", "fixes", "spawned", "stale", "food_tgt")
+                 "expected", "fixes", "spawned", "stale", "food_tgt", "suspect", "confirmed")
 
     def __init__(self, aid, frame, tick):
         self.aid = aid
@@ -155,6 +157,8 @@ class Mem:
         self.expected = None
         self.fixes = 0
         self.spawned = 0
+        self.suspect = False       # moved where it could not see since its pose was last confirmed
+        self.confirmed = -10 ** 9  # tick of the last exact landmark confirmation
 
 
 class FrameMap:
@@ -545,6 +549,25 @@ class Hive:
         for m, obs in alive.values():
             if obs["Edge"]:
                 self._landmark_fix(m, obs["Edge"])
+        if self.p["peer_fix"] > 0:
+            for m, obs in alive.values():
+                if m.suspect or m.stale or self.tick - m.confirmed > 30 or not obs["Agent"]:
+                    continue
+                for o in obs["Agent"]:
+                    other = alive.get(o.get("id"))
+                    if other is None:
+                        continue
+                    q = other[0]
+                    if q.frame != m.frame or not q.suspect or q.stale:
+                        continue
+                    th = m.h + o["angle"]
+                    q.x = m.x + o["distance"] * math.cos(th)
+                    q.y = m.y + o["distance"] * math.sin(th)
+                    q.suspect = False
+                    q.confirmed = m.confirmed
+                    self.stats["peer_fixes"] = self.stats.get("peer_fixes", 0) + 1
+        for m, obs in alive.values():
+            if obs["Edge"]:
                 self._map_edges(m, obs["Edge"])
         by_frame = {}
         for m, obs in alive.values():
@@ -615,6 +638,8 @@ class Hive:
             e -= 0.01 * (m.age + 0.1)
         m.expected = e
         d *= BIOME_PENALTY.get(m.biome, 1.0)
+        if d > 2.0 and abs(wrap(mdir)) > m.cone / 2:
+            m.suspect = True
         if d > 0:
             fm = self.maps[m.frame]
             direction = m.h + mdir
@@ -734,7 +759,9 @@ class Hive:
             x1, y1 = self._to_frame(m, sx, sy)
             x2, y2 = self._to_frame(m, ex, ey)
             if (round(x1), round(y1), round(x2), round(y2)) in fm.edge_keys:
-                return                      # a known face sits exactly where we expect it: pose is right
+                m.suspect = False           # a known face sits exactly where we expect it: pose is right
+                m.confirmed = self.tick
+                return
             pts.append((x1, y1, x2, y2))
         # Candidate shifts: same length and direction, closer than 25 px. Opposite faces of a box share
         # length and direction but are >= 30 px apart, so they cannot be confused within that radius.
@@ -747,7 +774,7 @@ class Hive:
                 dx2, dy2 = e[2] - x2, e[3] - y2
                 if abs(dx1 - dx2) + abs(dy1 - dy2) > 0.05:      # different length or direction
                     continue
-                if abs(dx1) + abs(dy1) < 25.0:
+                if dx1 * dx1 + dy1 * dy1 < 29.0 * 29.0:
                     cands.append((dx1, dy1))
         if not cands:
             return
@@ -762,6 +789,8 @@ class Hive:
             m.x += best[1]
             m.y += best[2]
             m.fixes += 1
+            m.suspect = False
+            m.confirmed = self.tick
             self.stats["fixes"] += 1
 
     def _map_edges(self, m, edges):
@@ -1151,6 +1180,15 @@ class Hive:
         breeder = np.array([bool(m.spawned) and not (m.old and m.energy < 101.0) for m in agents])
         # food eaten by an agent that will never pass it on is wasted: they only get what nobody else wants
         eff = np.where(breeder[:, None], eff, eff * p["weak_food_w"])
+        if p["old_eat_rule"] > 0:
+            old = np.array([m.old for m in agents])
+            if old.any():
+                fuel = (np.array([m.energy for m in agents])[:, None] - 0.05 * d - (arrive - t) * drain[:, None]
+                        + v_now)
+                good = np.array([bool(m.spawned) for m in agents])[:, None]
+                # an old agent eats only what turns into a child at once (its energy drains 6-12/s otherwise)
+                eff = np.where(old[:, None], np.where(good & (fuel > 102.0) & (v_now > 0), v_now, -1e9), eff)
+                wait = np.where(old[:, None], 0.0, wait)
         score = eff - p["dist_cost"] * d + p["hunger_w"] * frac_missing[:, None]
         # keep going for the fruit chosen last tick unless something clearly better appears (no zig-zag)
         for i, m in enumerate(agents):
