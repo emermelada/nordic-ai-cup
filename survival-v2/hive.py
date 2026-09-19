@@ -51,6 +51,8 @@ DEFAULT_PARAMS = {
     "tree_stick": 100.0,           # keep the current tree unless another is this much nearer
     "grab_energy": 0.0,            # below this energy an agent under threat still grabs a fruit ...
     "grab_dist": 35.0,             # ... within this distance
+    "scout_retired": 0.0,          # 1 = retired weak genomes explore stale map cells instead of sitting
+    "scout_min_e": 15.0,
     "camp_spacing": 60.0,          # a tree counts as taken if another camper sits within this distance
     "tree_fresh_w": 120.0,         # px a tree with fruit seen in the last 30 s is worth
     "barren_watch": 20.0,          # s sitting at a tree without fruit before giving up on it
@@ -907,7 +909,10 @@ class Hive:
             elif m.aid in threat:
                 act = self._flee(m, fm, threat[m.aid])
             elif m.aid in retire:
-                act = self._retire(m, fm)
+                if p["scout_retired"] > 0 and fm.world and m.energy > p["scout_min_e"]:
+                    act = self._explore(m, fm)     # spend the energy it cannot pass on mapping trees for the rest
+                else:
+                    act = self._retire(m, fm)
             elif m.aid in food:
                 m.mode = "food"
                 x, y, wait = food[m.aid]

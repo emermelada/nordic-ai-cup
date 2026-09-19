@@ -295,6 +295,8 @@ class FastEnvironment(Environment):
         self._static = {}
         self.agent_observations = {}
         self.kill_log = []
+        self.eat_log = []       # (time, agent_id, fruit energy, fruit age in s, energy thrown away above max)
+        self.death_log = []     # (time, agent_id, age, max_age) for agents that ran out of energy
         # counters for evaluation only (no effect on the simulation)
         self.stat = {"fruit_n": 0, "fruit_e": 0.0, "kill_n": 0, "kill_e": 0.0, "starve_n": 0, "move_e": 0.0,
                      "turn_e": 0.0, "live_e": 0.0, "old_e": 0.0, "spawn_e": 0.0, "wasted_e": 0.0, "old_death_n": 0}
@@ -586,6 +588,7 @@ class FastEnvironment(Environment):
                 self.kill_agent(agent)
                 a_alive[a_index[id(agent)]] = False
                 self.stat["starve_n"] += 1
+                self.death_log.append((self.time, agent.agent_id, agent.age, agent.max_age))
                 if agent.age > agent.max_age:
                     self.stat["old_death_n"] += 1
                 continue
@@ -599,6 +602,8 @@ class FastEnvironment(Environment):
                 d = np.hypot(F[1] - ax, F[2] - ay)
                 for i in np.flatnonzero(f_alive & (d < agent.size + f_rad)).tolist():
                     fruit = F[0][i]
+                    self.eat_log.append((self.time, agent.agent_id, fruit.energy, fruit.age / 2.0,
+                                         max(0.0, agent.energy + fruit.energy - agent.max_energy), fruit.x, fruit.y))
                     agent.energy = min(agent.max_energy, agent.energy + fruit.energy)
                     self.score += fruit.energy / 1000
                     self.stat["fruit_n"] += 1

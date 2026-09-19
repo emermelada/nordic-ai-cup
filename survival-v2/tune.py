@@ -54,8 +54,10 @@ SPACE = {
     "tree_stick": (0.0, 300.0, False),
     "slow_tree_pen": (0.0, 600.0, False),
     "alert_always": (40.0, 120.0, False),
+    "camp_spacing": (20.0, 150.0, False),
+    "brake_min_pop": (6.0, 40.0, False),
 }
-INT_KEYS = {"pop_min", "pop_cap_early", "pop_cap_mid"}
+INT_KEYS = {"pop_min", "pop_cap_early", "pop_cap_mid", "brake_min_pop"}
 NAMES = list(SPACE)
 
 

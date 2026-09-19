@@ -60,6 +60,21 @@ survived. Mean ± SE over the seeds listed.
 | **baseline on seeds 101-140 (40)** | **1000 +- 52** | 6/40 under 500 s |
 | **camp occupancy from claims instead of positions (seeds 101-140)** | **1239 +- 56** | switches 9-14 -> 3.6 per agent-minute; 2/40 under 500 s; 20/40 alive at 1200 (11) |
 | no predators (seeds 101-120) | 1608 | the energy economy is the ceiling |
+| tree choice favours trees with a long productive future (seeds 101-140) | 1160 +- 51 | paired diff vs claims -79 +- 69: reverted |
+
+## Where the food goes (eatdiag.py, seeds 101-110, claims version)
+
+| Eater's situation | Share of fruit | Mean energy |
+|---|---|---|
+| heading for that fruit, ripe | 32% | 58.5 |
+| heading for that fruit, age unknown to the hive, turned out young | 28% | 31 |
+| heading for that fruit, known young (hungry or old agents) | 14% | 33 |
+| walked over it on the way to another fruit | 12% | 42 |
+| camping, fleeing, exploring (walked over it) | 12% | 36-40 |
+
+59% of all fruit is eaten under 15 s old. A fruit is worth 20 + 2/s up to 60 at 20 s and rots at 50 s, and
+nothing else eats fruit, so waiting is almost free: this is the largest energy leak found so far (~30% of
+the food energy).
 
 ## Platform validation 1 (tunnel, 19 Sep 11:16 UTC)
 
