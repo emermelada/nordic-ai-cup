@@ -1616,3 +1616,16 @@ Compute 72 ms median of a 333 ms budget on a 5090. That is the day's endpoint:
 The sd of 0.0072 across four complete runs is consistent with the 0.005 figure
 measured this morning on a three-model stack, so the extra model has not made
 the configuration noisier.
+
+### Flat 1.2 growth on the 4-model stack — rejected
+
+One complete run 0.5118 against the served 1.3's four-run mean of 0.5270 (two
+of the three runs lost frames, evaluator-side: our service answered every frame
+in 67 ms median with nothing over budget, and the Helsinki RTT was 29.7 ms).
+
+The hypothesis was reasonable and is now dead: adding a 2560 pass means many
+detections come from a view with 6 source px per grid cell instead of 12, so
+the boxes are geometrically more accurate and might need less inflation. They
+do not. **1.3 remains the optimum on the 4-model stack**, unchanged from the
+3-model one, which makes the growth factor look like a property of the
+evaluator's box convention rather than of our detector's precision.
