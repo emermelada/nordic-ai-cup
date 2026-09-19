@@ -29,7 +29,10 @@ from flyby import load_model, predict
 from utils import validate_response
 
 HOST = '0.0.0.0'
-PORT = 9053
+# A rented box only exposes the ports its template mapped -- this one gives
+# 8080, not 9053 -- and binding the wrong one means the evaluator cannot reach
+# us at all while every local check passes.
+PORT = int(os.environ.get('DRONE_PORT', '9053'))
 
 # With a timestamp: serve.log has to be lined up against tunnel.log to tell a
 # network stall from a slow model, and the default format has no time at all.

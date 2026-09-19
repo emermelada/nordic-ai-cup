@@ -1081,3 +1081,223 @@ The two largest steps — box growth (+0.157) and pairing (+0.10) — were not
 better detectors. Four attempts at a better detector (v5, v7, rotation TTA, and
 v8 *as a replacement*) all failed; v8 only paid as an *addition*. The leverage
 has been in the scoring convention and in class coverage, not in the backbone.
+
+---
+
+## 2026-09-19, 15:00 CEST: 0.5055 — the growth profile was wrong, and so was the track threshold
+
+**New best: mean 0.5055 over complete runs, best single run 0.5113**, from
+`DRONE_BOX_GROW=1.3` (flat, every class) plus
+`NEW_TRACK_CONFIDENCE=0.10`. Both are one-word configuration changes on the
+code already in `1a7810c`; no code change is needed to serve this.
+
+```bash
+DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt \
+DRONE_IMGSZ=960,1280,1280 DRONE_DEVICE=mps DRONE_RECORD_DIR=data/recordings \
+DRONE_SET=BOTH_MODELS=1,NEW_TRACK_CONFIDENCE=0.10 .venv/bin/python api.py
+```
+
+`/api` must show `box_grow` with all 16 classes at `[1.3, 1.3]`,
+`new_track_confidence: 0.1`, `models_loaded: 3`, `imgsz: [960, 1280, 1280]`.
+
+### Runs are deterministic given the camera path — use pairs, not means
+
+The largest methodological finding of the day. Hash a run's full view
+sequence (`tools` scratch script, 249 x (frame, level, cx, cy)) and runs with
+the same hash return **the same score to sixteen digits**. Trajectory
+`ae2c83fb` came up 7 times in 30 runs; under track-conf 0.15 it returned
+0.5017590925376386 three times out of three.
+
+This means **run-to-run "noise" is not noise** — it is which camera path the
+run happened to take, decided by whether an early command lands before the
+evaluator renders the next frame. Comparing arms by their means is confounded
+by the draw: flat 1.3 drew its worst trajectory four times while track-conf
+0.15 drew its best three times, which made a real +0.012 look like +0.004.
+
+The whole day, measured on one identical trajectory (`ae2c83fb`):
+
+| config | score | step |
+|---|---|---|
+| `helsinki` profile, track-conf 0.25 (yesterday's best) | 0.4762 | |
+| profile at cap 1.45 | 0.4771 | +0.0009 |
+| **flat 1.3**, 0.25 | 0.4893 | **+0.0131** |
+| flat 1.3 + floor band | 0.4908 | +0.0015 |
+| flat 1.3, **track-conf 0.15** | 0.5018 | **+0.0125** |
+| flat 1.3, track-conf 0.075 | 0.5065 | +0.0047 |
+
+On `82a5e16a`: profile 0.4849, flat 1.3 **0.4994**, track-conf 0.05 0.4842.
+
+### The box-convention factors measure mask spindliness, not the convention
+
+`training/box_convention.json` is `patch box / alpha-mask box`, which tracks
+how spindly an object is inside its cut-out. It is **not** a measurement of any
+disagreement between our boxes and the evaluator's.
+
+Measured against the evaluator's own ground truth: v4, v6 and v8 over all 25
+official Helsinki frames, six Level-1 sweep views each, matched by centre
+proximity. **Every class, every model: predicted box / official box =
+0.97-1.04, median IoU 0.79-0.98.** The only real per-class bias found is v4/v6
+under-sizing hangar height ~1.19x and v8 under-sizing medium_launcher.
+(Caveat: Helsinki is the scene these models were trained from, so this shows
+the box regressor *can* produce official boxes, not that it does on a new
+flight.)
+
+Growing a correctly-sized box only lowers IoU, and past g = 1.414 a perfectly
+centred box is already under the 0.50 threshold on its own — which is why
+`flat 1.45` lost 0.019. Growth pays only against **under-sizing**, and the
+optimum is exactly 1/r where r is how undersized we are.
+
+The real under-sizing is **resolution**. Rendering each confirmed object from
+`data/scene` as a native Level-2 view and as a 2x-downsampled Level-1 view and
+running all three served models on both: the Level-1 box is smaller, most on
+the smallest objects — spacecraft 1.23, large_tower 1.13, jammer 1.12 against
+~1.02 for the large classes. Spearman between that shrinkage and the profile
+we were serving: **-0.02**. Uncorrelated. Hence flat.
+
+The growth curve, on real runs:
+
+| growth | mean | |
+|---|---|---|
+| `helsinki` profile (~1.1 effective) | 0.4754 | |
+| **flat 1.30** | **0.4922** | peak |
+| flat 1.45 | 0.4740 | past the cliff |
+
+### `score_offline.py` is blind to box growth, and inverted on it
+
+It grows the *truth* by the same `box_convention.json` factors that `BOX_GROW`
+applies to predictions, so for every class under the cap both sides scale about
+their own centres by the same number and the effect cancels. The old
+"1.3 -> 0.488, 1.5 -> 0.480" cap sweep was reading second-order noise.
+
+Worse, it is **anti-correlated** on this arm: it scored flat 1.3 at 0.434
+against the profile's 0.461, where reality said +0.017. Screening flat 1.3
+offline would have thrown away the best result of the day. It was accurate on
+the camera arm (-0.046 offline against -0.049 real), so the rule is: **trust it
+for anything that does not touch box geometry, never for anything that does.**
+
+### The track-admission threshold was two model generations stale
+
+`NEW_TRACK_CONFIDENCE` decides whether a detection becomes a remembered track —
+answered for an object's whole ~31-frame transit — or a one-frame guess. It had
+been 0.25 since it was tuned against v3 at a score of 0.132, before the
+three-model ensemble, before box growth, before the motion fix.
+
+| threshold | mean | boxes/frame |
+|---|---|---|
+| 0.25 | 0.4922 | 32.6 |
+| 0.15 | 0.4981 | 42.2 |
+| **0.10** | **0.5055** | ~50 |
+| 0.075 | 0.5065 (1 run) | 58.3 |
+| 0.05 | **0.4842** | 71.3 |
+
+A real peak with a cliff between 0.05 and 0.075: below it, faint *false*
+detections also become persistent tracks and outrank genuine faint answers
+elsewhere in the flight — the same failure `FLOOR_ALL_CLASSES=0.01` hit.
+**0.10 is served rather than 0.075** because they score the same and 0.10 is
+further from the cliff; on a more cluttered flight the cliff moves up.
+
+### The rented box does NOT score lower than the Mac
+
+The ~0.02 penalty recorded in this file ("the box measures ~0.02 lower on an
+identical config") was **the Cloudflare tunnel, not the machine**. Served
+direct over a Vast-mapped port, three control runs gave 0.4652 / 0.4849 /
+0.4762, mean **0.4750**, against the Mac's 0.4753 — a difference of 0.0003.
+
+Confirmed independently: dumping raw detections for the same 40 recorded frames
+on CUDA and on CPU, the two agree to **0.008 px median box error and 0.00013
+median class-score error**, 213 of 214 detections matched at IoU > 0.9. The
+detector is numerically identical. Compare across machines freely; prefer a
+direct port to any tunnel.
+
+### Measured dead today — do not re-run these
+
+* **Level 2 in any form.** `hybrid_next_view`'s coverage branch picked the
+  nearest Level-1 sweep point measured from where the camera already was — which
+  after it arrived was the point it was standing on — and never advanced
+  `sweep_index`, so the coverage phase re-looked at one sixth of the frame.
+  Fixed (a `cover_index` that advances; `full` is byte-identical). At a low duty
+  cycle the fixed camera costs nothing in coverage — 217 L1 / 31 L2 / 0 refused,
+  median 63 looks per cell, same as `full`. **It still lost 0.049 on a real
+  run.** The per-class column says why: hangar -0.298, large_tower -0.115,
+  large_launcher -0.095. Our models were trained on Level-1-scale views, so at
+  1:1 they *name* objects worse (measured: hangar correct-class 0.43 -> 0.14,
+  mine_roller 1.00 -> 0.48), and `LEVEL_WEIGHT[2]` is 1.0 with votes that
+  accumulate forever, so a few confident wrong-class native sightings rename a
+  well-established track. Meanwhile the target classes did not improve at all
+  (small_launcher 0.001 -> 0.000). 30 native views cannot cover a 13 px object's
+  31-frame transit. **The camera question is now closed on a working
+  implementation.**
+* **A floor band at confidence 0.0** (`DRONE_FLOOR_ZERO=1`, added this session,
+  off by default). The scorer semantics check out — maxDets is 100 per image
+  *per category*, we emit at most 8 of one class per frame, and 150 junk boxes
+  at score 0.0 leave a perfect class at AP 1.000 — and the implementation is
+  clean (0 floor boxes ranked above a real answer, max 30 of one class per
+  frame). It is simply worth **+0.0015**: paired, 0.4908 against flat 1.3's
+  0.4893. Not worth 4x the response size.
+* **Growth cap above 1.3.** Only four scored classes have a factor above 1.3, so
+  the cap is a weak lever; raising it to 1.45 moved 8 of 12 classes not at all.
+
+### Corrections to the v9 plan in this file
+
+1. **Do not train v9 with official-convention labels.** The flag
+   (`--box-convention official`) does not exist in `make_dataset.py`, and the
+   premise is wrong: our boxes already match the official convention on
+   Helsinki. `BOX_GROW` is applied in `annotations_for` with no knowledge of
+   which model produced a box, so a v9 predicting larger boxes would get flat
+   1.3 stacked on top and overshoot — and overshooting cost 0.019 today.
+   **Use the same label convention as v4/v6/v8.**
+2. **Raise the class-weight floor to 0.8.** The v9 recipe carries hangar=0.4,
+   jet_plane=0.5, large_tower=0.5 — repeating the v8 mistake this file already
+   documents ("should not go below ~0.8 on a class already scoring well"). v8
+   cut hangar to 0.4 and its hangar AP fell 0.871 -> 0.505. Those are still our
+   best classes.
+3. **v9 does not drop in.** Growth 1.3 and track-conf 0.10 were tuned against
+   this ensemble's box statistics and confidence calibration. A fourth model
+   changes both; re-check track-conf at minimum.
+4. **Two v9 plans existed and they contradicted each other.** This file
+   (19 Sep 03:02) said "the v6 recipe with official-convention labels, not
+   another backbone"; `train_remote.sh` and `training/yolo11-p2.yaml` describe
+   a yolo11m with a P2 head. The first is dead — its premise was that a model
+   on official labels needs no report-time growth, and there is no convention
+   error to train away. **The P2 recipe is the one to run**, and today's
+   Level-1-vs-Level-2 measurement supports it: `small_launcher` was found 6/6
+   at native resolution and 0/6 at Level 1, and P2 gives it at Level 1 the cell
+   count native resolution gives it today. Keep the *scepticism* that wrote
+   "not another backbone", though: it was right five times out of six, and
+   today's +0.030 again came from conventions, not capacity.
+
+### Tooling changed this session
+
+* `tools/arm.sh` — starts one sweep arm from a named baseline plus overrides and
+  refuses to hand it over unless `/api` agrees: models_loaded == models_requested,
+  box_grow 16 classes, imgsz matching the model count, recording on. Kills only
+  its own service via a PID file (`pkill -x python3` would take the rented box's
+  Jupyter; `pkill -f` matches the ssh command line and has killed a shell
+  mid-command three times). `tools/arm.sh frames` counts and flags short runs.
+* `tools/preflight.py` — `--expect-models` now defaults to `models_requested`
+  from `/api` rather than the constant 2, which silently passed while three
+  models were served. `--expect-grow` fails on an empty or short `box_grow`.
+* `tools/score_offline.py` — `--model-alt` is repeatable, so it can finally
+  replay the three-model configuration that is actually served.
+* `api.py` — `/api` reports `inspect`, `det_conf`, `track_conf`, `both_models`,
+  `floor_zero`, `floor_size_tol`, `miss_penalty`. `DRONE_INSPECT` previously
+  could not be confirmed from outside the process at all. `DRONE_PORT` makes the
+  bind port configurable (a rented box exposes only the ports its template
+  mapped).
+* `flyby.py` — `DRONE_FLOOR_ZERO`, `DRONE_FLOOR_SIZE_TOL`, `DRONE_MISS_PENALTY`,
+  all off by default and proved byte-identical to `1a7810c` when unset by
+  replaying 120 frames of synthetic detections and hashing the answers.
+
+### Protocol notes
+
+* **Count frames every time.** 5 of 30 runs today came back short and every one
+  had to be discarded. Two of those were the service being restarted mid-run —
+  check the recording's last-modified time before switching arms.
+* The competition service returned one attempt with
+  `submitted_at == started_at == finished_at` and a stale-looking score. It was
+  real (the run executed fully on our side) but the timestamps were broken.
+  Two other attempts sent exactly one frame and then stopped, returning a 404
+  to the submitter while our service answered 200. **Do not spend the one-shot
+  evaluation while the service is behaving like that.**
