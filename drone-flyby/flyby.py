@@ -416,6 +416,23 @@ SWEEPS = {
     # Top row mostly, with an occasional look back at the bottom middle for
     # objects the first pass missed. TM -> BM is 1080 px, just inside the limit.
     'top_mostly': FULL_SWEEP + [TL, TM, TR, TM, TL, TM, TR, TM, BM, TM] * 80,
+    # 'row0' = the full Level-1 sweep with a whole-frame Level-0 look after each
+    # row (Javier, ffbb874). Additive: it keeps every Level-1 look `full` takes
+    # and spends two extra frames per cycle on the whole frame. Measured in the
+    # closed-loop simulator at recall 0.545 against full's 0.466, ahead on AP
+    # against both truth files, and best of ten patterns.
+    #
+    # The Level-0 look only pays because of the imgsz 2560 pass: at Level 0 one
+    # transmitted pixel is 4 source pixels, so a stride-8 cell at 2560 spans 12
+    # source pixels -- exactly what a Level-1 view had at 1280. v4@960 finds 0
+    # of 18 objects at Level 0 and v6@1280 finds 12 of 18, which is why full0
+    # and quad0 lost when they were judged on v3.
+    #
+    # Note this is the opposite trade to 'top_mostly', which was measured on a
+    # real run at 0.5150/0.5098 against full's 0.5270: giving UP the bottom-row
+    # looks costs more than the earlier acquisition gains, because objects are
+    # ~1.5x larger at the bottom and that is where the class votes are reliable.
+    'row0': [TL, TM, TR, (0, 1920, 1080), BR, BM, BL, (0, 1920, 1080)],
     # Level-2 entry band: every new object at NATIVE resolution.
     #
     # The L2 move limit is 551 px and adjacent L2 centres 480 px apart tile the
