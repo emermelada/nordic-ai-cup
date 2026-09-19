@@ -1382,3 +1382,16 @@ They are refused, which desynchronises further. Not worth fixing while the
 endpoint is healthy (it needs a multi-second stall to trigger), but it turns one
 lost answer into a cascade, and it is why 0.1945 was so far below even a
 frame-loss explanation.
+
+### The endpoint is reproducible: same host, same score
+
+19 Sep 15:13, after two failed hosts, the Czechia `datacenter:214845` machine
+(93.91.156.98) was re-rented and the locked config reproduced exactly:
+**0.5065, 249/249, 1.2 % stalled camera steps** -- inside the morning's
+0.5027 / 0.5065 / 0.5113 at 0.4 / 1.2 / 3.6 % stalls. Host quality is stable
+and repeatable when the two gates pass, so a single confirmation run is enough
+on a known host rather than three.
+
+Note when reading stall rates: run `tools/stall`-style counting on the RUN's
+recording only. A `tools/preflight.py` replay sends frames as fast as it can
+and shows ~23 % "stalls" that mean nothing.
