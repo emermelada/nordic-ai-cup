@@ -95,6 +95,41 @@ log-probabilities and take the argmax.
   genuinely different signal, and it needs no new data — it runs over pools
   already on disk.
 
+### 2b. Tested and rejected, 2026-09-20 — span geometry is not the selector
+
+Combining the two systems from their *spans alone* was tried and does not work.
+On the 195 positives, with the control at 0.716181 tIoU:
+
+| Rule over the two predicted spans | Raw | Change |
+| --- | ---: | ---: |
+| Take the extractor whenever the spans overlap at all | 0.838195 | +0.008486 |
+| Union of the two where they overlap | 0.842218 | +0.012509 |
+| Intersection where they overlap | 0.825086 | −0.004623 |
+| Overlap threshold chosen leave-one-conversation-out | 0.844454 | +0.014745 |
+| **Same, with the rule family also chosen out-of-fold** | **0.827216** | **−0.002493** |
+
+The last row is the honest one: bootstrap [−0.017281, +0.011083], 36% of
+resamples above zero, and the procedure cannot even settle on a rule
+(`gate@0.2` for 27 conversations, `gate_longer@0.0` for 12). Everything above it
+is the cost of picking a rule family by looking at the full set. **With 39
+conversations and 195 positives, a selector built from hand-crafted span
+geometry will overfit.** The oracle's +0.0520 is real, but realizing it needs a
+signal from inside a model, not the geometry of two boxes.
+
+Span dilation is also dead: every amount hurts (−0.022 raw at ±0.1 s, −0.094 at
+±0.5 s) and out-of-fold selection correctly picks zero. The median gold-minus-
+control edge offset is **exactly 0.000 s on both sides** — when the control finds
+the right region its boundaries are already right. The apparent length shortfall
+(gold 3.21 s, control 2.98 s, extractor 2.78 s) is an artifact of the complete
+misses, not systematic under-coverage.
+
+**The one cheap shot left at the oracle** is the extractor's own decode margin —
+its best span score minus its CLS score, already computed in `decode_window` and
+currently discarded by `prediction_spans`. If that margin predicts which system
+is right, the chooser is nearly free. It needs one short GPU inference pass over
+the three fold checkpoints to emit margins alongside spans. Test that before
+concluding selection is closed.
+
 ### 3. The extractor as the evidence stage
 
 Measured on 2026-09-20: **0.8361 raw, +0.0064 over the control**, consistent
