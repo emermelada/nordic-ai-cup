@@ -12,6 +12,7 @@ is logged. One Hive serves consecutive games; it resets itself when sim_time goe
 Timing and the caller's address are logged every 1000 requests (SURV_LOG, default server_log.jsonl).
 """
 import json
+import math
 import os
 import sys
 import time
@@ -43,6 +44,56 @@ def _noop(step):
              "spawn_agent": False} for a in (step.get("agent_status") or []) if isinstance(a, dict)]
 
 
+TRACE_PATH = os.environ.get("SURV_TRACE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "server_trace.csv"))
+FIRST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "first_request.json")
+_first_dumped = [False]
+
+
+def _trace(step, dt, n_actions):
+    """One compact line per request: wall time, sim time, agents, score, decide ms, observation types seen."""
+    try:
+        agents = step.get("agent_status") or []
+        types = {}
+        for a in agents[:3]:
+            for o in (a.get("observations") or [])[:50]:
+                types[str(o.get("type"))] = 1
+        with open(TRACE_PATH, "a", encoding="utf-8") as f:
+            f.write(f"{time.time():.3f},{step.get('sim_time')},{len(agents)},{step.get('score')},{step.get('game_status')},"
+                    f"{1000 * dt:.2f},{n_actions},{'|'.join(sorted(types))}\n")
+        if agents and not _first_dumped[0]:
+            _first_dumped[0] = True
+            with open(FIRST_PATH, "wb") as f:
+                f.write(orjson.dumps(step, option=orjson.OPT_INDENT_2))
+    except Exception:
+        pass
+
+
+def _clean(actions, step):
+    """Every field a plain finite float/int/bool: a NaN would serialise as null and fail the grader's
+    ActionRequest validation, which ends the game without an error message."""
+    alive = {a.get("agent_id") for a in (step.get("agent_status") or []) if isinstance(a, dict)}
+    out = []
+    bad = 0
+    for a in actions:
+        try:
+            aid = int(a["agent_id"])
+            vals = []
+            for k in ("move_distance", "move_direction", "turn_angle"):
+                v = float(a.get(k, 0.0))
+                if not math.isfinite(v):
+                    v = 0.0
+                    bad += 1
+                vals.append(v)
+            out.append({"agent_id": aid, "move_distance": max(0.0, vals[0]), "move_direction": vals[1],
+                        "turn_angle": vals[2], "spawn_agent": bool(a.get("spawn_agent", False))})
+        except Exception:
+            bad += 1
+    if bad:
+        stats["bad_values"] = stats.get("bad_values", 0) + bad
+        _log({"t": time.time(), "bad_values": bad, "sim_time": step.get("sim_time")})
+    return out
+
+
 def handle(body, client=None):
     t0 = time.perf_counter()
     if stats["last_done"] is not None:
@@ -50,13 +101,20 @@ def handle(body, client=None):
     step = {}
     try:
         step = orjson.loads(body) if body else {}
-        actions = hive.decide(step)
+        actions = _clean(hive.decide(step), step)
     except Exception:
         stats["errors"] += 1
         _log({"t": time.time(), "error": traceback.format_exc()[-2000:]})
         actions = _noop(step if isinstance(step, dict) else {})
-    out = orjson.dumps({"actions": actions})
+    try:
+        out = orjson.dumps({"actions": actions})
+    except Exception:
+        stats["errors"] += 1
+        _log({"t": time.time(), "error": "dumps: " + traceback.format_exc()[-2000:]})
+        out = orjson.dumps({"actions": _noop(step if isinstance(step, dict) else {})})
     dt = time.perf_counter() - t0
+    if isinstance(step, dict):
+        _trace(step, dt, len(actions))
     stats["n"] += 1
     stats["decide_s"] += dt
     stats["decide_max"] = max(stats["decide_max"], dt)

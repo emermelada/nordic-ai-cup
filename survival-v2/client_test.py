@@ -21,6 +21,7 @@ sim = SimulationCore(seed=seed)
 step = StepResponse(game_status="ok", score=0, sim_time=sim.env.time, n_agents=len(sim.env.agents), agent_status=[])
 waits = []
 for k in range(ticks):
+    if step.game_status == "game_over": break
     t0 = time.perf_counter()
     resp = s.post(url, json=step.dict(), timeout=10)
     waits.append(time.perf_counter() - t0)

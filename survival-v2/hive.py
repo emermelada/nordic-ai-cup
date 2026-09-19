@@ -59,6 +59,7 @@ DEFAULT_PARAMS = {
     "pop_cap_early": 36, "pop_cap_mid": 18, "pop_cap_late": 8,
     "t_mid": 900.0, "t_late": 1800.0,
     "pop_min": 6,                  # below this anyone may breed
+    "breed_colony_e": 100.0,       # no births (except old-age dumps) while the colony's mean energy is below
     "weak_food_w": 0.3,            # fruit value for agents that will not breed (weak genome / old and poor)
     "endgame_t": 2926.0,           # a child born now (75 energy) lives idle to t=3000
     # foraging
@@ -72,7 +73,8 @@ DEFAULT_PARAMS = {
     "wait_dist": 18.0,             # where to wait next to an unripe fruit (touching is < 5 + radius <= 14)
     # threats
     "alert_awake": 190.0,          # react to awake predators whose track is this uncertain/close
-    "alert_close": 110.0,          # always react to an awake predator this close (it charges under 90)
+    "alert_close": 110.0,          # react to an awake predator this close (it charges under 90) ...
+    "alert_always": 70.0,          # ... even when it is busy with a closer agent, if it is this close
     "alert_rest": 75.0,            # stay this far from resting ones (they hear 60 px when they wake)
     "charge_zone": 95.0,           # predators charge inside 90 px whatever we do: run (sprint if slower)
     "keep_dist": 160.0,            # back off from awake predators closer than this
@@ -794,9 +796,29 @@ class Hive:
             else:
                 d_eff = d
             sees = (off <= PI / 6 + 0.1 and d_eff < 260.0) or d_eff < 65.0
-            if d_eff < p["alert_close"] or sees:
-                out.append((max(d_eff, 0.0), math.atan2(dy, dx), True, sees))
+            if not (d_eff < p["alert_close"] or sees):
+                continue
+            if d_eff >= p["alert_always"] and stale <= 0.25 and tr[6] < d - 1e-6:
+                continue                       # it will go for a closer agent first
+            out.append((max(d_eff, 0.0), math.atan2(dy, dx), True, sees))
         return out
+
+    def _closest_prey(self, fm, agents):
+        """For every predator track: distance to the closest agent it can perceive (hearing 60 px, or its
+        250 px / +-30 deg cone); stored as tr[6]. A predator chases only that agent."""
+        if not fm.preds:
+            return
+        if not agents:
+            for tr in fm.preds:
+                tr[6:] = [np.inf]
+            return
+        A = np.array([(q.x, q.y) for q in agents])
+        for tr in fm.preds:
+            dx, dy = A[:, 0] - tr[0], A[:, 1] - tr[1]
+            d = np.hypot(dx, dy)
+            ang = np.abs((np.arctan2(dy, dx) - tr[2] + PI) % TWO_PI - PI)
+            seen = (d < 60.0) | ((d < 250.0) & (ang <= PI / 6))
+            tr[6:] = [float(d[seen].min()) if seen.any() else np.inf]
 
     def _plan(self, alive, by_frame):
         p = self.p
@@ -804,7 +826,9 @@ class Hive:
         n = len(alive)
         cap = self._pop_cap()
         order = sorted(alive.values(), key=lambda v: v[0].aid)
-        # --- threats first
+        # --- threats first (a predator chases the closest agent it perceives)
+        for fid, group in by_frame.items():
+            self._closest_prey(self.maps[fid], [m for m, _ in group])
         threat = {}
         for m, obs in order:
             th = self._threats(m, self.maps[m.frame])
@@ -837,13 +861,17 @@ class Hive:
                 cands.append((2, -m.fit, m.aid, r_hi - (r_hi - r_lo) * rank))
         cands.sort()
         preds_seen = any(fm.preds for fm in self.maps.values()) or t > 150.0
+        # colony brake: while the average agent is poor the colony is at its food limit; more mouths now
+        # means everybody starves together a minute later (boom and bust)
+        mean_e = sum(m.energy for m, _ in order) / max(n, 1)
+        brake = mean_e < p["breed_colony_e"] and n >= p["pop_min"]
         for pri, _, aid, reserve in cands:
             m = alive[aid][0]
             if pri >= 2 and preds_seen and m.speed < 15.5:   # slower than a predator: keep the sprint unlocked
                 reserve = max(reserve, m.max_energy / 5 + p["sprint_keep"])
             if m.energy - 101.0 < reserve:
                 continue
-            if pri >= 2 and budget <= 0:
+            if pri >= 2 and (budget <= 0 or brake):
                 continue
             if pri == 0 and budget <= -6:
                 continue
@@ -982,9 +1010,11 @@ class Hive:
         for q in self.mem.values():
             if q.aid == m.aid or q.frame != m.frame:
                 continue
+            if q.mode != "camp":
+                continue
             dq = np.hypot(fm.tx - q.x, fm.ty - q.y)
-            occ |= dq < 40.0
-            if q.mode == "camp" and q.target is not None:
+            occ |= dq < 20.0
+            if q.target is not None:
                 k = int((np.abs(fm.tx - q.target[0]) + np.abs(fm.ty - q.target[1])).argmin())
                 if dq[k] < d[k]:
                     occ[k] = True
