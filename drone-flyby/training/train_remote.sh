@@ -73,6 +73,46 @@
 # patches, mine_roller 10 -> 19, 263 -> 288 total.
 # ---------------------------------------------------------------------------
 #
+# ---------------------------------------------------------------------------
+# v9 / P2 RECIPE - the small-object floor, attacked structurally.
+#
+#   MODEL=training/yolo11-p2.yaml PRETRAINED=yolo11m.pt IMGSZ=1280 \\
+#   NAME=drone-yolo11m-p2-v9 BATCH=6 EPOCHS=40 \\
+#   WEIGHTS=spacecraft=2.0,small_launcher=1.5,tank=1.8,jammer=1.8,helicopter=1.6,mine_roller=1.6,small_plane=1.4,condor=1.2,ta-ta=1.2,medium_plane=1.2,medium_launcher=1.2,small_tower=0.7,large_launcher=0.7,large_tower=0.5,jet_plane=0.5,hangar=0.4 \\
+#   bash training/train_remote.sh
+#
+# Stock YOLO11 detects at strides 8/16/32; training/yolo11-p2.yaml adds a P2
+# head at stride 4. At imgsz 1280 on a Level-1 view that halves the cell from
+# 12 to 6 SOURCE pixels, doubling the cells every object spans.
+#
+# WHY. Per-class AP tracks cells-per-object almost exactly: below ~2 cells
+# nothing is ever detected, above ~4 everything is. spacecraft sits at 2.0 and
+# scores 0.003; P2 puts it at 4.1, the band where jet_plane (3.9) scores 0.932.
+#
+# THE PRIZE IS MACRO AVERAGING, not frame counts. The score is the mean over 12
+# classes, so spacecraft and small_launcher occupy 2/12 = 17% of it and together
+# contribute 0.003 today. Measured against the served pair at 0.455:
+#   both classes at 0.25 -> 0.496     both at 0.50 -> 0.538     perfect -> 0.621
+# That is the largest single block left.
+#
+# WEIGHTS shift accordingly: spacecraft to 2.0 (it is the tractable one), and
+# small_launcher up to 1.5 only because P2 finally gives it 2.2 cells. Do not
+# judge this model on small_launcher alone -- 2.2 cells may still be below the
+# floor, and spacecraft is where the return is.
+#
+# BATCH=6 is a GUESS, not a measurement. yolo11m at 1280 uses 25.7 GB of 32 GB
+# at BATCH=12 with three heads; P2 adds a fourth at 4x the anchors of P3 (total
+# anchors 19,320 -> 78,200). MEASURE IT: start the run, watch the first epoch's
+# memory column, and restart higher if there is headroom. Expect each epoch to
+# cost noticeably more than the 181 s that yolo11m/1280/batch-12 took.
+#
+# PRETRAINED warm-starts from COCO yolo11m.pt: ~61% of parameters transfer (the
+# whole backbone plus upper neck). Layers after the new P2 branch shift index
+# and start fresh. Note three head layers match by SHAPE while being
+# semantically different -- training overwrites them, but it is a transfer that
+# reads as cleaner than it is.
+# ---------------------------------------------------------------------------
+#
 # TWO WAYS TO TRAIN v6. The default below is a STANDALONE v6 meant to replace
 # v4. The alternative is a v6 trained to COMPLEMENT v4 as a pair (DRONE_MODEL_ALT
 # in flyby.py: two models take alternate frames and meet in the object memory, so
@@ -119,7 +159,7 @@ SCENES=${SCENES:-1600}              # 6 views each: 1600 -> 9600 images
 BATCH=${BATCH:-16}                  # 32 GB VRAM at 960 px fits 32-48 for m
 IMGSZ=${IMGSZ:-960}
 WORK=${WORK:-/workspace}
-NAME=${NAME:-drone-$(basename "$MODEL" .pt)-v6}
+NAME=${NAME:-drone-$(basename "$(basename "$MODEL" .pt)" .yaml)-v6}
 # Backgrounds cut from the recorded validation flight (training/make_real_backgrounds.py).
 # Measured on 2026-09-18: v4 scores median IoU 0.93 and 100% correct class on
 # Helsinki but 31% per-frame recall on validation, so the background domain is
@@ -216,7 +256,8 @@ python training/make_dataset.py \
     --class-weights "$WEIGHTS"
 
 echo "== train $MODEL, $EPOCHS epochs"
-MODEL="$MODEL" EPOCHS="$EPOCHS" BATCH="$BATCH" IMGSZ="$IMGSZ" WORK="$WORK" NAME="$NAME" python - <<'PY'
+MODEL="$MODEL" EPOCHS="$EPOCHS" BATCH="$BATCH" IMGSZ="$IMGSZ" WORK="$WORK" NAME="$NAME" \
+  PRETRAINED="${PRETRAINED:-}" python - <<'PY'
 import os, shutil, psutil
 from ultralytics import YOLO
 
@@ -228,7 +269,16 @@ free_gb = psutil.virtual_memory().available / 1e9
 cache = 'ram' if free_gb > images * 0.0017 + 8 else 'disk'
 print(f'{images} training images, {free_gb:.0f} GB RAM free -> cache={cache}')
 
+# MODEL may be a .pt (fine-tune) or an architecture .yaml (new head shape).
+# With a .yaml, PRETRAINED names weights to warm-start from: the backbone and
+# most of the neck transfer by matching state_dict keys, and layers whose index
+# shifted (everything after the new P2 branch) start fresh. Expect ~60%.
 model = YOLO(os.environ['MODEL'])
+pretrained = os.environ.get('PRETRAINED', '')
+if pretrained:
+    before = sum(p.numel() for p in model.model.parameters())
+    model = model.load(pretrained)
+    print(f'warm-started from {pretrained} ({before/1e6:.1f}M param model)')
 model.train(
     data=f'{work}/yolo/data.yaml',
     imgsz=int(os.environ['IMGSZ']),
