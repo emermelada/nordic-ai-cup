@@ -1,0 +1,5 @@
+best_controller_ORIG.py seed=101 steps=6000 fruits=974 spawns=129 pred=129
+best_controller_ORIG.py seed=102 steps=6000 fruits=1131 spawns=134 pred=135
+best_controller.py seed=101 steps=6000 fruits=974 spawns=129 pred=129
+best_controller.py seed=102 steps=6000 fruits=1131 spawns=134 pred=135
+EXIT 0

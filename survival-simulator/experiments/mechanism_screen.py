@@ -47,6 +47,28 @@ ARMS = {
     "both": {"target_hyst": 1.6, "blind_explore_frac": 0.12, "wander_weight": 0.03},
     # a deliberately WRONG direction as a control: travel MORE per fruit (should worsen the mechanism)
     "wanderup": {"wander_weight": 0.20, "blind_explore_frac": 0.50},
+    # ---- ENERGY-CAPACITY SELECTION -----------------------------------------------------------------
+    # Hypothesis: the sprint lockout is `energy < max_energy/5` (environment.py:512), so a lineage bred
+    # for a BIGGER ENERGY BANK is locked out less often - and 86% of predation deaths happen in lockout.
+    # Our own winner signature found winners have 5.0x higher max_energy (16/16 episodes), and the V2
+    # comment records newborns already reaching max 996.8 by accident. V2 selected on VISION (gs_w_vision
+    # 1.0 vs gs_w_energy 0.4) and ratcheted the wrong trait. These arms flip the weights to energy and,
+    # crucially, keep more breeders (topk 3-4) or stop gating in a small fleet (gs_rescue_pop), because
+    # V2's failure mode was thinning the fleet until income collapsed.
+    "en_top3": {"genome_select": 1.0, "gs_w_energy": 3.0, "gs_w_vision": 0.15, "gs_w_cone": 0.10,
+                "gs_w_hearing": 0.05, "gs_w_speed": 0.10, "gs_w_sprint": 0.10, "gs_topk": 3.0},
+    "en_top4": {"genome_select": 1.0, "gs_w_energy": 3.0, "gs_w_vision": 0.15, "gs_w_cone": 0.10,
+                "gs_w_hearing": 0.05, "gs_w_speed": 0.10, "gs_w_sprint": 0.10, "gs_topk": 4.0},
+    "en_top3_late": {"genome_select": 1.0, "gs_w_energy": 3.0, "gs_w_vision": 0.15, "gs_w_cone": 0.10,
+                     "gs_w_hearing": 0.05, "gs_w_speed": 0.10, "gs_w_sprint": 0.10, "gs_topk": 3.0,
+                     "gs_late_energy_mult": 6.0},
+    "en_top3_rescue3": {"genome_select": 1.0, "gs_w_energy": 3.0, "gs_w_vision": 0.15, "gs_w_cone": 0.10,
+                        "gs_w_hearing": 0.05, "gs_w_speed": 0.10, "gs_w_sprint": 0.10, "gs_topk": 3.0,
+                        "gs_rescue_pop": 3.0},
+    # control: the SAME selection but vision-dominant (reproducing the V2 weighting) - if it ratchets
+    # vision and not energy, the arms above are measuring the trait choice and not just "selection on"
+    "vis_ctrl": {"genome_select": 1.0, "gs_w_vision": 3.0, "gs_w_energy": 0.2, "gs_w_cone": 0.10,
+                 "gs_w_hearing": 0.05, "gs_w_speed": 0.10, "gs_w_sprint": 0.10, "gs_topk": 3.0},
 }
 
 
@@ -71,7 +93,7 @@ def screen_arm(name, seeds, outdir):
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, f"{name}_params.json")
     json.dump(arm_params(name), open(path, "w"))
-    tpf, lock, fruits, ticks, per_agent, lock_fracs = [], [], [], [], [], []
+    tpf, lock, fruits, ticks, per_agent, lock_fracs, e_caps = [], [], [], [], [], [], []
     for sd in seeds:
         rec = rp.record_episode(sd, 18000, params_path=path, every=4, traces=True)
         ticks.append(rec["final"]["ticks"])
@@ -81,12 +103,15 @@ def screen_arm(name, seeds, outdir):
             tpf.append(a["travel"] / a["fruits"])
             lock_fracs.append(a["lockout_frac"])
             per_agent.append(a["fruits"] / max(1, a["ticks"]) * 1000)
+            e_caps.append(a["e_max"])            # the ENERGY-CAPACITY mechanism metric
         fruits.append(sum(1 for e in rec["events"] if e["k"] == "die" and e["cause"] == "eaten"))
         lock.append(0)
     return {"arm": name, "seeds": len(seeds),
             "travel_per_fruit": st.median(tpf) if tpf else None,
             "lockout_frac": st.median(lock_fracs) if lock_fracs else None,
             "fruits_per_1k": st.median(per_agent) if per_agent else None,
+            "e_max_med": st.median(e_caps) if e_caps else None,
+            "e_max_max": max(e_caps) if e_caps else None,
             "ticks_mean": st.mean(ticks) if ticks else None,
             "ticks_median": st.median(ticks) if ticks else None,
             "agents_measured": len(tpf)}
@@ -110,7 +135,7 @@ def main():
             os.makedirs(args.outdir, exist_ok=True)
             p = os.path.join(args.outdir, "base_params.json")
             json.dump(json.load(open(DEPLOYED)), open(p, "w"))
-            tpf, lock_fracs, per_agent, ticks = [], [], [], []
+            tpf, lock_fracs, per_agent, ticks, e_caps = [], [], [], [], []
             for sd in seeds:
                 rec = rp.record_episode(sd, 18000, params_path=p, every=4, traces=True)
                 ticks.append(rec["final"]["ticks"])
@@ -120,10 +145,13 @@ def main():
                     tpf.append(a["travel"] / a["fruits"])
                     lock_fracs.append(a["lockout_frac"])
                     per_agent.append(a["fruits"] / max(1, a["ticks"]) * 1000)
+                    e_caps.append(a["e_max"])
             rows.append({"arm": "base (deployed)", "seeds": len(seeds),
                          "travel_per_fruit": st.median(tpf) if tpf else None,
                          "lockout_frac": st.median(lock_fracs) if lock_fracs else None,
                          "fruits_per_1k": st.median(per_agent) if per_agent else None,
+                         "e_max_med": st.median(e_caps) if e_caps else None,
+                         "e_max_max": max(e_caps) if e_caps else None,
                          "ticks_mean": st.mean(ticks) if ticks else None,
                          "ticks_median": st.median(ticks) if ticks else None,
                          "agents_measured": len(tpf)})
@@ -132,15 +160,19 @@ def main():
         print(f"  done {nm}", flush=True)
 
     base = rows[0]["travel_per_fruit"] if rows else None
-    print(f"\nMECHANISM SCREEN | {len(seeds)} seeds x 18000 ticks | target = travel per fruit (LOWER better)")
+    be = rows[0].get("e_max_med") if rows else None
+    print(f"\nMECHANISM SCREEN | {len(seeds)} seeds x 18000 ticks | targets = travel/fruit (LOWER) and "
+          f"fleet max_energy (HIGHER, the lockout lever)")
     print(f"{'arm':>18} {'travel/fruit':>13} {'vs base':>8} {'lockout':>8} {'fruit/1k':>9} "
-          f"{'ticks mean':>10} {'agents':>7}")
+          f"{'eMax med':>9} {'eMax max':>9} {'vs base':>8} {'ticks mean':>10} {'agents':>7}")
     for r in rows:
         rel = ""
         if base and r["travel_per_fruit"]:
             rel = f"{r['travel_per_fruit'] / base:.2f}x"
+        erel = f"{r['e_max_med'] / be:.2f}x" if (be and r.get("e_max_med")) else ""
         print(f"{r['arm']:>18} {(r['travel_per_fruit'] or 0):>13.1f} {rel:>8} "
               f"{(r['lockout_frac'] or 0):>8.2f} {(r['fruits_per_1k'] or 0):>9.1f} "
+              f"{(r.get('e_max_med') or 0):>9.0f} {(r.get('e_max_max') or 0):>9.0f} {erel:>8} "
               f"{(r['ticks_mean'] or 0):>10.0f} {r['agents_measured']:>7}")
     print("\nrule: an arm earns a paired survival test ONLY if it lowers travel/fruit meaningfully")
     print("(and the wrong-direction control must raise it, or the screen is not measuring what it claims)")

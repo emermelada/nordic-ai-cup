@@ -113,5 +113,13 @@ on unseen seeds before it means anything.
 reserve/repro floors; memory search / follow / ARS; thin relay & banking; E3 retreat-while-facing evasion
 (+0.4% over 80 seeds); V2 genome-aware breeder selection (−17% over 40); random neural policies (−38%);
 mutated nets (−23.7%); heterogeneous fleet roles (best −6.9%); generic PPO (no established requirement).
+**Added 2026-09-19 07:20:** `tree_weight` taper (0 / 0.05 / 0.1 / 0.15 / −0.25 — the "0.1 peak" reversed on
+the next seed block, and the wrong-direction control scored *positive*: sign does not follow direction);
+`M_no_tree` itself (−5.5% on 160 fresh seeds, 50% wins, pooled 300 seeds −4.2 pts → refuted three times);
+the 800-candidate C6 neighbourhood (`wide2`, best +4.0% at W20/L20, reversals from stage 2 → 3);
+the counterfactual oracle even when re-conditioned on healthy snapshots (no consistent winner: flat tally
+over six behaviours, gaps ≤1.2 SE, and 53% of healthy states lose *every* branch to fleet extinction).
+**The 2026-09-19 C6 deploy is NOT in this list — it was re-validated on 160 fresh seeds: it beats the
+pre-C6 controller on 65% of them (104/160) and every single-delta revert is worse. Keep it deployed.**
 **The shared mechanism behind every failure: each idea cut income or mobility in an access-limited world
 with a 15x energy surplus. That is a finding, not bad luck.**

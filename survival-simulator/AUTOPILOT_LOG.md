@@ -1,4 +1,76 @@
 
+## 2026-09-19 07:20 UTC — M_no_tree REFUTED at 160 fresh seeds; the C6 DEPLOY is now properly validated (it beats the pre-C6 controller on 65% of 160 fresh seeds)
+(status sweep 06:17-07:19 UTC; all times UTC; two lanes, exp box only)
+
+**Serving box (untouched all cycle):** container up, in-container `best_controller.py` = `f90cb4e3…`
+matches `best_controller.sha256`, C6 params live, `https://survival.zaitzev.com/` **200 in 14 ms**,
+no tmux lanes, load 0.06, no validation POSTs in the last 8 h. Exp box was completely idle on arrival.
+
+**Harvested four finished lanes** (all were already in the ledger, no compute spent): `c6conf`
+(seeds 2960-2999), `c6conf2` (3000-3039), `c6conf3` (3050-3089), `wide2` (stage 3, 40 seeds).
+
+**M_no_tree is REFUTED — third fresh seed block, 160 seeds (3100-3259), 18000 ticks, 48 workers,
+23.1 min (`mntree160`, 800 episodes at 0 cache hits):** `M_no_tree` **−440 ticks (−5.5%), W80/L80 = 50%,
+floor p10 −573 pts**; its parameter-identical duplicate `M_no_tree_dup` −421 (W82/L78) → this block's A/A
+agrees to 19 ticks, so the negative is real, not noise. Pooled over all 300 seeds it has ever run:
+**−4.2 board pts, 54% wins (162/300), p10 floor −385, P(net loss on a 3-run validation) 50%.**
+The earlier +7.6% (W26/L14) that made it a lead was one favourable 40-seed block; the arm is simply
+jittery (per-seed paired sd 262 board pts vs a 94-pt A/A floor). **CLOSED — do not reopen.**
+
+**Tree-attraction dose curve is DEAD too.** `M_tree01` (0.1) went **+5.5% (W22/L18) on 3000-3039 then
+−2.5% (W19/L20) on 3050-3089**; 0.15 → −1.3%, 0.05 → −9.5%, and the wrong-direction control
+(`M_tree_neg`, −0.25) came out **+1.6% (W86/L74) on 160 fresh seeds** while the claimed positive one came
+out negative. The sign does not follow the direction → the "0.1 is the peak" curve was noise. CLOSED.
+
+**wide2 (800-candidate search around C6) produced nothing:** stage 3 (40 seeds) best was `s0658` +4.0%
+(W20/L20), everything else 0 to −7.1%, best candidates from stage 2 (e.g. `s0291` +2.5% at 10 seeds → −7.1%
+at 40) reversed. No candidate qualifies. Q5 CLOSED.
+
+**The deploy is now confirmed the right way round — this is the useful result of the cycle.** With the
+deployed C6 as BASE, I ran the pre-C6 parameter set (`ROLLBACK_params_f90cb4e3.json`) and the three
+single-delta reverts head-to-head on **160 fresh seeds (3260-3419), `revert160`, 960 episodes, 28.3 min**:
+
+| arm | paired | win | floor p10 |
+|---|---|---|---|
+| `OLD` (full pre-C6 revert) | **−516 (−6.5%)** | W56/L104 (35% won) | −553 |
+| `R_reserve` (reserve_frac 0.15 back) | −460 (−5.8%) | W69/L90 | −646 |
+| `R_blind` (blind_explore 0.12→0.29) | −272 (−3.4%) | W75/L83 | −370 |
+| `R_evade` (evade_mode 1.0 back) | −83 (−1.1%) | W76/L80/T4 | −11 |
+| `BASE_C6` (A/A vs deployed BASE) | −54 (−0.7%) | 11W/12L/T137 | +0 |
+
+So the deployed C6 wins **104/160 = 65%** of fresh unseen seeds against the controller it replaced, and the
+deltas that bought it are ordered `reserve_frac` ≫ `blind_explore_frac` > `evade_mode`. **KEEP the deploy;
+do NOT revert.** (This is also the first time the C6 deploy has been checked at ≥40 fresh seeds with a
+positive result — the +18.1% that justified it came from a favourably drawn holdout, and the follow-up
+40-seed set read ≈0, which is why it looked like a wash.)
+
+**Noise floor for seed block 3100-3259 (base for judging everything above):** `BASE_C6` vs deployed `BASE`
+(parameter-identical) = **14W/17L/129T of 160**, mean −10 pts, sd 94 pts ⇒ identical configs disagree on
+~19% of seeds and a 40-seed mean below ~±30 pts is noise. Consistent with the 05:32 calibration.
+
+**Q2 oracle, re-conditioned (free analysis, `experiments/oracle_healthy.py`, commit):** 245 usable states
+(of 272; 27 older-schema), split by snapshot health (no lockout, energy_frac ≥ 0.4) → 95 healthy /
+150 unhealthy. Among **healthy** states where the controller branch survives the horizon, an alternative
+ends alive *and* richer in **18/31**, but the winner tally is flat across all six alternatives
+(`flee_predator` 16, `walk_to_fruit` 15, `still` 14, `sprint_to_fruit` 13, `toward_predator` 13) and raw
+branch survival is within 1.2 SE (flee 39% vs controller 33%), while **53% of healthy states have EVERY
+branch dying** (fleet extinction swamps the comparison). So conditioning on healthy states does not rescue
+Q2: there is still **no consistent winning behaviour**, and the one-state "sprint to fruit" lead is dead.
+**Q2/Q3 stay closed.** New tools committed: `experiments/oracle_healthy.py`, `experiments/deploy_gate.py`
+(applies HARD RULE 1 — n≥40, win≥55%, floor≥0 — plus a bootstrap P(3-run validation nets a loss)).
+
+**Launched / decisions:** `mntree160` and `revert160` both launched and harvested in this cycle; exp box is
+now **idle with no lanes** — I deliberately did not start a third lane, because every remaining queue item
+is closed and a hypothesis-free sweep would just burn the box. **No deploy, no revert.** Queue state:
+Q1 done (C6 deployed and now validated), Q2/Q3 closed by the re-conditioned oracle, Q4 closed negative,
+Q5 closed (wide1 no verdict, wide2 nothing). The only open direction left is a *structural* one (the fleet
+always goes extinct by ~8 k ticks — median death tick 6,664 — while the board's front-runners sit at 2,096,
+i.e. roughly 2x our ticks), which no parameter perturbation in this family has moved.
+
+**Human:** nothing is blocked on you and no DNS change is needed. Worth knowing: with the deploy now
+validated at 65% of 160 fresh seeds, re-running the official validation is a **positive-expectation** bet —
+the board keeps the best attempt, and our single-run spread is large.
+
 ## 2026-09-19 05:32 UTC — M_no_tree does not replicate; tree-attraction DOSE CURVE found (0.1 is the peak)
 (status sweep 05:06-05:32 UTC; all times UTC)
 

@@ -1,0 +1,75 @@
+{
+ "horizon": 18000,
+ "seeds": [
+  1500,
+  1501,
+  1502,
+  1503
+ ],
+ "index": [
+  {
+   "seed": 1500,
+   "ticks": 3882,
+   "score": 377.2672,
+   "causes": {
+    "starved": 50,
+    "aged": 9,
+    "eaten": 45
+   },
+   "wall_blocked_total": 1319,
+   "pred_deaths": 0,
+   "min_energy_seen": -1.0,
+   "path": "/opt/nac/replays_1/seed1500_3882t.json.gz"
+  },
+  {
+   "seed": 1501,
+   "ticks": 6873,
+   "score": 667.6454,
+   "causes": {
+    "starved": 56,
+    "aged": 22,
+    "eaten": 83
+   },
+   "wall_blocked_total": 2446,
+   "pred_deaths": 0,
+   "min_energy_seen": -0.8,
+   "path": "/opt/nac/replays_1/seed1501_6873t.json.gz"
+  },
+  {
+   "seed": 1502,
+   "ticks": 4558,
+   "score": 461.2593,
+   "causes": {
+    "starved": 41,
+    "aged": 18,
+    "eaten": 17
+   },
+   "wall_blocked_total": 11420,
+   "pred_deaths": 0,
+   "min_energy_seen": -0.6,
+   "path": "/opt/nac/replays_1/seed1502_4558t.json.gz"
+  },
+  {
+   "seed": 1503,
+   "ticks": 6884,
+   "score": 690.2294,
+   "causes": {
+    "starved": 45,
+    "aged": 33,
+    "eaten": 71
+   },
+   "wall_blocked_total": 17103,
+   "pred_deaths": 0,
+   "min_energy_seen": -1.1,
+   "path": "/opt/nac/replays_1/seed1503_6884t.json.gz"
+  }
+ ],
+ "representatives": {
+  "base": "/opt/nac/replays_1/seed1503_6884t.json.gz",
+  "short_failure": "/opt/nac/replays_1/seed1500_3882t.json.gz",
+  "long_survival": "/opt/nac/replays_1/seed1503_6884t.json.gz",
+  "predator_death": "/opt/nac/replays_1/seed1500_3882t.json.gz",
+  "wall_heavy": "/opt/nac/replays_1/seed1503_6884t.json.gz",
+  "low_energy": "/opt/nac/replays_1/seed1503_6884t.json.gz"
+ }
+}

@@ -201,6 +201,11 @@ def record_episode(seed, horizon, params_path=DEPLOYED, every=2, agent_hist=12, 
                 ar["last_e"] = e_now
                 ar["e_max"] = max(ar["e_max"], e_now)
                 ar["e_min"] = min(ar["e_min"], e_now)
+                # The TRAIT, not the held energy: this is the heritable capacity that sets the sprint
+                # lockout floor (environment.py:512 uses max_energy/5). Earlier the metric recorded the
+                # highest energy the agent ever HELD, which is a different quantity and made the
+                # energy-capacity hypothesis unmeasurable.
+                ar["max_e_trait"] = float(st.get("max_energy", 0.0)) or ar.get("max_e_trait", 0.0)
                 ar["obs_fruit"] += len(fruit)
                 ar["obs_pred"] += len(preds)
                 if e_now < 0.2 * max_e:

@@ -24,8 +24,8 @@ Shared rule for every agent working on this project. Read this BEFORE you launch
 | 2026-09-18 18:48 | orchestrator | nac-L1, nac-L2 (lockout factorial) | 1060-1069, 1070-1079 | 18000 | finished |
 | 2026-09-18 19:32 | orchestrator | nac-diag (lockout/closure/access diagnostic) | 1060,1070,1080 | 18000 | finished |
 
-| 2026-09-18 21:20 | W2 (thin relay) | nac-B1 (wB0 ref + wB1/wB2/wB3 + LIVE) | 1300-1319 | 18000 | running |
-| 2026-09-18 21:40 | W2 (thin relay) | nac-B2 (wB0 ref + wB1 dose + wB4 mild-thin + LIVE) | 1300-1319 | 18000 | running |
+| 2026-09-18 21:20 | W2 (thin relay) | nac-B1 (wB0 ref + wB1/wB2/wB3 + LIVE) | 1300-1319 | 18000 | finished (nac-B1 SIGKILLed mid-LIVE; control arm wB0_ref used) |
+| 2026-09-18 21:40 | W2 (thin relay) | nac-B2 (wB0 ref + wB1 dose + wB4 mild-thin + LIVE) | 1300-1319 | 18000 | finished (nac-B1 SIGKILLed mid-LIVE; control arm wB0_ref used) |
 
 ## Who is in the queue
 

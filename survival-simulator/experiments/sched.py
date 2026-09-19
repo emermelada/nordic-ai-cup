@@ -344,6 +344,23 @@ def main():
             # unusable candidate file (gen_search.py emits "tag", which killed the first wide run).
             if "id" not in c and "tag" in c:
                 c["id"] = c["tag"]
+            # GUARD: a knob that does not exist in the controller is SILENTLY IGNORED, so an arm can run,
+            # report a plausible number, and have done nothing at all. This actually happened: the gs_*
+            # breeder-selection arms were inert because the SERVING controller predates that code. Any
+            # override key the controller does not know is now a loud warning, and if EVERY override is
+            # unknown the candidate is dropped rather than run as a pointless copy of the baseline.
+            try:
+                from best_controller import DEFAULT_PARAMS as _DP
+            except Exception:
+                _DP = {}
+            unknown = [k for k in c["params"] if k != "id" and k not in _DP]
+            if unknown:
+                print(f"WARNING {c['id']}: {len(unknown)} override key(s) NOT in the controller and will "
+                      f"be IGNORED: {unknown[:6]}", flush=True)
+            known_over = [k for k in c["params"] if k != "id" and k in _DP]
+            if not known_over and unknown:
+                print(f"DROPPING {c['id']}: every override is unknown -> would be a copy of BASE", flush=True)
+                continue
             cands.append({"id": c["id"], "params": {"id": c["id"], **c["params"]}})
     print(f"candidates: {len(cands)} (1 baseline + {len(cands)-1})", flush=True)
 
