@@ -1646,3 +1646,31 @@ Also: a liveness check of the form `until ! ssh box 'pgrep -f x'; do ...` fires
 a false "process ended" the first time ssh itself fails ("Network is
 unreachable"). Distinguish "ssh failed" from "process gone", or the alert cries
 wolf.
+
+### The offline truth files, calibrated against 12 runs of KNOWN real score
+
+Scored twelve complete runs (real scores 0.4983-0.5339, spanning today's arms)
+against both truth files with `tools/calibrate_truth.py`:
+
+| truth | MAE | bias | Pearson | Spearman |
+|---|---|---|---|---|
+| `training/scene_objects.json` (66 objects, mined from data/scene) | 0.0736 | **-0.0736** | **+0.894** | **+0.811** |
+| `training/validation_objects.json` (32 objects, mined by v2) | 0.0183 | -0.0167 | **-0.039** | **-0.287** |
+
+**Read the correlation column, not the MAE.** The old 32-object file sits close
+to the real number and has *no rank correlation at all* over this band — it
+cannot tell a 0.4983 run from a 0.5339 one, and is slightly inverted. The
+66-object file is offset by a nearly constant -0.074 (range -0.063 to -0.085)
+and ranks correctly.
+
+So: **use `scene_objects.json` for comparing configurations, and add ~0.074 to
+read it as a real score.** Retire `validation_objects.json` for model and
+config selection. This is a stronger statement than the earlier "+0.94 Spearman
+after the ignore-region fix" in this file: that was measured across configs
+spanning 0.24-0.30, where anything ranks; these twelve runs span 0.036 of real
+score, which is the band that actually matters now.
+
+Caveat: the 66-object file has no `spacecraft`, `small_launcher`, `condor` or
+`medium_plane`, so it cannot speak for four classes -- two of which are our
+weakest. It does contain `medium_launcher` and `ta-ta`, which the old file had
+none of.
