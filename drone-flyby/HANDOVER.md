@@ -1731,3 +1731,49 @@ macro average on its own.
 
 It is a training-data problem -- the detector has learned "dark blob on terrain"
 -- and it belongs to v10, not to any serving-time knob.
+
+## 2026-09-20, 01:15 CEST: 0.5380 — the row0 camera, with v9 along for the ride
+
+**New best: mean 0.5380 over three complete runs (0.5341 / 0.5387 / 0.5411),
+against the 4-model control's 0.5270 over five (0.5187 / 0.5234 / 0.5272 /
+0.5320 / 0.5339). +0.0110, and NO OVERLAP** -- the worst row0+v9 run beats the
+best control run. Same host, same night.
+
+```bash
+DRONE_CAMERA=row0 \
+DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-p2-v9.pt \
+DRONE_IMGSZ=960,1280,1280,2560,1280 \
+DRONE_DEVICE=cuda DRONE_RECORD_DIR=data/recordings \
+DRONE_SET=BOTH_MODELS=1,NEW_TRACK_CONFIDENCE=0.10 python3 api.py
+```
+
+80 ms median of a 333 ms budget, 0 of 772 frames over.
+
+### The gain is the camera, not v9 — and v9's own targets got worse
+
+Per-class recall on the best run against the 32 confirmed objects (the *recall*
+column of that file is sound even though its AP column is not -- see the
+calibration section):
+
+| class | control | row0+v9 | |
+|---|---|---|---|
+| mine_roller | 0.67 | **0.85** | +0.18 |
+| helicopter | 0.51 | **0.65** | +0.14 |
+| jet_plane | 0.93 | 0.97 | +0.04 |
+| small_plane | 0.76 | 0.79 | +0.03 |
+| **spacecraft** | 0.70 | **0.50** | **-0.20** |
+| hangar | 0.91 | 0.76 | -0.15 |
+| tank | 0.71 | 0.59 | -0.12 |
+| small_launcher | 0.03 | 0.00 | -0.03 |
+
+**v9 was trained with `spacecraft=2.0` and `small_launcher=1.5` as its two
+highest class weights, and both went DOWN.** The bar for shipping it was
+explicitly "read the per-class column for those two". By that reading v9 is not
+paying; the gain is `mine_roller` and `helicopter`, which is the camera. This
+matches the simulation that preceded it (row0 +0.0082, v9 +0.0023).
+
+**So the open question is `row0` WITHOUT v9** -- likely as good, with one fewer
+model, ~15 ms less latency and less failure surface on a one-shot attempt.
+Three complete runs decides it. It is the first thing to do with spare runs.
