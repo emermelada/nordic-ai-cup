@@ -89,16 +89,19 @@ def main():
             continue
         mw, ml = st.median(w), st.median(l)
         ratio = (mw / ml) if ml else float("inf")
-        # how consistently the winner median beats the loser median ACROSS episodes
+        # Consistency ACROSS episodes: the direction must be taken from the pooled medians, not
+        # hardcoded - otherwise a metric where winners are legitimately HIGHER reports "0/16".
+        higher = mw > ml
         wins = 0
         for _sd, _t, win, lose in per_episode:
             ww = [a[k] for a in win if a.get(k) is not None]
             ll = [a[k] for a in lose if a.get(k) is not None]
-            if ww and ll and st.median(ww) != st.median(ll):
-                wins += (st.median(ww) > st.median(ll)) if k in INHERITED or k == "lockout_frac" else \
-                        (st.median(ww) < st.median(ll))
+            if ww and ll:
+                dw = st.median(ww) - st.median(ll)
+                if dw != 0 and (dw > 0) == higher:
+                    wins += 1
         tag = "INHERITED trait" if k in INHERITED else "behaviour"
-        consist = f"{wins}/{len(per_episode)} episodes consistent ({tag})"
+        consist = f"{wins}/{len(per_episode)} eps consistent, winners {('HIGHER' if higher else 'LOWER'):6s} ({tag})"
         print(f"{k:>20} {mw:>10.2f} {ml:>10.2f} {ratio:>7.2f}  {consist:>28}")
 
     print("\nverdict: a behaviour is a candidate IMITATION TARGET if winners differ consistently")
