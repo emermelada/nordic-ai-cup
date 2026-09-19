@@ -7,7 +7,12 @@ no hosted inference calls and never removes other files or models.
 
 The first GPU pilot is complete: **0.799728 raw versus 0.829709 for the frozen
 control**. This candidate is not recommended for deployment. See
-[the measured results and remaining artifact-recovery step](RESULTS.md).
+[the measured results](RESULTS.md).
+
+A second stage adds public rationale supervision: 43,812 checked question/evidence
+pairs from CoQA and MASH-QA pretrain the extractor before the competition folds,
+and SIMORD's 16 medical-dialogue questions adapt each fold. The corpus, licences,
+filters and measured cost are in [EXTERNAL_DATA.md](EXTERNAL_DATA.md).
 
 ## Prepare the original data
 
@@ -69,6 +74,32 @@ step time, peak allocated CUDA memory and an estimated training duration per fol
 The estimate excludes download, evaluation and checkpoint writing. No benchmark
 checkpoint is promoted or evaluated as a trained candidate.
 
+## External rationale data
+
+`fetch_external.py` downloads the raw corpora (text only, hashes recorded) and
+`prepare_external.py` converts, decontaminates and fully tokenizes them into one
+bundle. Both are described, with counts and commands, in
+[EXTERNAL_DATA.md](EXTERNAL_DATA.md). Preparation needs no GPU; do not start the
+billed instance for it.
+
+## Intermediate pretraining
+
+```bash
+.venv/bin/python -m tools.evidence_training.train \
+  --data dataset.json --external-data external.json --output runs/pretrain-mix-001 \
+  --mode pretrain --epochs 2 --evals-per-epoch 2 --patience 3 \
+  --batch-size 8 --accumulation 2 --eval-batch-size 32 --max-seconds 6000 --min-free-gb 60
+```
+
+`--external-data` is refused unless the bundle was decontaminated against this
+exact `dataset.json`. Pretraining trains on CoQA and MASH-QA only; epochs run for
+tens of minutes, so `--evals-per-epoch` selects inside them. The selection metric
+is the **unweighted mean of per-source positive word-span IoU** on the external
+development split, so the larger general corpus cannot hide a collapse on the
+medical one. It is not temporal IoU and not the competition score. The learning
+rate warms up over 6% of planned updates and decays linearly. `model/` holds the
+best checkpoint, including the untrained epoch zero if nothing beats it.
+
 ## Original-data pilot
 
 ```bash
@@ -76,6 +107,11 @@ timeout --signal=INT --kill-after=30s 45m .venv/bin/python -m tools.evidence_tra
   --data dataset.json --output runs/cv-001 --device cuda --mode cv \
   --epochs 3 --batch-size 4 --accumulation 4 --max-seconds 2400
 ```
+
+Pass `--model runs/pretrain-mix-001/model` to start the folds from a pretrained
+checkpoint, and `--external-data external.json` to add SIMORD's medical-dialogue
+questions to each training fold. Held-out conversations are never changed by
+either option, and no other external source enters fold training.
 
 Use `--fold 0` for one preliminary fold. Use all three folds for the comparison.
 The default learning rate is 1e-5. The model sees overlapping 512-token windows
@@ -140,13 +176,20 @@ first run tests the existing samples without API generation costs.
 ## Checks
 
 ```bash
-.venv311/bin/python -m unittest tests.test_evidence_training -v
+.venv311/bin/python -m unittest tests.test_evidence_training tests.test_evidence_external -v
 ```
 
 Tests cover the actual 390-row control, gold-to-word mapping against a brute-force
 oracle, fold leakage, duplicate transcripts, repeated phrase occurrence, overflow
 windows, impossible spans, missing predictions, and a real tiny CPU training /
 checkpoint reload / three-fold scoring run. The tiny model tests mechanics only.
+
+The external tests cover CoQA history isolation and the no/unknown distinction,
+character rationales expanded to whole words, MASH-QA offsets against the
+published archive, SIMORD noncontiguous provenance, the lexical quarantine index,
+the dataset-hash guard, train/dev leakage, and real CPU pretraining over a mixed
+source bundle followed by fold training from that checkpoint. Tests needing the
+downloaded archives or `TextGrid` skip when those are absent.
 
 Optional Mac settings: `--device mps --precision fp32 --batch-size 1 --accumulation 8`.
 No quantized LLM or MLX dependency is required by this package.

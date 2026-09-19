@@ -4,6 +4,7 @@ No hosted inference, serving changes, or paid dataset-generation calls are made.
 """
 
 import argparse
+from collections import Counter
 from contextlib import nullcontext
 import gc
 import importlib.metadata
@@ -19,6 +20,7 @@ from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenize
 
 from .data import digest, score, validate_bundle, write_json
 from .features import collate, decode_window, make_features, prediction_spans
+from .external import hydrate, load_external
 
 
 class BudgetExpired(RuntimeError):
@@ -47,6 +49,9 @@ class Runner:
         self.bundle = json.loads(args.data.read_text())
         validate_bundle(self.bundle)
         self.records = self.bundle['records']
+        self.external = load_external(args.external_data, args.data) if args.external_data else None
+        self.medical_records = ([r for r in hydrate(self.external, 'train') if r['source'] == 'simord']
+                                if self.external else [])
         if max(r['gold_words'][1] - r['gold_words'][0] + 1 for r in self.records if r['label']) > args.max_span_words:
             raise ValueError('max-span-words would make some gold spans unreachable')
         self.metadata = {
@@ -56,6 +61,9 @@ class Runner:
             'precision': 'bf16_autocast_float32_weights' if self.use_bf16 else 'fp32',
             'versions': {p: importlib.metadata.version(p) for p in ('torch', 'transformers', 'numpy')},
             'answers_frozen': True, 'folds': self.bundle['folds'],
+            'code_sha256': {p.name: digest(p) for p in Path(__file__).parent.glob('*.py')},
+            'external_data_sha256': digest(args.external_data) if args.external_data else None,
+            'external_medical_training_questions': len(self.medical_records),
         }
         if self.device == 'cuda':
             free, total = torch.cuda.mem_get_info()
@@ -160,8 +168,20 @@ class Runner:
         return float(np.mean(losses)), float(norm)
 
     def benchmark(self):
-        ids = set(self.bundle['folds'][0]['train'])
-        records = [r for r in self.records if r['conversation'] in ids]
+        epoch_windows = None
+        if self.external:
+            from .pretrain import PRETRAIN_SOURCES
+            all_records = [r for r in hydrate(self.external, 'train') if r['source'] in PRETRAIN_SOURCES]
+            if not all_records:
+                raise ValueError('No external pretraining examples')
+            # Sampling questions proportionally reproduces the real window mixture in expectation.
+            rng = random.Random(self.args.seed)
+            records = rng.sample(all_records, min(len(all_records), 512))
+            counts = self.external.get('window_counts', {})
+            epoch_windows = sum(counts.get(f'train:{source}', 0) for source in PRETRAIN_SOURCES) or None
+        else:
+            ids = set(self.bundle['folds'][0]['train'])
+            records = [r for r in self.records if r['conversation'] in ids]
         features = self.features(records)
         model = self.new_model()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.args.learning_rate, weight_decay=.01)
@@ -180,9 +200,17 @@ class Runner:
                       seconds=durations[-1])
         stable = durations[1:] or durations
         steps_per_epoch = math.ceil(math.ceil(len(features) / self.args.batch_size) / self.args.accumulation)
+        per_window = float(np.mean(stable)) / (self.args.batch_size * self.args.accumulation)
         report = {'optimizer_steps': len(durations), 'training_records': len(records),
+                  'scope': 'External pretraining mixture sample' if self.external else 'Original training fold',
+                  'sampled_windows_by_source': dict(Counter(records[f['record_index']].get('source', 'original')
+                                                            for f in features)),
                   'training_windows': len(features), 'step_seconds': durations,
                   'mean_step_seconds_after_warmup': float(np.mean(stable)),
+                  'seconds_per_window': per_window,
+                  'external_epoch_windows': epoch_windows,
+                  'estimated_minutes_per_external_epoch': round(epoch_windows * per_window / 60, 1)
+                  if epoch_windows else None,
                   'estimated_training_seconds_per_fold': float(np.mean(stable)) * steps_per_epoch * self.args.epochs,
                   'estimate_excludes': 'downloads, preprocessing, evaluation, checkpoint writes, other folds',
                   'max_cuda_allocated_gb': torch.cuda.max_memory_allocated() / 1024**3 if self.device == 'cuda' else None}
@@ -195,8 +223,11 @@ class Runner:
         directory.mkdir()
         groups = {k: [r for r in self.records if r['conversation'] in set(plan[k])]
                   for k in ('train', 'dev', 'test')}
+        groups['train'].extend(self.medical_records)
         features = {k: self.features(v) for k, v in groups.items()}
-        write_json(directory / 'split.json', {**plan, 'questions': {k: len(v) for k, v in groups.items()},
+        write_json(directory / 'split.json', {**plan,
+                                              'external_medical_ids': [r['id'] for r in self.medical_records],
+                                              'questions': {k: len(v) for k, v in groups.items()},
                                               'windows': {k: len(v) for k, v in features.items()}})
         model = self.new_model(seed=self.args.seed + fold)
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.args.learning_rate, weight_decay=.01)
@@ -277,7 +308,7 @@ class Runner:
 
     def fit(self):
         """Fit a fixed number of epochs on all public data, without claiming held-out performance."""
-        features = self.features(self.records)
+        features = self.features(self.records + self.medical_records)
         model = self.new_model()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.args.learning_rate, weight_decay=.01)
         rng = random.Random(self.args.seed)
@@ -301,11 +332,15 @@ def main(argv=None):
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--model', default='deepset/deberta-v3-large-squad2')
     parser.add_argument('--revision', default='main')
-    parser.add_argument('--mode', choices=('benchmark', 'cv', 'fit'), default='cv')
+    parser.add_argument('--mode', choices=('benchmark', 'pretrain', 'cv', 'fit'), default='cv')
+    parser.add_argument('--external-data', type=Path,
+                        help='Checked text-only bundle: CoQA and MASH-QA pretrain; only SIMORD train adapts CV/fit')
     parser.add_argument('--device', choices=('auto', 'cuda', 'mps', 'cpu'), default='auto')
     parser.add_argument('--precision', choices=('auto', 'bf16', 'fp32'), default='auto')
     parser.add_argument('--fold', default='all')
     parser.add_argument('--epochs', type=int, default=3)
+    parser.add_argument('--evals-per-epoch', type=int, default=1,
+                        help='Development evaluations inside each pretraining epoch')
     parser.add_argument('--patience', type=int, default=2)
     parser.add_argument('--batch-size', type=int, default=4)
     parser.add_argument('--eval-batch-size', type=int, default=8)
@@ -320,7 +355,10 @@ def main(argv=None):
     parser.add_argument('--min-free-gb', type=float, default=16)
     parser.add_argument('--gradient-checkpointing', action='store_true')
     args = parser.parse_args(argv)
-    for name in ('epochs', 'patience', 'batch_size', 'eval_batch_size', 'accumulation', 'benchmark_steps', 'max_seconds'):
+    if args.mode == 'pretrain' and not args.external_data:
+        parser.error('--mode pretrain requires --external-data')
+    for name in ('epochs', 'evals_per_epoch', 'patience', 'batch_size', 'eval_batch_size', 'accumulation',
+                 'benchmark_steps', 'max_seconds'):
         if getattr(args, name) <= 0:
             parser.error(f'{name} must be positive')
     if args.learning_rate <= 0 or args.min_free_gb < 0 or args.max_span_words <= 0:
@@ -333,6 +371,9 @@ def main(argv=None):
         runner.save_status('running')
         if args.mode == 'benchmark':
             runner.benchmark()
+        elif args.mode == 'pretrain':
+            from .pretrain import pretrain
+            pretrain(runner)
         elif args.mode == 'fit':
             runner.fit()
         else:

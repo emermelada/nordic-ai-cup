@@ -1,11 +1,82 @@
-# First GPU pilot — 19 September 2026
+# Evidence extractor experiments — 19–20 September 2026
 
-**Decision: retain the existing system.** The QA-pretrained encoder trained on the
-original examples did not improve evidence localization. A longer run of the same
-recipe is not supported by this result; no final all-data fit or serving integration
-was performed.
+**Decision: retain the locked serving build.** Two GPU experiments were run. The
+first, on the original examples alone, was a clear regression. The second added
+external rationale supervision and **reversed that regression into a small gain
+of +0.0064 raw**, which is below the pre-registered +0.03 substantial-gain gate
+and inside its own confidence interval. Nothing was deployed.
 
-## Experiment
+The second experiment's most useful output is not its headline: the trained
+extractor and the 27B evidence stage **disagree on 71 of 195 questions, and an
+oracle that picked the better of the two per question would score 0.8817 raw,
++0.0520 over the control**. The two systems fail differently, which is a measured
+selector opportunity rather than an estimated one. See
+[SCORE_IMPROVEMENT_PLAN.md](../../SCORE_IMPROVEMENT_PLAN.md).
+
+## Second experiment — external rationale pretraining, 20 September 2026
+
+Intermediate training on 43,812 checked question/evidence pairs from CoQA and
+MASH-QA (66,279 windows; see [EXTERNAL_DATA.md](EXTERNAL_DATA.md)), then the same
+conversation-disjoint folds and settings as the pilot.
+
+Pretraining: two epochs, effective batch 16 as 8 x accumulation 2, learning rate
+1e-5 with 6% warmup and linear decay, 57.1 minutes on one RTX PRO 6000. External
+development macro word-span IoU rose **0.2699 -> 0.7059** (CoQA 0.6678, MASH-QA
+0.7440). The selected checkpoint is the epoch-2 mid-point, chosen by an
+evaluation inside the epoch; the end-of-epoch checkpoint scored 0.7054.
+
+| Comparison | Mean tIoU | Raw | Change vs control | Conversation bootstrap 95% |
+| --- | ---: | ---: | ---: | --- |
+| Frozen control | 0.7161810760 | 0.8297086456 | — | — |
+| Pilot, original data only | 0.6662128340 | 0.7997277004 | −0.0299809452 | [−0.0537, −0.0065] |
+| **Pretrained initialization** | **0.7269130554** | **0.8361478333** | **+0.0064391876** | [−0.0204, +0.0339] |
+| Pretrained + SIMORD dialogue | 0.6926750577 | 0.8156050346 | −0.0141036110 | [−0.0361, +0.0082] |
+
+Per-fold change for the pretrained run was +0.013210, +0.008309 and −0.002213,
+against the pilot's −0.000473, −0.049319 and −0.038481. The repair is consistent
+across folds, not one lucky fold.
+
+### What actually changed, and what did not
+
+| Evidence quality bucket | Control | Pretrained extractor |
+| --- | ---: | ---: |
+| Zero overlap | 21 | 22 |
+| 0 < IoU < 0.5 | 32 | 26 |
+| 0.5 <= IoU < 0.9 | 37 | 38 |
+| IoU >= 0.9 | 105 | 109 |
+
+**Boundaries improved; occurrence selection did not.** On the 167 questions where
+both systems land somewhere real, mean tIoU rises 0.8024 -> 0.8198. But the
+extractor fixes 6 of the control's 21 zero-overlap misses while creating 7 new
+ones — a wash. The trained model is the better boundary model and is not yet a
+better occurrence finder, which is exactly the split that decides how it should
+be used.
+
+### Adding SIMORD dialogue supervision hurt
+
+The 16 medical-dialogue training questions cost **−0.0342 mean tIoU** and broke
+fold consistency (+0.020142, −0.022401, −0.038999). Their sentence-level
+provenance has a median span of 43 words against the competition's median of 8,
+so the only in-domain dialogue data available teaches the wrong span length. Long
+external rationales are harmful here even when they are in-domain; this is why
+the preparation filter caps evidence at 48 words.
+
+### Throughput
+
+Measured on the real mixture, effective batch 16 throughout:
+
+| Micro-batch x accumulation | Seconds per update | Peak CUDA | Minutes per epoch |
+| --- | ---: | ---: | ---: |
+| 4 x 4 (pilot shape) | 0.421 | 13.9 GiB | 29.0 |
+| **8 x 2** | **0.351** | 20.6 GiB | **24.3** |
+| 16 x 1 | 0.370 | 32.3 GiB | 25.5 |
+
+Total GPU session was about 1h20m including benchmarks, both CV runs and the
+vLLM restart, roughly $2 of instance time.
+
+## First GPU pilot — 19 September 2026
+
+### Experiment
 
 - Model: `deepset/deberta-v3-large-squad2`, approximately 435M parameters.
 - Hardware: one RTX PRO 6000 Blackwell Max-Q, 96 GB.
@@ -20,7 +91,7 @@ was performed.
   classifier. These public examples were previously inspected; this is an
   exploratory comparison, not hidden-platform validation.
 
-## Measured comparison
+### Measured comparison
 
 The completed remote `runs/cv-002/report.json` was read during the session:
 
@@ -46,7 +117,7 @@ and averaged 0.465 seconds per optimizer update after warmup. This benchmark
 preceded the tokenizer correction described below. A repeat was requested, but
 its completion has not been recovered; do not treat it as verified.
 
-## Validation and correction
+### Validation and correction
 
 Eleven local tests passed, including real tiny-model CPU training, checkpoint
 reload and complete three-fold scoring. Dataset export reproduces the existing
@@ -66,10 +137,14 @@ the corrected three-fold run completed. The failed attempt remains on disk.
 - Completed remote evaluation: `runs/cv-002/`, including reports, manifests, logs
   and three selected checkpoints. The detailed report has **not been copied back
   locally**; the numeric observations above preserve the session's readout.
-- The instance became unavailable before final artifact retrieval. A subsequent
-  start request reported that resources were unavailable. That request was
-  followed by an explicit stop; Vast confirmed `actual_status=exited`,
-  `cur_state=stopped`, `intended_status=stopped` at approximately 21:15 UTC.
+- **Recovered 20 September**: the pilot reports, manifests and logs are now at
+  `runs/evidence-external-20260919/gpu-artifacts/pilot-runs/`, and the second
+  experiment's artifacts at `runs/evidence-external-20260919/gpu-artifacts/external-run/`.
+  The pretrained checkpoint (1.7 GB) stays on the box at
+  `/workspace/medical-evidence-training-codex/runs/pretrain-mix-001/model`.
+- vLLM was stopped for exclusive GPU use during the second experiment and
+  restarted afterwards; it was verified serving `qwen` before the instance was
+  stopped. No serving configuration was changed.
 - GPU compute billing is zero while stopped. Retained instance storage was quoted
   at approximately $0.0292/hour. The instance was not destroyed.
 - Only the explicitly authorized Qwen3.5-122B-A10B-GPTQ-Int4 model directory was
@@ -84,9 +159,14 @@ downloading model weights. Stop the instance again after retrieval.
 
 ## Implication
 
-The available examples are enough to run a cheap, falsifiable pilot. They did not
-make this extractor competitive. This does not establish that external training
-data cannot help, but it rules out treating this exact original-data recipe as a
-demonstrated path to 0.9. The next training experiment should change the evidence
-available to the model (for example, relevant externally annotated spans) and use
-the same conversation-disjoint comparison before any deployment decision.
+The pilot's failure was data scarcity, not the wrong architecture. Adding 43,812
+external rationale examples moved the same recipe from −0.0300 to +0.0064 raw, a
+swing of +0.0364, and made it consistent across folds. That validates supervised
+span extraction as a direction while falling short of the gate that would justify
+touching a locked, validated build.
+
+The measured next step is selection rather than more pretraining: the two systems
+already in hand have an oracle combination worth +0.0520 raw, and the extractor's
+advantage is specifically in boundaries, where a local-window refinement cannot
+introduce new occurrence errors. Both routes are specified in
+[SCORE_IMPROVEMENT_PLAN.md](../../SCORE_IMPROVEMENT_PLAN.md).
