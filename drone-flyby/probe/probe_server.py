@@ -60,6 +60,9 @@ OUT = os.environ.get('PROBE_OUT')
 JOBS_PATH = os.environ.get('PROBE_JOBS')
 
 MOVE_LIMIT = {0: 2203.0, 1: 1102.0, 2: 551.0}
+# Seconds of silence after which a one-or-two-frame sequence is treated as a
+# verify rather than a run, and its job is returned to the queue.
+VERIFY_GRACE = float(os.environ.get('PROBE_VERIFY_GRACE', '45'))
 
 
 def parse_tile(spec: str) -> Tuple[int, int, int]:
@@ -121,6 +124,19 @@ def job_for(sequence_id: str) -> Job:
         job = _assigned.get(sequence_id)
         if job is not None:
             return job
+        # The portal's "Test endpoint" sends exactly one frame. Left alone it
+        # consumes the next job, so the real run behind it gets the wrong
+        # payload -- which already happened twice. Any sequence that took a job
+        # and then went quiet after a frame or two gives it back.
+        now = time.time()
+        for old_id, stats in list(_seq_stats.items()):
+            if (stats['frames'] <= 2 and now - stats['first'] > VERIFY_GRACE
+                    and stats['job'] in _used):
+                _used.discard(stats['job'])
+                _assigned.pop(old_id, None)
+                _seq_stats.pop(old_id, None)
+                logger.warning('released job %s: sequence %s sent %d frame(s) and stopped',
+                               stats['job'], old_id, stats['frames'])
         job = DEFAULT_JOB
         if JOBS_PATH and Path(JOBS_PATH).exists():
             for spec in json.loads(Path(JOBS_PATH).read_text()):

@@ -452,6 +452,8 @@ SWEEPS = {
 CAMERA = os.environ.get('DRONE_CAMERA', 'full')
 # Every point as (level, x, y); plain (x, y) points are Level 1.
 SWEEP = [p if len(p) == 3 else (1, *p) for p in SWEEPS.get(CAMERA, FULL_SWEEP)]
+# Whether this pattern steers to Level 2 at all; see choose_next_view.
+SWEEP_HAS_L2 = any(p[0] == 2 for p in SWEEP)
 
 # 'survey': a data-collection pattern, not a scoring one. Level-2 views
 # (native resolution) snake along two rows covering the top half, where every
@@ -1154,8 +1156,13 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
         target = inspection_target(state, base, request.frame)
     if target is not None:
         state.answers_since_inspection = 0
-    elif base[0] == 2:
-        # Back up to Level 1 as close as the 551 px limit allows.
+    elif base[0] == 2 and not SWEEP_HAS_L2:
+        # Back up to Level 1 as close as the 551 px limit allows. Only when the
+        # pattern itself has no Level-2 points: this branch predates any L2
+        # pattern and, left unguarded, it overrides them on the very first L2
+        # frame. Measured with tools/camsim.py on the entry ring: 1 distinct L2
+        # centre visited and 25 % of the top band covered, because every L2
+        # arrival was immediately answered with a move back to L1.
         x = int(min(max(base[1], 960), 2880))
         y = int(min(max(base[2], 540), 1620))
         target = (1, x, y)
@@ -1182,6 +1189,14 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
                 state.sweep_index = nearest
                 target = SWEEP[nearest]
 
+    if target is not None and not legal(base, *target):
+        # Shorten the move (and fix the level) instead of abandoning the
+        # pattern: from Level 2 the full-view fallback below is an illegal
+        # level change, so an unreachable target used to mean no command at
+        # all, and the camera sat still.
+        stepped = step_towards(base, *target)
+        if stepped is not None:
+            target = stepped
     if target is not None and legal(base, *target):
         state.pending = target
         return RequestedViewDto(resolution_level=target[0], center_x=target[1], center_y=target[2])

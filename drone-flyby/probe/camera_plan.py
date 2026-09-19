@@ -97,6 +97,7 @@ def simulate(pattern, frames):
 
 
 DIVISOR = {0: 4.0, 1: 2.0, 2: 1.0}
+REPEAT_DISCOUNT = 0.425      # 0.368 / 0.865, measured
 
 # Measured on real detections (probe/carry_test.py, affine_fitted column): the
 # chance a carried box still overlaps the truth at IoU 0.5, by frames since the
@@ -145,6 +146,7 @@ def evaluate(pattern_name, objects, frames, margin=0.6, curve=None):
         life = 0
         undetected = 1.0        # probability the object has NOT been found yet
         last_look = None
+        missed_at = set()       # levels this object has already been looked at
         for frame in frames:
             box = G.box_at(params, frame)
             if not G.visible(box):
@@ -163,9 +165,19 @@ def evaluate(pattern_name, objects, frames, margin=0.6, curve=None):
                     first_look = frame
                 if curve is not None:
                     side = float(np.sqrt(area)) / DIVISOR[level]
-                    if curve(side) > 0.25:      # a look too coarse to find it is not a sighting
+                    p_look = curve(side)
+                    # Repeated looks do NOT fail independently: measured on the
+                    # recording, a look after a miss hits 0.368 of the time
+                    # against 0.949 after a hit (overall 0.865). So a second
+                    # look at the same resolution is worth 0.425 of the first.
+                    # A look at a FINER level is new information and is not
+                    # discounted, which is the whole case for Level 2.
+                    if level in missed_at:
+                        p_look *= REPEAT_DISCOUNT
+                    if p_look > 0.25:
                         last_look = frame
-                    undetected *= (1.0 - curve(side))
+                    missed_at.add(level)
+                    undetected *= (1.0 - p_look)
                 else:
                     last_look = frame
             if first_look is not None and frame >= first_look:
