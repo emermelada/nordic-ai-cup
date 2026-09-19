@@ -1333,3 +1333,52 @@ This also re-reads the old "a rented box scores ~0.02 lower than the Mac" note:
 part of that was the Cloudflare tunnel, and part was almost certainly where the
 box was. A count of repeated consecutive views is the diagnostic; it takes
 seconds and needs only the recording.
+
+### Choosing a serving host: BOTH latency and sustained bandwidth, measured
+
+Three rented hosts were tried on 19 Sep afternoon and two failed, for different
+reasons, and neither failure would have been caught by any check that existed at
+midday. Both gates are in `tools/bootstrap_remote.sh`; run them **before
+uploading anything**, and destroy a host that fails either.
+
+| host | Helsinki RTT | sustained 100 MB from Helsinki | real score |
+|---|---|---|---|
+| Czechia `datacenter:214845` | 30.4 ms (p95 38.3) | 83 / 88 / 38 MB/s | **0.5027-0.5113** |
+| Bulgaria | **58-89 ms** | 47.7 MB/s | 0.4235 / 0.4569 |
+| Estonia | 8.0 ms | **23 -> 16 -> 9 MB/s** | **0.1945** |
+
+* **Bulgaria** had bandwidth to spare and answered every frame in 47-50 ms, and
+  still lost 0.05-0.08 -- purely to camera stalls (see the previous section).
+* **Estonia** had the best latency available (Tallinn is 80 km from Helsinki)
+  and a *shared, contended* pipe. Under the 1.5 MB-per-frame load it collapsed:
+  four requests took **3.4-5.8 seconds to reach us**, while our own service
+  answered each in 62-80 ms. The evaluator timed them out at 3333 ms, the
+  camera never moved, our tracker kept planning from `state.pending` (the view
+  we had asked for and never got), and every subsequent move was illegal:
+  "center movement 1920.00px exceeds the L1 limit of 1102.00px". Score 0.1945.
+  Vast labels that column "Internet Download Speed (**shared**)" -- the
+  advertised figure is a ceiling, not an allocation.
+
+Practical rules:
+* Prefer a host tagged `datacenter:`. Both failures were non-datacenter, and
+  the Finland box never accepted an ssh key at all (neither direct nor via
+  `sshN.vast.ai`) and had to be abandoned.
+* Latency gate: 30 TCP connects **spaced 200 ms apart**. 100 rapid connects trip
+  Hetzner's rate limiting and fake a jitter failure -- that false REJECT nearly
+  cost us a good host.
+* Bandwidth gate: three consecutive 100 MB pulls. One is not enough; Estonia's
+  first read 23 MB/s and only the third exposed the collapse.
+* The stream needs 4.5 MB/s sustained (1.5 MB x 3 fps). Anything that cannot
+  hold ~20 MB/s under repeat load will stall.
+
+### Latent bug this exposed: a lost answer desynchronises the camera
+
+`choose_next_view` plans from `state.pending` (the view we last asked for)
+whenever `camera_command_feedback` is None, because the evaluator renders the
+next frame before our answer lands. If our answer is **lost or times out**, the
+camera never moves, but we still believe `pending` -- so we plan from a
+position the camera is not at and emit moves that exceed the L1 distance limit.
+They are refused, which desynchronises further. Not worth fixing while the
+endpoint is healthy (it needs a multi-second stall to trigger), but it turns one
+lost answer into a cascade, and it is why 0.1945 was so far below even a
+frame-loss explanation.

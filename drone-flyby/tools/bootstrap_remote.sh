@@ -34,13 +34,13 @@ say "LATENCY TO THE EVALUATOR -- the gate that matters most"
 # scored 0.42-0.46, where a low-latency box stalled 0.4-3.6 % and scored
 # 0.50-0.51. No frames were lost in either case -- the loss is pure coverage.
 ssh $SSH_ARGS 'python3 -c "
-import socket, time, statistics, sys
+import socket, time, statistics, sys  # spaced: 100 rapid connects trip Hetzner rate limiting and fake a jitter failure
 lat=[]
-for _ in range(100):
+for _ in range(30):
     s=socket.socket(); s.settimeout(2); t=time.perf_counter()
     try: s.connect((\"hel1-speed.hetzner.com\", 443))
     except Exception: continue
-    lat.append((time.perf_counter()-t)*1000); s.close()
+    lat.append((time.perf_counter()-t)*1000); s.close(); time.sleep(0.25)
 lat.sort()
 med=statistics.median(lat); p95=lat[int(.95*len(lat))]
 print(f\"   Helsinki RTT: median {med:.1f} ms  p95 {p95:.1f} ms  min {lat[0]:.1f}  max {lat[-1]:.1f}  n={len(lat)}\")
