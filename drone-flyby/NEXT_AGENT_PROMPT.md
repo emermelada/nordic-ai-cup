@@ -18,6 +18,10 @@ spending a validation run on any of them is pure waste.
 
 ## Your job, in order
 
+**BEFORE ANYTHING ELSE: the deadline is 16:00 CEST TODAY and both GPU boxes are
+destroyed.** Re-rent and get three confirmation runs done with real buffer, not
+at 15:50. Re-renting plus gating plus a first run is comfortably an hour.
+
 1. **Re-rent the serving host and gate it.** Vast.ai, Czechia
    `datacenter:214845` (`m:53164` / `m:40773`, was `93.91.156.98`) — that host
    produced every 0.50+ score. Use `tools/bootstrap_remote.sh`, which gates on
@@ -33,6 +37,16 @@ spending a validation run on any of them is pure waste.
 3. **Then add v9.** `models/drone-yolo11m-p2-v9.pt` as a FIFTH pass at 1280 —
    an addition, never a replacement. Three complete runs of the winner from
    step 2 plus v9.
+
+   **Ship it if it beats 0.5270 at all**, and read the **per-class** column for
+   `spacecraft` and `small_launcher` rather than the total. Both sessions agreed
+   this bar after the simulation put v9 at only +0.0023: the mined truth
+   contains none of `spacecraft`/`small_launcher`/`condor`/`medium_plane`, and
+   `spacecraft` 2.0 and `small_launcher` 1.5 are v9's two highest class weights.
+   Rejecting v9 on that number would repeat the exact error this project made
+   by rejecting Level-0 cameras on a detector blind at Level 0. `small_launcher`
+   is the precedent: 0.000 in every configuration ever measured until the 2560
+   pass took it to 0.512, and no offline metric predicted that.
 
 4. **Then, if runs remain:** mine the four classes missing from the truth file
    (`spacecraft`, `small_launcher`, `condor`, `medium_plane`) with
@@ -62,6 +76,11 @@ spending a validation run on any of them is pure waste.
   Use the mined truth for RANKING configurations (Spearman +0.811, constant
   −0.074 offset), never for absolute score, and never to tune `DRONE_BOX_GROW`
   (it inherits our own box convention and is blind to growth by construction).
+* **The calibration set is `data/runs_20260919.tar.gz`** (6.3 MB packed, 49 MB
+  unpacked, force-added past the `data/` gitignore): 31 runs' answers with their
+  real scores. Any new or extended truth file must be re-calibrated against it
+  with `tools/calibrate_truth.py`. Do not delete it — it existed on one laptop
+  until yesterday.
 
 ## What to expect
 
