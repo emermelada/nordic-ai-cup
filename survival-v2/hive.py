@@ -35,26 +35,39 @@ RASTER_CELL = 10.0
 
 DEFAULT_PARAMS = {
     # breeding
-    "w_speed": 6.0, "w_hear": 1.5, "w_vis": 0.7, "w_cone": 0.7, "w_sprint": 0.8, "w_energy": 0.0,
+    "w_speed": 6.0, "w_hear": 3.0, "w_vis": 0.7, "w_cone": 0.7, "w_sprint": 0.8, "w_energy": 0.0,
     "elite_margin": 0.03,          # fitness within this of the best alive counts as elite
     "breed_reserve_early": 40.0,   # energy an elite keeps after spawning while t < breed_phase_end
     "breed_reserve_late": 120.0,   # energy kept after spawning later on
     "breed_phase_end": 900.0,
     "breed_reserve_span": 200.0,   # the worst genome that may breed keeps this much more than the best
-    "breed_min_rank": 0.6,         # genomes ranked below this (0 = bottom quartile, 1 = best) do not breed
+    "breed_gap": 0.4,              # genomes more than this below the reference genome do not breed
+    "breed_ref_q": 0.75,           # reference genome = this quantile of fitness alive (not the single best)
     "sprint_keep": 15.0,           # once predators exist, keep max_energy/5 + this after spawning (sprint lock)
     "spread_r": 70.0,              # campers avoid trees with another agent within this radius
     "spread_pen": 200.0,
+    "tree_prod_w": 60.0,           # px of walking one known fruit / known-fruiting tree is worth
+    "barren_reach": 250.0,         # do not walk farther than this to a tree not seen fruiting
+    "tree_stick": 100.0,           # keep the current tree unless another is this much nearer
+    "tree_fresh_w": 120.0,         # px a tree with fruit seen in the last 30 s is worth
+    "barren_watch": 20.0,          # s sitting at a tree without fruit before giving up on it
+    "tree_forget": 70.0,           # s unseen after which a tree is dropped (trees live ~58 s)
+    "breed_start": 25.0,           # no breeding before this (young trees do not fruit yet)
+    "food_range_hungry": 200.0,
+    "food_range_idle": 150.0,      # food radius for agents not sitting at a fruiting tree
     "pop_cap_early": 36, "pop_cap_mid": 18, "pop_cap_late": 8,
     "t_mid": 900.0, "t_late": 1800.0,
-    "pop_min": 4,                  # below this anyone may breed
+    "pop_min": 6,                  # below this anyone may breed
+    "weak_food_w": 0.3,            # fruit value for agents that will not breed (weak genome / old and poor)
     "endgame_t": 2926.0,           # a child born now (75 energy) lives idle to t=3000
     # foraging
     "ripe_age": 19.0,              # leave dated fruit younger than this (s) on the tree ...
-    "starve_frac": 0.12,           # ... unless below this fraction of max energy
+    "starve_frac": 0.08,           # ... unless below this fraction of max energy
+    "hunger_w": 30.0,              # assignment bonus for hungry agents (x fraction of max energy missing)
     "dist_cost": 0.06,             # energy-equivalent cost per px of travel (walk 0.05 + living time)
-    "food_range": 250.0,
-    "min_gain": 8.0,               # skip fruit whose net energy gain would be smaller than this
+    "food_range": 90.0,             # territorial: eat around where you sit
+    "min_gain": 8.0,
+    "food_stick": 0.0,             # score bonus for the fruit an agent was already heading to               # skip fruit whose net energy gain would be smaller than this
     "wait_dist": 18.0,             # where to wait next to an unripe fruit (touching is < 5 + radius <= 14)
     # threats
     "alert_awake": 190.0,          # react to awake predators whose track is this uncertain/close
@@ -63,6 +76,8 @@ DEFAULT_PARAMS = {
     "charge_zone": 95.0,           # predators charge inside 90 px whatever we do: run (sprint if slower)
     "keep_dist": 160.0,            # back off from awake predators closer than this
     "drift_speed": 3.0,            # ... and drift away slowly from farther ones that can see us
+    "charge_speed": 40.0,          # speed cap inside the charge zone (40 = full walking speed; predator sprints 15)
+    "backoff_speed": 11.0,         # speed when backing off a circling predator (it closes at ~10.6)
     "face_tol": 0.9,               # keep the nearest awake predator within this bearing (< pi/2)
     "scan_rate": 0.15,             # idle agents turn this much per tick to watch all round
     "track_memory": 1.5,           # seconds an unseen predator heading our way stays a threat
@@ -79,7 +94,7 @@ class Mem:
     """What the hive remembers about one agent."""
     __slots__ = ("aid", "frame", "x", "y", "h", "energy", "max_energy", "speed", "sprint", "hear", "vis", "cone",
                  "age", "biome", "last", "old", "born", "fit", "mode", "target", "wander_dir", "wander_until",
-                 "expected", "fixes", "spawned", "stale")
+                 "expected", "fixes", "spawned", "stale", "food_tgt")
 
     def __init__(self, aid, frame, tick):
         self.aid = aid
@@ -87,6 +102,7 @@ class Mem:
         self.x = self.y = self.h = 0.0
         self.age = -1.0
         self.stale = False
+        self.food_tgt = None
         self.last = None
         self.old = False
         self.born = tick
@@ -120,6 +136,10 @@ class FrameMap:
         self.ty = np.empty(0)
         self.tfirst = np.empty(0)
         self.tlast = np.empty(0)
+        self.tfruit = np.empty(0)     # last time fruit was seen within 65 px of the tree
+        self.twatch = np.empty(0)     # seconds someone sat next to it since that fruit (barren test)
+        # exploration: last time each 100 px cell was looked at (world frame only)
+        self.seen = np.zeros((16, 12)) if world else None
         self.preds = []            # [x, y, h, last_seen, last_moved, first_seen]
         # hearing raster: tick when each 10 px cell was last well inside someone's hearing radius
         if world:
@@ -319,6 +339,7 @@ class Hive:
             fm = self.maps[fid]
             self._map_trees(fm, group)
             self._map_fruits(fm, group)
+            self._tree_watch(fm, group)
             self._map_predators(fm, group)
             for m, _ in group:
                 if not m.stale:
@@ -477,6 +498,7 @@ class Hive:
             tx2, ty2 = c * a.tx - s * a.ty + tx, s * a.tx + c * a.ty + ty
             b.tx, b.ty = np.concatenate((b.tx, tx2)), np.concatenate((b.ty, ty2))
             b.tfirst, b.tlast = np.concatenate((b.tfirst, a.tfirst)), np.concatenate((b.tlast, a.tlast))
+            b.tfruit, b.twatch = np.concatenate((b.tfruit, a.tfruit)), np.concatenate((b.twatch, a.twatch))
             _dedupe_trees(b)
         for pr in a.preds:
             b.preds.append([c * pr[0] - s * pr[1] + tx, s * pr[0] + c * pr[1] + ty, pr[2] + phi, pr[3], pr[4],
@@ -570,13 +592,55 @@ class Hive:
                 fm.ty = np.concatenate((fm.ty, new[:, 1]))
                 fm.tfirst = np.concatenate((fm.tfirst, np.full(len(new), t)))
                 fm.tlast = np.concatenate((fm.tlast, np.full(len(new), t)))
+                fm.tfruit = np.concatenate((fm.tfruit, np.full(len(new), -1e9)))
+                fm.twatch = np.concatenate((fm.twatch, np.zeros(len(new))))
                 seen = np.concatenate((seen, np.ones(len(new), bool)))
         if fm.tx.size:
             fm.tlast[seen] = t
-            gone = (~seen) & self._perceivable(fm, group, fm.tx, fm.ty, 12.0)
-            keep = (~gone) & (t - fm.tlast < 120.0)
+            gone = (~seen) & self._heard_zone(group, fm.tx, fm.ty, 8.0)
+            keep = (~gone) & (t - fm.tlast < self.p["tree_forget"])
             if not keep.all():
                 fm.tx, fm.ty, fm.tfirst, fm.tlast = fm.tx[keep], fm.ty[keep], fm.tfirst[keep], fm.tlast[keep]
+                fm.tfruit, fm.twatch = fm.tfruit[keep], fm.twatch[keep]
+
+    def _tree_watch(self, fm, group):
+        """Which trees fruit: fruit seen within 65 px refreshes tfruit; sitting next to one without fruit
+        accumulates twatch (a fruiting tree spawns ~0.1 fruit/s, so 20 s of nothing means young or barren)."""
+        t = self.t
+        if fm.tx.size:
+            if fm.fx.size:
+                recent = fm.flast >= t - 1e-6
+                if recent.any():
+                    dd = np.hypot(fm.tx[:, None] - fm.fx[None, recent], fm.ty[:, None] - fm.fy[None, recent])
+                    has = (dd < 65.0).any(axis=1)
+                    fm.tfruit[has] = t
+                    fm.twatch[has] = 0.0
+            live = [(m.x, m.y) for m, _ in group if not m.stale]
+            if live:
+                A = np.array(live)
+                dd = np.hypot(fm.tx[:, None] - A[None, :, 0], fm.ty[:, None] - A[None, :, 1])
+                fm.twatch[(dd < 30.0).any(axis=1)] += 0.1
+        if fm.seen is not None:
+            for m, _ in group:
+                if m.stale:
+                    continue
+                for r in (0.0, 100.0, 200.0, 300.0):
+                    if r > m.vis:
+                        break
+                    for da in ((0.0,) if r == 0.0 else (-m.cone / 3, 0.0, m.cone / 3)):
+                        x = m.x + r * math.cos(m.h + da)
+                        y = m.y + r * math.sin(m.h + da)
+                        i, j = int(x // 100), int(y // 100)
+                        if 0 <= i < 16 and 0 <= j < 12:
+                            fm.seen[i, j] = t
+
+    def _heard_zone(self, group, x, y, margin):
+        """Points well inside some (non-stale) agent's hearing radius: absence there is certain."""
+        out = np.zeros(x.size, bool)
+        for m, _ in group:
+            if not m.stale:
+                out |= np.hypot(x - m.x, y - m.y) <= m.hear - margin
+        return out
 
     def _perceivable(self, fm, group, x, y, margin):
         """Which points some agent of the group should perceive now (hearing, or cone ignoring walls)."""
@@ -715,30 +779,32 @@ class Hive:
         spawners = set()
         budget = cap - n
         endgame = t >= p["endgame_t"]
-        fits = sorted(m.fit for m, _ in order)
-        lo_fit = fits[len(fits) // 4] if len(fits) >= 4 else fits[0]
-        span = self.best_fit - lo_fit
+        gap = p["breed_gap"]
+        fits_sorted = sorted(q.fit for q, _ in order)
+        ref_fit = fits_sorted[min(len(fits_sorted) - 1, int(len(fits_sorted) * p["breed_ref_q"]))]
+        lo_fit = ref_fit - gap
         early = t < p["breed_phase_end"]
         r_lo = p["breed_reserve_early"] if early else p["breed_reserve_late"]
         r_hi = r_lo + p["breed_reserve_span"]
         cands = []
         for m, obs in order:
-            if m.energy <= 101.0 or m.aid in threat:
+            if m.energy <= 101.0 or m.aid in threat or t < p["breed_start"]:
                 continue
-            if m.old:
-                cands.append((0, -m.fit, m.aid, 3.0))
-            elif endgame:
+            rank = min(1.0, max(0.0, (m.fit - lo_fit) / gap))     # 1 = as good as the best genome alive
+            good = m.fit >= lo_fit or n < p["pop_min"]
+            if endgame:
                 cands.append((1, -m.fit, m.aid, 3.0))
+            elif not good:
+                continue                       # weak genomes never breed, not even their old-age energy
+            elif m.old:
+                cands.append((0, -m.fit, m.aid, 3.0))
             else:
-                rank = 1.0 if span < 1e-3 else min(1.0, max(0.0, (m.fit - lo_fit) / span))   # 1 = best alive
-                if rank < p["breed_min_rank"] and n >= p["pop_min"]:
-                    continue
                 cands.append((2, -m.fit, m.aid, r_hi - (r_hi - r_lo) * rank))
         cands.sort()
         preds_seen = any(fm.preds for fm in self.maps.values()) or t > 150.0
         for pri, _, aid, reserve in cands:
             m = alive[aid][0]
-            if pri >= 2 and preds_seen:
+            if pri >= 2 and preds_seen and m.speed < 15.5:   # slower than a predator: keep the sprint unlocked
                 reserve = max(reserve, m.max_energy / 5 + p["sprint_keep"])
             if m.energy - 101.0 < reserve:
                 continue
@@ -748,15 +814,27 @@ class Hive:
                 continue
             spawners.add(aid)
             budget -= 1
+        # --- agents that cannot turn food into children (weak genomes, or old without a dump) eat last
+        gap_cut = lo_fit
+        for m, obs in order:
+            m.spawned = 1 if (m.fit >= gap_cut or n < p["pop_min"]) else 0      # reuse slot: 1 = may breed
         # --- food assignment (global greedy per frame)
         food = {}
+        retire = set()
+        if n >= p["pop_min"]:
+            for m, obs in order:
+                if not m.spawned and m.aid not in threat:
+                    retire.add(m.aid)     # a weak genome turns food into nothing: leave it to the breeders
         for fid, group in by_frame.items():
-            food.update(self._assign_food(self.maps[fid], [m for m, _ in group if m.aid not in threat]))
+            food.update(self._assign_food(self.maps[fid], [m for m, _ in group
+                                                            if m.aid not in threat and m.aid not in retire]))
         actions = []
         for m, obs in order:
             fm = self.maps[m.frame]
             if m.aid in threat:
                 act = self._flee(m, fm, threat[m.aid])
+            elif m.aid in retire:
+                act = self._retire(m, fm)
             elif m.aid in food:
                 m.mode = "food"
                 x, y, wait = food[m.aid]
@@ -796,8 +874,28 @@ class Hive:
         dated = (fm.fhi - fm.flo) < 8.0               # spawn time known to within a few seconds
         unripe = dated[None, :] & (age_min < p["ripe_age"])
         eff = np.where(unripe & ~hungry[:, None], -1e9, value)
-        score = eff - p["dist_cost"] * d
-        score[rot | (d > p["food_range"]) | (score < p["min_gain"])] = -1e9
+        frac_missing = np.array([1.0 - m.energy / max(m.max_energy, 1.0) for m in agents])
+        breeder = np.array([bool(m.spawned) and not (m.old and m.energy < 101.0) for m in agents])
+        # food eaten by an agent that will never pass it on is wasted: they only get what nobody else wants
+        eff = np.where(breeder[:, None], eff, eff * p["weak_food_w"])
+        score = eff - p["dist_cost"] * d + p["hunger_w"] * frac_missing[:, None]
+        # keep going for the fruit chosen last tick unless something clearly better appears (no zig-zag)
+        for i, m in enumerate(agents):
+            if m.food_tgt is not None:
+                dd = np.abs(fm.fx - m.food_tgt[0]) + np.abs(fm.fy - m.food_tgt[1])
+                j = int(dd.argmin())
+                if dd[j] < 1.0:
+                    score[i, j] += p["food_stick"]
+        # stay local while sitting at a tree that fruited recently; otherwise reach out for known fruit
+        at_fresh = np.zeros(len(agents), bool)
+        if fm.tx.size:
+            dt_ = np.hypot(fm.tx[None, :] - ax[:, None], fm.ty[None, :] - ay[:, None])
+            fresh_t = (t - fm.tfruit) < 30.0
+            at_fresh = ((dt_ < 30.0) & fresh_t[None, :]).any(axis=1)
+        reach = np.where(at_fresh, p["food_range"], p["food_range_idle"])
+        reach = np.where(hungry, np.maximum(reach, p["food_range_hungry"]), reach)
+        starving = np.array([m.energy < 25.0 for m in agents])
+        score[rot | (d > reach[:, None]) | (((eff - p["dist_cost"] * d) < p["min_gain"]) & ~starving[:, None])] = -1e9
         out = {}
         if score.size == 0:
             return out
@@ -813,27 +911,60 @@ class Hive:
             used_a.add(i)
             used_f.add(j)
             out[agents[i].aid] = (float(fm.fx[j]), float(fm.fy[j]), False)
+            agents[i].food_tgt = (float(fm.fx[j]), float(fm.fy[j]))
             if len(used_a) == na:
                 break
         return out
 
+    def _tree_productivity(self, fm):
+        """Per tree: known fruit within 65 px, plus 1 if the tree is known to be >= 20 s old (it fruits)."""
+        if getattr(fm, "_prod_tick", -1) == self.tick:
+            return fm._prod
+        prod = np.zeros(fm.tx.size)
+        if fm.tx.size:
+            if fm.fx.size:
+                dd = np.hypot(fm.tx[:, None] - fm.fx[None, :], fm.ty[:, None] - fm.fy[None, :])
+                prod += (dd < 65.0).sum(axis=1)
+            prod += (self.t - fm.tfirst) >= 20.0
+        fm._prod, fm._prod_tick = prod, self.tick
+        return prod
+
     def _choose_tree(self, m, fm):
+        """The nearest fruiting tree nobody else sits at (walking is the colony's biggest energy cost).
+
+        A tree counts when fruit was seen around it in the last 30 s or it has been known for 20 s (so it is
+        old enough to fruit) and nobody has watched it stay barren. Occupied = another agent within 40 px of
+        it, or heading to it from closer. The current target is kept unless another is 100 px nearer.
+        """
         if not fm.tx.size:
             return None
-        taken = {}
-        for other in self.mem.values():
-            if other.aid != m.aid and other.frame == m.frame and other.mode == "camp" and other.target is not None:
-                taken[other.target] = taken.get(other.target, 0) + 1
+        p = self.p
+        t = self.t
+        fresh = (t - fm.tfruit) < 30.0
+        ok = fresh | (((t - fm.tfirst) >= 20.0) & (fm.twatch <= p["barren_watch"]))
         d = np.hypot(fm.tx - m.x, fm.ty - m.y)
-        crowd = np.array([taken.get((round(x), round(y)), 0) for x, y in zip(fm.tx.tolist(), fm.ty.tolist())])
-        others = [(q.x, q.y) for q in self.mem.values() if q.aid != m.aid and q.frame == m.frame]
-        near = np.zeros(fm.tx.size)
-        if others:
-            O = np.array(others)
-            dd = np.hypot(fm.tx[:, None] - O[None, :, 0], fm.ty[:, None] - O[None, :, 1])
-            near = (dd < self.p["spread_r"]).sum(axis=1)
-        score = d + 250.0 * crowd + self.p["spread_pen"] * near
+        occ = np.zeros(fm.tx.size, bool)
+        for q in self.mem.values():
+            if q.aid == m.aid or q.frame != m.frame:
+                continue
+            dq = np.hypot(fm.tx - q.x, fm.ty - q.y)
+            occ |= dq < 40.0
+            if q.mode == "camp" and q.target is not None:
+                k = int((np.abs(fm.tx - q.target[0]) + np.abs(fm.ty - q.target[1])).argmin())
+                if dq[k] < d[k]:
+                    occ[k] = True
+        score = d - p["tree_fresh_w"] * fresh
+        score[~ok | occ] = np.inf
+        score[(~fresh) & (d > p["barren_reach"])] = np.inf
         j = int(score.argmin())
+        if not np.isfinite(score[j]):
+            m.target = None
+            return None
+        if m.target is not None:
+            k = int((np.abs(fm.tx - m.target[0]) + np.abs(fm.ty - m.target[1])).argmin())
+            if abs(fm.tx[k] - m.target[0]) + abs(fm.ty[k] - m.target[1]) < 4.0 and np.isfinite(score[k]) \
+                    and score[k] < score[j] + p["tree_stick"]:
+                j = k
         m.target = (round(float(fm.tx[j])), round(float(fm.ty[j])))
         return float(fm.tx[j]), float(fm.ty[j])
 
@@ -875,14 +1006,16 @@ class Hive:
             fx, fy = -math.cos(nearest[1]), -math.sin(nearest[1])
         ang = math.atan2(fy, fx)
         d0, b0, awake0, sees0 = nearest
+        # Walking costs 0.05/px whatever the speed, so move only as fast as the threat requires:
+        # a charging predator does 15 px/tick; one we face beyond 90 px circles in at ~10.6 px/tick.
         if not awake0:
             dist = min(m.speed, 5.0) if d0 < p["alert_rest"] else 0.0
         elif d0 < p["charge_zone"]:
-            dist = m.speed
-            if m.speed < 15.5 and m.energy > m.max_energy / 5 + 15:
-                dist = m.sprint
+            dist = min(m.speed, p["charge_speed"])
+            if m.speed < 15.5 and m.energy > m.max_energy / 5 + 15:     # cannot out-walk a sprinting predator
+                dist = min(m.sprint, p["charge_speed"])
         elif d0 < p["keep_dist"]:
-            dist = m.speed
+            dist = min(m.speed, p["backoff_speed"])
         else:
             dist = min(m.speed, p["drift_speed"])
         # face the nearest awake predator: beyond 90 px this makes it circle instead of charging
@@ -892,6 +1025,31 @@ class Hive:
             turn = max(-1.2, min(1.2, rel))
         return {"agent_id": m.aid, "move_distance": float(dist), "move_direction": float(wrap(ang - m.h)),
                 "turn_angle": float(turn), "spawn_agent": False}
+
+    def _retire(self, m, fm):
+        """Stay out of the way: keep >= 75 px from trees and known fruit (touching a fruit eats it), watch around."""
+        m.mode = "retire"
+        px = py = 0.0
+        if fm.tx.size:
+            d = np.hypot(fm.tx - m.x, fm.ty - m.y)
+            close = d < 75.0
+            if close.any():
+                w = 1.0 / np.maximum(d[close], 5.0)
+                px += float(((m.x - fm.tx[close]) * w).sum())
+                py += float(((m.y - fm.ty[close]) * w).sum())
+        if fm.fx.size:
+            d = np.hypot(fm.fx - m.x, fm.fy - m.y)
+            close = d < 30.0
+            if close.any():
+                w = 1.0 / np.maximum(d[close], 3.0)
+                px += float(((m.x - fm.fx[close]) * w).sum())
+                py += float(((m.y - fm.fy[close]) * w).sum())
+        if px == 0.0 and py == 0.0:
+            return {"agent_id": m.aid, "move_distance": 0.0, "move_direction": 0.0,
+                    "turn_angle": float(self.p["scan_rate"]), "spawn_agent": False}
+        ang = math.atan2(py, px)
+        return {"agent_id": m.aid, "move_distance": float(min(m.speed, 5.0)), "move_direction": float(wrap(ang - m.h)),
+                "turn_angle": 0.0, "spawn_agent": False}
 
     def _go(self, m, tx, ty, stop=0.0, face_target=False):
         dx, dy = tx - m.x, ty - m.y
@@ -906,17 +1064,34 @@ class Hive:
                 "turn_angle": float(turn), "spawn_agent": False}
 
     def _explore(self, m, fm):
-        if m.wander_dir is None or self.tick >= m.wander_until:
+        """Walk to the map cell nobody has looked at for longest (world frame), else a random long walk."""
+        m.mode = "explore"
+        if fm.world and fm.seen is not None:
+            if not isinstance(m.wander_dir, tuple) or self.tick >= m.wander_until:
+                stale = np.minimum(self.t - fm.seen, 300.0)
+                ci = (np.arange(16) * 100 + 50)[:, None]
+                cj = (np.arange(12) * 100 + 50)[None, :]
+                dist = np.hypot(ci - m.x, cj - m.y)
+                taken = np.zeros_like(stale)
+                for q in self.mem.values():
+                    if q.aid != m.aid and q.mode == "explore" and isinstance(q.wander_dir, tuple):
+                        taken[q.wander_dir[0], q.wander_dir[1]] += 1
+                val = stale - 0.25 * dist - 200.0 * taken
+                val[1:-1, 1:-1] += 20.0          # the rim cells are half wall
+                i, j = np.unravel_index(int(val.argmax()), val.shape)
+                m.wander_dir = (int(i), int(j))
+                m.wander_until = self.tick + 400
+            i, j = m.wander_dir
+            tx, ty = i * 100 + 50.0, j * 100 + 50.0
+            if math.hypot(tx - m.x, ty - m.y) < 40.0:
+                m.wander_until = self.tick
+            act = self._go(m, tx, ty)
+            act["move_distance"] = float(min(act["move_distance"], self.p["explore_speed"]))
+            return act
+        if not isinstance(m.wander_dir, float) or self.tick >= m.wander_until:
             m.wander_dir = self.rng.uniform(-PI, PI)
-            m.wander_until = self.tick + int(self.rng.uniform(40, 160))
+            m.wander_until = self.tick + int(self.rng.uniform(60, 200))
         ang = m.wander_dir
-        if fm.world:
-            margin = 120.0
-            cx = 1.0 if m.x < margin else (-1.0 if m.x > WORLD_W - margin else 0.0)
-            cy = 1.0 if m.y < margin else (-1.0 if m.y > WORLD_H - margin else 0.0)
-            if cx or cy:
-                ang = math.atan2(cy + 0.3 * math.sin(ang), cx + 0.3 * math.cos(ang))
-                m.wander_dir = ang
         turn = max(-0.5, min(0.5, wrap(ang - m.h)))
         return {"agent_id": m.aid, "move_distance": float(min(m.speed, self.p["explore_speed"])),
                 "move_direction": float(wrap(ang - m.h)), "turn_angle": float(turn), "spawn_agent": False}
@@ -970,3 +1145,4 @@ def _dedupe_trees(b):
     _, idx = np.unique(key, axis=0, return_index=True)
     idx = np.sort(idx)
     b.tx, b.ty, b.tfirst, b.tlast = b.tx[idx], b.ty[idx], b.tfirst[idx], b.tlast[idx]
+    b.tfruit, b.twatch = b.tfruit[idx], b.twatch[idx]

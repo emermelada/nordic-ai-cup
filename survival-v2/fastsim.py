@@ -639,6 +639,7 @@ class FastEnvironment(Environment):
         for fruit in self.fruits:
             if fruit.age > 100:
                 self.remove_fruit(fruit)
+                self.stat["rot_n"] = self.stat.get("rot_n", 0) + 1
                 continue
             fruit.grow(amount=2 * dt)
 

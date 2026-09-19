@@ -38,12 +38,14 @@ def play(job):
     import orjson
     from fastsim import SimulationCore, to_actions
     if policy == "hive":
-        from hive import Hive
+        Hive = __import__(os.environ.get("HIVE_MODULE", "hive")).Hive
         hive = Hive(params=params, seed=seed)
     else:
         raise ValueError(policy)
     sim = SimulationCore(seed=seed)
     env = sim.env
+    if os.environ.get("NO_PREDATORS"):
+        env.spawn_predator = lambda *a, **k: None
     actions = []
     dec_t, dec_max = 0.0, 0.0
     payload, n_payload = 0, 0

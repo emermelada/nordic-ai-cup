@@ -42,4 +42,6 @@ for r in rows:
     summary["cant_sprint"] += (not r["sprint_ok"])
     if r["d_first_known"] is not None: summary["known_at_<100"] += r["d_first_known"] < 100
 print(dict(summary))
-for r in rows[:25]: print(r)
+late = [r for r in rows if r["t"] > int(__import__("os").environ.get("PM_T", "600"))]
+print("late kills", len(late), "fast(>=15)", sum(1 for r in late if r["speed"] >= 15), "cant_sprint", sum(1 for r in late if not r["sprint_ok"]))
+for r in late[:30]: print(r)
