@@ -1583,3 +1583,24 @@ mechanism aimed at demoting weak tracks -- AGREEMENT_WEIGHT, MISS_PENALTY,
 HITS_BASE, the 0.0 floor band's filter -- is attacking a problem that is mostly
 measurement error. What has actually paid all day is *detecting more*: box
 growth, a lower track threshold, and a fourth model at 2560.
+
+### `DRONE_DET_CONF=0.003` — a wash, do not ship it
+
+Complete runs 0.5278 / 0.5076 (mean 0.5177) against the served 0.01's
+0.5187 / 0.5234 (mean 0.5211). Inside the noise and slightly below, with four
+times the spread. It produced the single highest run of the day (0.5278) and
+also the lowest of its arm — that is variance, not effect.
+
+Worth recording because the *reasoning* was sound and still is: the scene holds
+many more real objects than the truth file lists, so faint detections are more
+often real than the old analysis assumed. But lowering the floor apparently
+displaces as many good answers as it adds real ones — average precision pools
+every frame before ranking, so an extra faint box competes globally, not just
+in its own frame. 0.01 stays.
+
+This closes the configuration search. Everything tunable without a new model
+has now been measured: box growth (flat 1.3), the growth cap (1.3),
+`NEW_TRACK_CONFIDENCE` (0.10), the resolution ladder (a 4th pass at 2560),
+`DRONE_DET_CONF` (0.01), the camera (`full`), `AGREEMENT_WEIGHT`/`MISS_PENALTY`/
+`HITS_BASE` (all suppression, all dead), the floor band, and `RUNNER_UPS`
+(saturated). The next real lever is a better detector.
