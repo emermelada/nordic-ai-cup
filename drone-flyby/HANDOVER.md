@@ -1690,3 +1690,44 @@ medium_plane) is the next session's first task. Without this set there is
 nothing to calibrate against.
 
 The view PNGs are NOT included (5 GB, and the answers are what the scorer needs).
+
+### Per-class confidence calibration cannot change mAP — arithmetic, verified
+
+NEW_PLAN §4b lists "confidence calibration across classes (Platt/isotonic on the
+mined truth)" as the cheapest of the ranking hypotheses and the "+0.1
+candidate". **It is a no-op.** COCO AP is computed per class and depends only on
+the *order* of that class's detections; Platt and isotonic calibration are
+monotonic, so they preserve that order exactly.
+
+Verified on run `b5544ad3` against the mined truth — three transforms, all
+identical to six decimal places:
+
+| transform | mAP |
+|---|---|
+| baseline | 0.451083 |
+| every score squared | 0.451083 |
+| `tank` scores x0.1 | 0.451083 |
+| sqrt on `tank` and `small_plane` | 0.451083 |
+
+**What would help is changing the within-class ORDER**, not rescaling it. That
+needs a signal separating a real detection from a false one, and the three we
+have -- model agreement, miss count, hit count -- were all measured dead.
+
+### `tank` is a genuine false-positive problem, unlike the other classes
+
+Cropped the 18 highest-confidence `tank` answers (>= 0.25) matching no confirmed
+tank, from `data/scene`. Almost all are **empty terrain**: bare grass, dirt,
+vegetation, shipping containers, and boats in a marina. The single highest, at
+**0.80, is bare ground**. Exactly one of eighteen looks like a real military
+vehicle.
+
+This is the opposite of the general unmatched-detection finding
+(`data/unmatched_sheet.png`, commit 356ebb5), where most high-confidence
+unmatched boxes were real unlabelled objects. **The two results are consistent
+and both matter:** globally, suppressing weak detections fails because they are
+mostly real; for `tank` specifically the outranking boxes are genuinely
+spurious, which is why `tank` sits near zero AP while carrying 0.083 of the
+macro average on its own.
+
+It is a training-data problem -- the detector has learned "dark blob on terrain"
+-- and it belongs to v10, not to any serving-time knob.
