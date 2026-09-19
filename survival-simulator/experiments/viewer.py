@@ -31,9 +31,14 @@ import math
 import os
 import sys
 
-os.environ.setdefault("SDL_VIDEODRIVER", os.environ.get("SDL_VIDEODRIVER", ""))
-
 import pygame  # noqa: E402
+
+# DO NOT touch SDL_VIDEODRIVER here. An earlier version did:
+#     os.environ.setdefault("SDL_VIDEODRIVER", os.environ.get("SDL_VIDEODRIVER", ""))
+# which sets the variable to an EMPTY STRING when it is unset, and SDL cannot choose a video driver from
+# an empty value: pygame.display.set_mode() then fails with "windows not available" while a bare pygame
+# test in the same venv works. If a headless run is wanted, pass SDL_VIDEODRIVER=dummy explicitly on the
+# command line - never default it to empty.
 
 BIOME_COLORS = {"Grassland_biome": (54, 92, 48), "Forest_biome": (34, 74, 40),
                 "Desert_biome": (150, 132, 84), "Snow_biome": (196, 200, 205),
@@ -227,7 +232,29 @@ class Player:
     # ---------------------------------------------------------------- loop
     def run(self):
         pygame.init()
-        surf = pygame.display.set_mode((self.W + self.panel, self.H))
+        try:
+            surf = pygame.display.set_mode((self.W + self.panel, self.H))
+        except Exception as exc:
+            # Fail SOFT, with the cause spelled out: a display problem must never look like a broken
+            # recording. The most common cause by far is SDL_VIDEODRIVER being set to "" or to a driver
+            # this machine does not have.
+            print(f"[viewer] cannot create a window: {exc}")
+            print("[viewer] SDL_VIDEODRIVER is currently "
+                  f"{os.environ.get('SDL_VIDEODRIVER', '<unset>')!r}")
+            print("[viewer] falling back to text playback (same data, no window). "
+                  "For the window, ensure SDL_VIDEODRIVER is UNSET (not empty) in your shell.")
+            import replay as _rp
+            last = -10 ** 9
+            for i, fr in enumerate(self.frames):
+                if fr["t"] - last < 250 and i != 0:
+                    continue
+                last = fr["t"]
+                self.i = i
+                print(_rp.ascii_frame(fr, w=self.rec.get("w", 1600), h=self.rec.get("h", 1200)))
+                for ln in self.panel_lines(fr):
+                    print("   " + ln)
+                print()
+            return
         pygame.display.set_caption(f"replay seed {self.rec['seed']} - {len(self.frames)} frames")
         clock = pygame.time.Clock()
         while True:
