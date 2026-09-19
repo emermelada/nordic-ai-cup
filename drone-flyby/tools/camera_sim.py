@@ -35,13 +35,24 @@ def main() -> int:
                                       'Injected into flyby.SWEEP; flyby.py is not modified.')
     ap.add_argument('--frames', type=int, default=249)
     ap.add_argument('--device', default='cpu')
+    ap.add_argument('--extra-model', action='append', default=[],
+                    metavar='PATH:SIZE',
+                    help='Append a pass to the served stack, e.g. runs/v9/weights/best.pt:1280. '
+                         'ADDITION, never replacement: v8 and imgsz 1600 both failed as '
+                         'replacements and paid as additions.')
     ap.add_argument('--dump', help='Write the answers to this JSON, for AP scoring elsewhere.')
     args = ap.parse_args()
 
+    served = list(SERVED)
+    for spec in args.extra_model:
+        path, _, size = spec.rpartition(':')
+        served.append((path, int(size)))
     os.environ['DRONE_CAMERA'] = args.camera
-    os.environ['DRONE_MODEL'] = str(ROOT / SERVED[0][0])
-    os.environ['DRONE_MODEL_ALT'] = ','.join(str(ROOT / p) for p, _ in SERVED[1:])
-    os.environ['DRONE_IMGSZ'] = ','.join(str(s) for _, s in SERVED)
+    def resolve(p):
+        return p if os.path.isabs(p) else str(ROOT / p)
+    os.environ['DRONE_MODEL'] = resolve(served[0][0])
+    os.environ['DRONE_MODEL_ALT'] = ','.join(resolve(p) for p, _ in served[1:])
+    os.environ['DRONE_IMGSZ'] = ','.join(str(s) for _, s in served)
     os.environ['DRONE_DEVICE'] = args.device
     os.environ.setdefault('DRONE_BOX_GROW', '1.3')
     os.environ.setdefault('DRONE_BOX_GROW_CAP', '1.3')
@@ -65,8 +76,9 @@ def main() -> int:
     flyby.BOTH_MODELS = 1
     flyby.NEW_TRACK_CONFIDENCE = 0.10
     flyby.load_model()
-    if len(flyby._models) != 4:
-        raise SystemExit(f'{len(flyby._models)} models loaded, wanted 4')
+    if len(flyby._models) != len(served):
+        raise SystemExit(f'{len(flyby._models)} models loaded, wanted {len(served)}')
+    print(f'stack: ' + ', '.join(f'{Path(p).name}@{s}' for p, s in served))
 
     coverage = json.loads((ROOT / 'data' / 'scene' / 'coverage.json').read_text())
     scored = {int(f) for f, c in coverage.items() if c['any'] >= 0.999}
