@@ -31,6 +31,11 @@ import os
 import random
 import sys
 
+# Reproducibility: Python randomises string hashing per process, and the simulator's entity iteration
+# order can depend on it, so two identical runs in different processes can diverge on a minority of
+# seeds (measured: 2 of 20 seeds, up to ~5,000 ticks). Recordings must not carry that noise.
+os.environ.setdefault("PYTHONHASHSEED", "0")
+
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))

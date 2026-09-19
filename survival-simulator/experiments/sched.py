@@ -43,6 +43,13 @@ import argparse
 import hashlib
 import json
 import os
+
+# MUST be set before any worker interpreter starts: PYTHONHASHSEED is read at interpreter startup, so
+# setting it inside a worker is too late. Python randomises string hashing per process, and the
+# simulator iterates over entity collections whose order can depend on it, so without this two
+# IDENTICAL configs can diverge across processes (measured: BASE vs a byte-identical copy differed on
+# 2 of 20 seeds - a ~10% noise source inside every paired comparison we run).
+os.environ.setdefault("PYTHONHASHSEED", "0")
 import random
 import sys
 import time
@@ -61,8 +68,12 @@ DEPLOYED = os.path.join(ROOT, "best_controller", "params.json")
 
 # ----------------------------------------------------------------------------- identity / cache
 def sim_version():
-    """Hash of the simulator + controller sources: the identity of a result."""
+    """Hash of the simulator + controller sources, plus the hash seed: the identity of a result."""
     h = hashlib.sha256()
+    # PYTHONHASHSEED belongs in the identity: results computed under per-process hash randomisation are
+    # not the same results (identical configs diverged on 2 of 20 seeds), so old cache entries must not
+    # be reused as if they were comparable.
+    h.update(f"PYTHONHASHSEED={os.environ.get('PYTHONHASHSEED', '<unset>')}".encode())
     files = [os.path.join(ROOT, "best_controller.py")]
     for d in ("src",):
         for dp, _dn, fn in os.walk(os.path.join(ROOT, d)):
@@ -240,6 +251,12 @@ def summarise(scored, baseline_id="BASE"):
         rows.append({
             "cand": cid, "n": len(steps), "mean": mean, "median": float(np.median(steps)),
             "min": int(min(steps)), "max": int(max(steps)), "var": float(np.var(steps)),
+            # FLOOR METRICS. The official score is a mean over 3 runs, so the bad tail drags it far more
+            # than the best run lifts it: a controller that can hit 1,231 but sometimes 550 has a
+            # VARIANCE problem, not a capability problem. p10 (and the paired gain in p10 against the
+            # baseline on identical seeds) is therefore the metric to optimise, not the mean.
+            "p10": float(np.percentile(steps, 10)),
+            "p25": float(np.percentile(steps, 25)),
             "extinct_frac": sum(1 for s in steps if s < max(v["horizon"] for v in per_seed.values())) / len(steps),
             "fruits": float(np.mean([v["fruits"] for v in per_seed.values()])),
             "lost": float(np.mean([v["lost"] for v in per_seed.values()])),
@@ -256,12 +273,15 @@ def summarise(scored, baseline_id="BASE"):
 
 
 def print_rows(rows, baseline_id="BASE", top=None):
+    # paired floor gain = candidate's p10 minus the baseline's p10 on the SAME seeds
+    bp10 = next((r["p10"] for r in rows if r["cand"] == baseline_id), None)
     for r in rows[:top] if top else rows:
         tag = "  " if r["cand"] == baseline_id else "->"
         p = "" if r["paired_mean"] is None else f"  paired {r['paired_mean']:+8.0f} ({r['paired_pct']:+5.1f}%)  W{r['wins']}/L{r['losses']}/T{r['ties']}"
-        print(f"{tag} {r['cand'][:34]:34s} n={r['n']:3d} mean={r['mean']:8.1f} med={r['median']:8.1f} "
-              f"min={r['min']:6d} var={r['var']:11.0f} ext={r['extinct_frac']:.2f} "
-              f"fruit={r['fruits']:6.0f} lost={r['lost']:5.1f} pop={r['final_agents']:4.1f}{p}", flush=True)
+        floor = "" if bp10 is None else f"  floorP10 {r['p10'] - bp10:+7.0f}"
+        print(f"{tag} {r['cand'][:30]:30s} n={r['n']:3d} mean={r['mean']:7.0f} med={r['median']:7.0f} "
+              f"p10={r['p10']:6.0f} min={r['min']:6d} var={r['var']:10.0f} ext={r['extinct_frac']:.2f} "
+              f"fruit={r['fruits']:6.0f} pop={r['final_agents']:4.1f}{p}{floor}", flush=True)
 
 
 # ----------------------------------------------------------------------------- main
