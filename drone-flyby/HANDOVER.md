@@ -1674,3 +1674,19 @@ Caveat: the 66-object file has no `spacecraft`, `small_launcher`, `condor` or
 `medium_plane`, so it cannot speak for four classes -- two of which are our
 weakest. It does contain `medium_launcher` and `ta-ta`, which the old file had
 none of.
+
+### The calibration set is in the repo
+
+`drone-flyby/data/runs_20260919.tar.gz` (6.3 MB, 49 MB unpacked) holds the
+per-frame ANSWERS of all 31 runs from 19 Sep, plus the serve logs. Twelve of
+them have known real validation scores, hardcoded in
+`tools/calibrate_truth.py`, and that is what calibrated the truth files above.
+
+Unpack with `tar xzf data/runs_20260919.tar.gz` from `drone-flyby/`. It is
+force-added past the `data/` gitignore on purpose: **any new truth file must be
+re-calibrated against these before its numbers are trusted**, and mining the
+four classes the 66-object file is missing (spacecraft, small_launcher, condor,
+medium_plane) is the next session's first task. Without this set there is
+nothing to calibrate against.
+
+The view PNGs are NOT included (5 GB, and the answers are what the scorer needs).
