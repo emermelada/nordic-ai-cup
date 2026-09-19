@@ -195,25 +195,36 @@ BOX_SCALE = 1.0
 # NOT confirmed on a real run yet. The offline case rests on a truth file grown
 # by these same factors, which cannot be fully independent. One validation run
 # decides it, and the effect should be far outside the +/-0.01 noise either way.
+# (width, height) separately: the convention is not isotropic. small_launcher
+# is 1.75 wide against 2.14 tall, helicopter 1.38 against 1.70 -- a rotor disc
+# and a tail boom grow the box in one axis more than the other, and one average
+# factor cannot match a box stretched that way.
 HELSINKI_BOX_FACTORS = {
-    'condor': 1.496, 'hangar': 1.152, 'helicopter': 1.531, 'jammer': 1.078,
-    'jet_plane': 1.489, 'large_launcher': 1.115, 'large_tower': 1.078,
-    'medium_launcher': 2.302, 'medium_plane': 1.320, 'mine_roller': 1.077,
-    'small_launcher': 1.936, 'small_plane': 1.075, 'small_tower': 1.184,
-    'spacecraft': 1.104, 'ta-ta': 1.147, 'tank': 1.309,
+    'condor': (1.57, 1.43), 'hangar': (1.08, 1.23), 'helicopter': (1.38, 1.70),
+    'jammer': (1.07, 1.09), 'jet_plane': (1.41, 1.57), 'large_launcher': (1.23, 1.01),
+    'large_tower': (1.07, 1.08), 'medium_launcher': (2.24, 2.37), 'medium_plane': (1.49, 1.17),
+    'mine_roller': (1.08, 1.07), 'small_launcher': (1.75, 2.14), 'small_plane': (1.13, 1.02),
+    'small_tower': (1.10, 1.28), 'spacecraft': (1.07, 1.14), 'ta-ta': (1.16, 1.13),
+    'tank': (1.30, 1.32),
 }
 BOX_GROW_CAP = float(os.environ.get('DRONE_BOX_GROW_CAP', '1.3'))
 
 
 def _parse_box_grow(spec: str):
-    """'helsinki' | '1.2' | 'tank=1.3,jet_plane=1.5' -> {class: factor}."""
+    """'helsinki' | '1.2' | 'tank=1.3,...' -> {class: (width factor, height factor)}.
+
+    The cap applies per dimension, so a class stretched in one axis keeps that
+    asymmetry up to the cap instead of being averaged away.
+    """
     spec = (spec or '').strip()
     if not spec:
         return {}
+    cap = lambda f: min(f, BOX_GROW_CAP)
     if spec == 'helsinki':
-        return {n: min(f, BOX_GROW_CAP) for n, f in HELSINKI_BOX_FACTORS.items()}
+        return {n: (cap(w), cap(h)) for n, (w, h) in HELSINKI_BOX_FACTORS.items()}
     try:
-        return {n: min(float(spec), BOX_GROW_CAP) for n in OBJECT_CLASSES}
+        both = cap(float(spec))
+        return {n: (both, both) for n in OBJECT_CLASSES}
     except ValueError:
         pass
     out = {}
@@ -222,7 +233,7 @@ def _parse_box_grow(spec: str):
         name = name.strip()
         if name not in OBJECT_CLASSES:
             raise SystemExit(f'DRONE_BOX_GROW: unknown class {name!r}')
-        out[name] = min(float(value), BOX_GROW_CAP)
+        out[name] = (cap(float(value)), cap(float(value)))
     return out
 
 
@@ -694,11 +705,11 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         track. It is applied here and nowhere else: the stored track box must
         stay tight, or matching, motion fitting and truncation all shift with it.
         """
-        factor = BOX_GROW.get(name, 1.0)
-        if factor != 1.0:
+        grow = BOX_GROW.get(name)
+        if grow and grow != (1.0, 1.0):
             x1, y1, x2, y2 = box
             cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
-            w, h = (x2 - x1) * factor / 2, (y2 - y1) * factor / 2
+            w, h = (x2 - x1) * grow[0] / 2, (y2 - y1) * grow[1] / 2
             box = np.array([cx - w, cy - h, cx + w, cy + h])
         return clip_bbox_to_frame((
             box[0] / IMAGE_WIDTH, box[1] / IMAGE_HEIGHT,

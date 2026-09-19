@@ -44,6 +44,7 @@ sys.path.insert(0, str(HERE))
 RECORDINGS = ROOT / 'data' / 'recordings'
 OBJECTS = ROOT / 'training' / 'validation_objects.json'
 IGNORE = ROOT / 'training' / 'validation_ignore.json'
+BOX_CONVENTION = ROOT / 'training' / 'box_convention.json'
 REACH = 30      # frames a confirmed sighting is carried
 
 
@@ -104,6 +105,40 @@ def known_boxes(objects, frame: int, motion=None):
         if box[2] - box[0] > 2 and box[3] - box[1] > 2:
             out.append((obj['class'], box))
     return out
+
+
+def loosen(objects, factors):
+    """Grow each truth box about its centre toward the official convention.
+
+    Our truth file came from our own detections, which are tight mask boxes,
+    while the evaluator's boxes are the projected 3D box of the object. Scoring
+    a tight prediction against a tight truth therefore hides the whole effect:
+    the served pair reads 0.455 against tight truth and really scored 0.3048.
+
+    Confirmed on validation 19 Sep: turning on report-time box growth took a
+    real run 0.3048 -> 0.4618, the largest single gain this project has had.
+    Growing the truth the same way brings the offline number into line -- across
+    the six configurations with real scores it cuts the mean absolute error
+    against reality from 0.134 to 0.075.
+    """
+    import copy
+    out = copy.deepcopy(objects)
+    for obj in out:
+        factor = factors.get(obj['class'])
+        if not factor:
+            continue
+        for seen in obj['observations']:
+            x1, y1, x2, y2 = seen['box']
+            cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+            half_w, half_h = (x2 - x1) * factor['w'] / 2, (y2 - y1) * factor['h'] / 2
+            seen['box'] = [cx - half_w, cy - half_h, cx + half_w, cy + half_h]
+    return out
+
+
+def box_factors():
+    if not BOX_CONVENTION.exists():
+        return {}
+    return json.loads(BOX_CONVENTION.read_text())
 
 
 def ignore_regions(verdicts=('confirmed',)):
@@ -302,6 +337,11 @@ def main() -> int:
     parser.add_argument('--set', action='append', default=[], help='NAME=value flyby setting override (with --replay).')
     parser.add_argument('--from-frame', type=int, default=0, help='Only score frames from here on.')
     parser.add_argument('--frames', type=int, default=249)
+    parser.add_argument('--truth-boxes', choices=['loose', 'tight'], default='loose',
+                        help="'loose' grows the truth toward the official box convention "
+                             '(training/box_convention.json); it matched reality far better '
+                             'across six real-scored configs. tight is the old behaviour and '
+                             'cannot see box geometry at all.')
     parser.add_argument('--no-ignore', action='store_true',
                         help='Score unlabelled-object regions as false positives, the old '
                              'behaviour. Anti-correlated with real scores; see ignore_regions().')
@@ -340,6 +380,10 @@ def main() -> int:
     motion = flyby.MOTION if args.truth_motion == 'prior' else fit_truth_motion(objects)[0]
     samples = fit_truth_motion(objects)[1] if args.truth_motion != 'prior' else 0
     regions = () if args.no_ignore else ignore_regions(tuple(args.ignore_verdicts.split(',')))
+    factors = box_factors()
+    if args.truth_boxes == 'loose' and factors:
+        objects = loosen(objects, factors)
+        motion = fit_truth_motion(objects)[0] if args.truth_motion != 'prior' else motion
     overall, by_class, instances = score(predictions, frames, objects, motion, regions)
 
     if args.replay:
@@ -361,6 +405,8 @@ def main() -> int:
         print('overrides: ' + ', '.join(args.set))
     print(f'{len(regions)} unlabelled-object regions ignored'
           if regions else 'no ignore regions (--no-ignore): unlabelled objects score as false positives')
+    print(f'truth boxes: {args.truth_boxes}'
+          + ('' if factors else '  (no box_convention.json; run training/measure_box_convention.py)'))
     print(f'\nmAP@0.50 (confirmed objects only) = {overall:.3f}\n')
     for name, value in sorted(by_class.items(), key=lambda item: -item[1]):
         print(f'   {name:18s} {value:.3f}')
