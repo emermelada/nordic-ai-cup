@@ -519,6 +519,16 @@ SWEEPS = {
     # Level-1 detail, so it can go the other way -- measure it, do not assume.
     'row0x2': [TL, (0, 1920, 1080), TM, (0, 1920, 1080), TR, (0, 1920, 1080),
                BR, (0, 1920, 1080), BM, (0, 1920, 1080), BL, (0, 1920, 1080)],
+    # 'row0x3' = 75 % Level 0, the midpoint if pure 'l0' turns out to have
+    # given up too much Level-1 detail. Measured curve so far, mean score by
+    # Level-0 share: 0 % 0.5418, 25 % 0.5686, 50 % 0.5841.
+    'row0x3': [TL, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080),
+               TM, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080),
+               TR, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080),
+               BR, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080),
+               BM, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080),
+               BL, (0, 1920, 1080), (0, 1920, 1080), (0, 1920, 1080)],
+
 
 
     # Level-2 entry band: every new object at NATIVE resolution.
