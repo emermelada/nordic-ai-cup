@@ -1,0 +1,14 @@
+# /etc/systemd/system/surv.service
+[Unit]
+Description=Survival agent server (hive / survival-v2)
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/surv
+Environment=SURV_LOG=/opt/surv/server_log.jsonl
+ExecStart=/opt/nacv/bin/python -m uvicorn server:app --host 0.0.0.0 --port 9052 --no-access-log --log-level warning
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
