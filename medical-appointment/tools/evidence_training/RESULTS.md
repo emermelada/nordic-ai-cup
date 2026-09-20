@@ -157,6 +157,36 @@ Two results worth keeping:
   single seed. Diversity, not accuracy, is what the third voter contributes.
 - **More voters is not better.** Four and five producers both score below three.
 
+### Minimum-Bayes-risk decoding, and a fourth confirmation of the same wall
+
+Every selection mechanism tried here picks the most likely span. Under an overlap metric that is
+the wrong decision rule: the score-maximising choice is the candidate with the highest *expected*
+overlap against the model's distribution, which hedges extent rather than committing to it. It
+needs no estimate of whether the anchor is already right, which is what defeated the thirteen
+selectors, so it was worth a measurement.
+
+Scored over the pool with the ranker's own scores as the distribution, softmax temperature T,
+mean gain over three seeds against the deployed medoid's +0.0176:
+
+| Rule | Mean gain | Worst seed | IoU >= 0.9 count |
+| --- | ---: | ---: | ---: |
+| **medoid3 (deployed)** | **+0.0176** | +0.0128 | 113-116 |
+| MBR over producers, refs = pool + producers | +0.0064 | −0.0016 | 106-112 |
+| MBR over pool, refs = pool + producers | +0.0057 | −0.0021 | 106-111 |
+| MBR over pool, T=1 | −0.0057 | −0.0180 | 99-105 |
+| MBR over pool, T=0.5 | −0.0067 | −0.0152 | 99-106 |
+| MBR over pool, T=2 | −0.0266 | −0.0271 | 84-86 |
+
+It fails, and the diagnostic says why: **the IoU >= 0.9 count collapses from 116 to as low as 84
+while zero-overlap stays flat.** Hedging does not rescue the wrong spans, it degrades the ones
+that were already exactly right — the same −0.062-on-116-correct-spans failure the extent refiner
+showed, reached from the opposite direction. The ranker's distribution is too diffuse to hedge
+against, and raising T (more hedging) monotonically makes it worse.
+
+That is the fourth independent confirmation that the blocker is a missing calibrated signal of
+*where the prediction is already correct*, not a missing decision rule: confidence as a
+comparator, span geometry, extent refinement and now metric-aware decoding all fail on it.
+
 ### A second encoder family: independence delivered, and it still lost
 
 The redundancy measurement said the extractor and the DeBERTa ranker are the weak link, so the
