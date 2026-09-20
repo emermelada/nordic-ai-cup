@@ -1,4 +1,4 @@
-# The configuration to ship — 20 Sep
+# The configuration to ship — 20 Sep (REVISED 13:50, read the truth-file section first)
 
 ## The finding that matters
 
@@ -230,3 +230,55 @@ captures that axis. Height was the only axis with anything left in it.
 **So every geometry lever is spent.** What remains for `spacecraft` (0.200),
 `small_launcher` (0.218) and `tank` (0.449) is detector quality and memory
 carrying -- the latter untested and needing a GPU (`tools/sweep_remote.sh`).
+
+
+---
+
+# CORRECTION (13:50): the offline proxy was the WRONG TRUTH FILE
+
+`tools/score_offline.py` reads **`validation_objects.json`** (32 objects).
+`tools/calibrate_truth.py` measured the two truth files against 12 runs of
+known real score:
+
+| truth | objects | Pearson | Spearman |
+|---|---|---|---|
+| `scene_objects.json` | 66 | **+0.894** | **+0.811** |
+| `validation_objects.json` | 32 | **-0.039** | **-0.287** |
+
+**Everything above was fitted against the anti-correlated one.** Re-scored
+against `scene_objects.json`, the full fitted config gives **-0.007**, not
++0.086.
+
+The two disagree about one class. Our jammer AP is **0.013** under
+validation truth and **0.848** under scene truth -- the same detections. Box
+conventions are near identical (jammer median 34.5 vs 38.1 px, small_plane
+38.1 vs 38.1), so this is not scaling: they disagree about *which objects are
+jammers*. `validation_objects.json` was labelled by "model v2 (conf >= 0.5)
+... checked by eye"; `scene_objects.json` by v8+v6 at native resolution keeping
+only chains of >= 6 consecutive sightings. The second is both the better method
+and the one that correlates with reality.
+
+## What is shipped instead: the factors that are safe under BOTH truths
+
+jammer is the **only** class whose factor flips sign. Every other factor is
+neutral or positive under both files, so dropping jammer alone gives a config
+that does not depend on which mining run is right:
+
+| config | validation truth | scene truth |
+|---|---|---|
+| full fitted | +0.083 | **-0.005** |
+| **safe (jammer reverted to 1.30)** | **+0.062** | **+0.006** |
+
+`SHIP_ARGS` carries the safe config. `jammer=1.30x1.30` is deliberate -- do not
+"restore" it to 0.78x1.09.
+
+## Honest expectation
+
+The claimed gain is now **+0.006 to +0.062** depending on which truth is right,
+not +0.086. It is positive under both, which is the most that can be said
+without a real run. **The first validation run decides it.** If it does not
+beat 0.5450, fall back: `DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3`.
+
+`tools/diagnosis/scene.py` re-scores any config against either truth;
+`tools/diagnosis/both.py` finds the factors safe under both. **Run every future
+offline claim through both truth files before believing it.**
