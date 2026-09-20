@@ -178,3 +178,30 @@ Carrying is worth as much as detection. `tools/sweep_remote.sh` runs
 memory, box growth) against cached detections -- seconds per run on a 5090, and
 it spends no validation attempts. That is the next lever and it has never been
 pulled.
+
+# Robustness: the gain does not depend on the truth assumptions
+
+The factors were fitted against 'loose' truth with unlabelled-object regions
+ignored. Re-scored on the two held-out runs under all four combinations:
+
+| truth | ignore | current | fixed | gain |
+|---|---|---|---|---|
+| loose | on  | 0.437 | 0.518 | **+0.081** |
+| loose | off | 0.426 | 0.504 | +0.079 |
+| tight | on  | 0.264 | 0.323 | +0.059 |
+| tight | off | 0.255 | 0.312 | +0.057 |
+
+`tight` is the opposite box convention and can barely see box geometry at all,
+yet the gain survives there too. This was the main risk -- that the factors
+were fitted to our own mining rather than to the real convention -- and it is
+answered.
+
+# Also ruled out, so nobody re-checks
+
+* **Duplicate detections**: zero, in every class. The tracker merges correctly.
+* **Precision / FP suppression**: the false positives are overwhelmingly
+  background boxes (tank 4840, jammer 3761), but most are **real unlabelled
+  objects** -- which is why all four previous suppression mechanisms failed and
+  why the size gate above also failed. Precision is a dead end on this task.
+  The remaining headroom in the last three classes is recall and detector
+  quality, not ranking.
