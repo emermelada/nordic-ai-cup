@@ -406,6 +406,33 @@ SURVEY_ROW_TOP = [(x, 270) for x in (480, 1030, 1580, 2130, 2680, 3230, 3360)]
 SURVEY_ROW_LOW = [(x, 810) for x in (3360, 2810, 2260, 1710, 1160, 610, 480)]
 SURVEY = SURVEY_ROW_TOP + SURVEY_ROW_LOW
 
+# 'survey4': DATA COLLECTION, not scoring. The whole frame at native resolution.
+#
+# `survey` above covers the top half only, which is why the patch harvest got
+# only 36 native cut-outs out of 262 -- and HANDOVER records that as the stated
+# cause of v7's failure ("it learned what blurry objects look like enlarged").
+# Every model we have served was taught the classes from half-resolution
+# cut-outs. Four rows instead of two fixes that.
+#
+# Row spacing 540 px and column spacing 530 px are both inside the 551 px L2
+# move limit; the wrap 1890 -> 270 is 1620 px and illegal, so the pattern walks
+# back up the left edge. Verified against the evaluator's own
+# describe_camera_rejection: 30 positions, ZERO illegal transitions.
+#
+# Cycle length 30 frames against an object transit of ~31, so every object is
+# caught at native resolution about once per pass and a 249-frame run gives 8.
+# Expect this pattern to SCORE BADLY (~0.10) -- it abandons coverage entirely.
+# That is fine; the run exists to produce patches, not a number.
+SURVEY4_ROWS = (270, 810, 1350, 1890)
+SURVEY4_COLS = (480, 1030, 1580, 2130, 2680, 3230, 3360)
+SURVEY4 = (
+    [(x, 270) for x in SURVEY4_COLS]
+    + [(x, 810) for x in reversed(SURVEY4_COLS)]
+    + [(x, 1350) for x in SURVEY4_COLS]
+    + [(x, 1890) for x in reversed(SURVEY4_COLS)]
+    + [(480, 1350), (480, 810)]
+)
+
 # 'hybrid': acquire small objects at native resolution, keep Level-1 coverage.
 #
 # Why it exists. Every scored object has a fixed size in source pixels, and at
@@ -1049,6 +1076,7 @@ def hybrid_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
 
 
 def survey_next_view(base, state: Sequence) -> Optional[RequestedViewDto]:
+    SURVEY = SURVEY4 if CAMERA == 'survey4' else globals()['SURVEY']
     if base[0] == 2 and (base[1], base[2]) == SURVEY[state.sweep_index % len(SURVEY)]:
         state.sweep_index = (state.sweep_index + 1) % len(SURVEY)
     elif base[0] == 2:
@@ -1086,7 +1114,7 @@ def choose_next_view(request: DroneFlybyPredictRequestDto, state: Sequence) -> O
     if state.pending is not None and request.camera_command_feedback is None:
         base = state.pending
 
-    if CAMERA == 'survey':
+    if CAMERA in ('survey', 'survey4'):
         return survey_next_view(base, state)
     if CAMERA == 'hybrid':
         return hybrid_next_view(base, state)
