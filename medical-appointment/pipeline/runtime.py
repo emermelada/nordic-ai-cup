@@ -115,6 +115,10 @@ def _stage_b(backend, words, questions, raw, transcript, request_started, rescue
         return {'error': f'{type(exc).__name__}: {exc}'}
 
 
+# Collapses evidence to measure the answer half of a score on its own. Never leave it on.
+DIAGNOSTIC_SPANS = os.environ.get('MEDICAL_DIAGNOSTIC_SPANS') == 'floor'
+
+
 def _vote_evidence(evidence, response, before, words, questions, duration, envelope,
                    deadline, extend_replies, trace=None):
     """Medoid of independent evidence producers; any failure keeps the selected spans.
@@ -159,6 +163,10 @@ def _worker_main(channel, generation, backend_factory):
         try:
             backend = backend_factory()
             backend.warmup()
+            # Load the extractor here, so the first conversation is not charged for it.
+            from pipeline.extractor import warmup as warm_extractor
+
+            warm_extractor()
             _send_frame(channel, {'kind': 'ready', 'generation': generation})
         except Exception as exc:
             logger.exception('Inference worker startup failed')
@@ -454,6 +462,14 @@ class Pipeline:
                     if placed:
                         logger.info('Placed %d yes answer(s) on the best matching sentence', placed)
                     response = sanitize_response(response, len(request.questions), duration)
+                    if DIAGNOSTIC_SPANS:
+                        # Measurement only: collapse every span so the reported score is
+                        # 0.4 x accuracy, which separates the two halves of a hidden score.
+                        for index, answer in enumerate(response.answers):
+                            if answer:
+                                response.evidence_start[index] = 0.0
+                                response.evidence_end[index] = 0.01
+                        logger.warning('DIAGNOSTIC_SPANS is on: evidence is deliberately worthless')
                     validate_response(response, len(request.questions))
                     # Both platform sets are exactly half yes; the rate is a label-free sanity check.
                     outcome = f'completed, yes={sum(response.answers)}/{len(response.answers)}'

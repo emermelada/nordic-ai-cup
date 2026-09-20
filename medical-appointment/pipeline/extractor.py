@@ -49,6 +49,12 @@ def _load():
     return True
 
 
+def warmup():
+    """Load the checkpoint during worker startup instead of inside the first request."""
+    if MODEL_PATH and _load():
+        logger.info('Span extractor warm')
+
+
 def predict_spans(words, questions, answers, deadline=None):
     """{question number: (start, end)} for answered questions; {} when unavailable."""
     if not any(answers) or not _load():

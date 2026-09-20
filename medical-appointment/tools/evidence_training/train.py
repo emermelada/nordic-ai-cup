@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from transformers import AutoConfig, AutoModelForQuestionAnswering, AutoTokenizer
 
-from .data import digest, score, validate_bundle, write_json
+from .data import digest, score, validate_bundle, validate_records, write_json
 from .features import collate, decode_window, make_features, prediction_spans
 from .external import hydrate, load_external
 
@@ -49,6 +49,15 @@ class Runner:
         self.bundle = json.loads(args.data.read_text())
         validate_bundle(self.bundle)
         self.records = self.bundle['records']
+        self.generated = []
+        if args.extra_data:
+            extra = json.loads(args.extra_data.read_text())['records']
+            validate_records(extra + self.records)
+            known = {r['conversation'] for r in self.records}
+            unknown = sorted({r['conversation'] for r in extra} - known)
+            if unknown:
+                raise ValueError(f'Generated rows reference unknown conversations: {unknown}')
+            self.generated = extra
         self.external = load_external(args.external_data, args.data) if args.external_data else None
         self.medical_records = ([r for r in hydrate(self.external, 'train') if r['source'] == 'simord']
                                 if self.external else [])
@@ -64,6 +73,8 @@ class Runner:
             'code_sha256': {p.name: digest(p) for p in Path(__file__).parent.glob('*.py')},
             'external_data_sha256': digest(args.external_data) if args.external_data else None,
             'external_medical_training_questions': len(self.medical_records),
+            'extra_data_sha256': digest(args.extra_data) if args.extra_data else None,
+            'generated_training_questions': len(self.generated),
         }
         if self.device == 'cuda':
             free, total = torch.cuda.mem_get_info()
@@ -224,9 +235,14 @@ class Runner:
         groups = {k: [r for r in self.records if r['conversation'] in set(plan[k])]
                   for k in ('train', 'dev', 'test')}
         groups['train'].extend(self.medical_records)
+        # Generated rows only ever join the fold that already trains on their conversation.
+        training_conversations = set(plan['train'])
+        generated = [r for r in self.generated if r['conversation'] in training_conversations]
+        groups['train'].extend(generated)
         features = {k: self.features(v) for k, v in groups.items()}
         write_json(directory / 'split.json', {**plan,
                                               'external_medical_ids': [r['id'] for r in self.medical_records],
+                                              'generated_questions': len(generated),
                                               'questions': {k: len(v) for k, v in groups.items()},
                                               'windows': {k: len(v) for k, v in features.items()}})
         model = self.new_model(seed=self.args.seed + fold)
@@ -308,7 +324,7 @@ class Runner:
 
     def fit(self):
         """Fit a fixed number of epochs on all public data, without claiming held-out performance."""
-        features = self.features(self.records + self.medical_records)
+        features = self.features(self.records + self.medical_records + self.generated)
         model = self.new_model()
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.args.learning_rate, weight_decay=.01)
         rng = random.Random(self.args.seed)
@@ -333,6 +349,9 @@ def main(argv=None):
     parser.add_argument('--model', default='deepset/deberta-v3-large-squad2')
     parser.add_argument('--revision', default='main')
     parser.add_argument('--mode', choices=('benchmark', 'pretrain', 'cv', 'fit'), default='cv')
+    parser.add_argument('--extra-data', type=Path,
+                        help='Generated in-domain rows; added only to folds that already train '
+                             'on their conversation')
     parser.add_argument('--external-data', type=Path,
                         help='Checked text-only bundle: CoQA and MASH-QA pretrain; only SIMORD train adapts CV/fit')
     parser.add_argument('--device', choices=('auto', 'cuda', 'mps', 'cpu'), default='auto')

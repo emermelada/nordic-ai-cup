@@ -269,6 +269,33 @@ class MixedSourceTrainingTest(unittest.TestCase):
         self.assertEqual(report['questions'], len(split['test']) * 2)
         self.assertEqual(json.loads((out / 'manifest.json').read_text())['external_medical_training_questions'], 6)
 
+    def test_generated_rows_only_train_folds_that_already_hold_their_conversation(self):
+        """The leakage guard: a generated row must never reach its own test fold."""
+        extra = []
+        for index in range(6):
+            base = record(f'c{index}', True)
+            extra.append({**base, 'id': f'c{index}_gen', 'question': 'Generated take the tablet?',
+                          'generated': True})
+        write_json(self.root / 'extra.json', {'records': extra})
+        out = self.run_training('cvgen', '--mode', 'cv', '--epochs', '1', '--fold', '0',
+                                '--extra-data', str(self.root / 'extra.json'))
+        split = json.loads((out / 'fold_0/split.json').read_text())
+        self.assertEqual(split['generated_questions'], len(split['train']))
+        self.assertEqual(split['questions']['train'],
+                         len(split['train']) * 2 + len(split['external_medical_ids'])
+                         + split['generated_questions'])
+        # Held-out conversations are untouched by generation.
+        self.assertEqual(split['questions']['test'], len(split['test']) * 2)
+        manifest = json.loads((out / 'manifest.json').read_text())
+        self.assertEqual(manifest['generated_training_questions'], 6)
+
+    def test_generated_rows_naming_an_unknown_conversation_are_refused(self):
+        write_json(self.root / 'stray.json',
+                   {'records': [{**record('unseen', True), 'id': 'unseen_gen'}]})
+        with self.assertRaisesRegex(ValueError, 'unknown conversations'):
+            self.run_training('cvstray', '--mode', 'cv', '--epochs', '1', '--fold', '0',
+                              '--extra-data', str(self.root / 'stray.json'))
+
     def test_training_data_must_match_the_declared_competition_dataset(self):
         write_json(self.root / 'moved.json', json.loads((self.root / 'data.json').read_text()) | {'sources': [{}]})
         with self.assertRaisesRegex(ValueError, 'decontaminated'):
