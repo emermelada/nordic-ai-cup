@@ -1,3 +1,89 @@
+# Drone Flyby - handoff. Target: mean 0.66.
+
+## 0. WHAT CHANGED AT 05:00 - the per-class calibration came back
+
+The 17 queued jobs ran. Decoding `data/probe/server.log` against the portal's
+validation list gives, per class, AP (= score contribution x K):
+
+| class | AP | class | AP |
+|---|---|---|---|
+| hangar | 0.93 | small_tower | 0.58 |
+| large_tower | 0.88 | **small_launcher** | **0.15** |
+| jet_plane | 0.85 | **medium_launcher** | **0.04** |
+| helicopter | 0.84 | **medium_plane** | **0.02** |
+| mine_roller | 0.69 | **ta-ta** | **0.00003** |
+| tank | 0.63 | spacecraft, condor, jammer | **exactly 0.0** |
+| large_launcher | 0.63 | | |
+| small_plane | 0.61 | | |
+
+Three classes at *exactly* 0.0 while we emit 470-1899 boxes for each means they
+are **absent from this flight's truth**, so **K = 13** and one class is worth
+**0.077**. The four weak classes hold **+0.27** of headroom; we need +0.12.
+
+**Two of them are our own bug.** `DRONE_BOX_GROW` was a flat 1.3 with
+`DRONE_BOX_GROW_CAP=1.3`, but the measured Helsinki convention wants **2.302**
+for medium_launcher and **1.936** for small_launcher. A box grown 1.3 when it
+needed 2.302 is nested at IoU (1.3/2.302)^2 = **0.319**, and at 1.936 -> **0.451**.
+Those are the *only* two classes whose capped IoU falls under the scorer's 0.50,
+and they are exactly the two that collapsed. Every class at IoU >= 0.72 scores
+0.58-0.93, and the AP ordering matches the IoU ordering.
+
+**It is not a ranking problem and never was.** Appending detections below
+existing ones is monotone in AP, so junk cannot bury a good box. Their boxes
+simply never reach IoU 0.50.
+
+## 0b. What is deployed now (05:05, verified on /api)
+
+    DRONE_BOX_GROW=<all 16 named, 1.3 except medium_launcher=2.302,
+                    small_launcher=1.936>
+    DRONE_BOX_GROW_CAP=2.4
+    DRONE_BAND=1
+
+Every other class is 1.3, byte for byte. Previous config saved at
+`data/serve_env.sh.pre_band`; `DRONE_BAND=0` restores the old answer shape.
+
+**The graded band.** AP ranks the whole flight by confidence, so a box appended
+strictly below every answer we believe in cannot lower any class's AP. Real
+answers clip at 0.001, so [0.0001, 0.0009] is free space. Measured against
+faster_coco_eval itself on a class broken by exactly this box mismatch:
+
+| payload | AP |
+|---|---|
+| single wrong scale | 0.000 |
+| + 4 shape variants **tied at 0.0** | 0.216 |
+| + 4 shape variants **graded** 9/7/5/3 e-4 | **0.500** |
+| + 8 shape variants graded | 0.500 (widening is free) |
+
+Tied boxes dilute to about AP/k because the scorer cannot order them; graded
+ones do not dilute at all. That is why the old `FLOOR_ZERO` (tied at 0.0) was
+worth so little - and it was never enabled in `serve_env.sh` anyway.
+
+Reproduced end to end on the official Helsinki boxes: flat-1.3 primaries give
+mAP 0.875 with medium_launcher and small_launcher at 0.00; the band alone takes
+both to 0.50 and harms nothing; **uncapping those two takes them to 1.00.**
+
+## 0c. What is still needed - MEASUREMENT
+
+Nothing above has met the real grader yet. Fire validations at
+**http://93.91.156.85:41241** (check `/api` first: it now reports `band`).
+
+Predicted, from the per-class arithmetic at K=13:
+
+| change | dAP | dscore | confidence |
+|---|---|---|---|
+| uncap the two classes | +0.71 | **+0.055** | high - quantitative, reproduced |
+| band: medium_plane hedge | +0.26 | +0.020 | medium |
+| band: ta-ta + the healthy nine | +0.26 | +0.020 | low |
+
+0.5418 measured mean -> **0.62-0.64 expected**, single draws 0.60-0.67. Closing
+to 0.66 likely also needs `serve_passes.sh 6` and/or the `row0` camera.
+
+**Watch for:** the band adds up to ~350 boxes a frame (cap 500). If frames start
+dropping or latency climbs past ~250 ms, set `DRONE_BAND=0` and keep the uncap,
+which is the larger and safer half.
+
+---
+
 # Drone Flyby — handoff, 2026-09-20 ~06:00 CEST. Target: mean 0.66.
 
 Deadline 16:00 CEST. One evaluation attempt, on a DIFFERENT 250-frame flight.
