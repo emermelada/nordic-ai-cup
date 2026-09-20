@@ -56,8 +56,9 @@ SPAWN_DRAIN = 100.0
 
 # metric columns kept per bucket (order matters for the compact numpy storage)
 COLS = ["t", "pop", "active", "births", "d_sy", "d_so", "d_eat", "fruit_n", "fruit_E",
-        "c_move", "c_turn", "c_biome", "c_old", "c_spawn", "e_in_eaten",
+        "c_move", "c_turn", "c_biome", "c_old", "c_spawn", "e_in_eaten", "rescue",
         "E_mean", "E_med", "E_max", "E_min", "E_sd", "ef_lt35", "ef_lt20",
+        "e_gt100", "e_gt140", "e_gt220",
         "see_fruit_1", "fruit_seen", "pred_seen", "tree_seen", "agent_seen",
         "stat_frac", "req_d", "disp", "spawn_req", "spawn_acc",
         "g_speed", "g_sprint", "g_hear", "g_vis", "g_maxE", "g_maxE_sd", "g_age",
@@ -77,7 +78,7 @@ def move_cost(dist, e, speed, sprint, max_energy):
     return speed * WALK_COST + (dist - speed) * SPRINT_COST, dist
 
 
-def run_seed(seed, horizon, bucket, hive_seed=0):
+def run_seed(seed, horizon, bucket, hive_seed=0, params_json=None, rescue=None):
     import numpy as np
     from hive_v2 import Hive
     from src.core import SimulationCore
@@ -85,7 +86,8 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
 
     random.seed(seed)
     np.random.seed(seed)
-    hive = Hive(seed=hive_seed)   # deployed server.py uses Hive(params=PARAMS) => hive seed 0
+    # deployed server.py: Hive(params=PARAMS) with HIVE_PARAMS unset => default params, hive seed 0
+    hive = Hive(params=(json.loads(params_json) if params_json else None), seed=hive_seed)
     core = SimulationCore(env_width=1600, env_height=1200, chunk_size=400, starting_agents=5,
                           starting_predators=0, starting_fruits=32, starting_trees=50, seed=seed)
     env = core.env
@@ -155,6 +157,26 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
             req[aid] = (dist, turn, spawn)
             acted.append((aid, ActionRequest(agent_id=aid, move_distance=dist, move_direction=dr,
                                              turn_angle=turn, spawn_agent=spawn)))
+        # ---- conditional rescue (paste_13 Phase 4): keep replacement breeding going when the fleet
+        # dwindles.  Trigger is a state the controller can see (population <= 12 after the boom); the
+        # action is a legal one (spawn_agent=True on the healthiest parent, only if it can afford the
+        # 100-energy cost with >=80 left over and the fleet is still under target).  Nothing else is
+        # touched: movement/turn come from hive unchanged, and if the trigger is false this is a no-op.
+        n_rescue0 = 0
+        pop_now = len(states)
+        if rescue == "lowpop" and i * DT >= 600 and 1 <= pop_now <= 12:
+            cands = sorted(((float(s.get("energy", 0.0)), s.get("agent_id")) for s in states
+                            if float(s.get("energy", 0.0)) > 180.0), reverse=True)
+            if cands and pop_now < 14:
+                best_aid = cands[0][1]
+                for k, (aid2, ar) in enumerate(acted):
+                    if aid2 == best_aid and not ar.spawn_agent:
+                        acted[k] = (aid2, ActionRequest(agent_id=aid2,
+                                                        move_distance=ar.move_distance,
+                                                        move_direction=ar.move_direction,
+                                                        turn_angle=ar.turn_angle, spawn_agent=True))
+                        n_rescue0 = 1
+                        break
         # exact pre-charged costs
         c_move = c_turn = c_biome = c_old = c_spawn = 0.0
         for aid, (dist, turn, spawn) in req.items():
@@ -221,6 +243,7 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
         see_f = 0.0
         fruit_seen = pred_seen = tree_seen = agent_seen = 0.0
         ef35 = ef20 = 0.0
+        egt100 = egt140 = egt220 = 0.0
         st = 0.0
         rd = 0.0
         sp_req = sp_acc = 0.0
@@ -242,6 +265,12 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
                 ef35 += 1.0
             if ef < 0.20:
                 ef20 += 1.0
+            if a.energy > 100.0:
+                egt100 += 1.0
+            if a.energy > 140.0:
+                egt140 += 1.0
+            if a.energy > 220.0:
+                egt220 += 1.0
             r = req.get(a.agent_id)
             if r is not None:
                 if r[0] <= 1e-9 and abs(r[1]) <= 1e-9:
@@ -291,6 +320,7 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
         acc["c_biome"] += c_biome
         acc["c_old"] += c_old
         acc["c_spawn"] += c_spawn
+        acc["rescue"] += n_rescue0
         acc["e_in_eaten"] += eaten_energy
         acc["E_mean"] += (sum(E) / n if E else 0.0)
         acc["E_med"] += (float(np.median(E)) if E else 0.0)
@@ -299,6 +329,9 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
         acc["E_sd"] += (float(np.std(E)) if E else 0.0)
         acc["ef_lt35"] += ef35 / n
         acc["ef_lt20"] += ef20 / n
+        acc["e_gt100"] += egt100 / n
+        acc["e_gt140"] += egt140 / n
+        acc["e_gt220"] += egt220 / n
         acc["see_fruit_1"] += see_f / n
         acc["fruit_seen"] += fruit_seen / n
         acc["pred_seen"] += pred_seen / n
@@ -337,6 +370,7 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
                 if c == "t":
                     row[c] = (i + 1) / 10.0
                 elif c in ("pop", "E_mean", "E_med", "E_max", "E_min", "E_sd", "ef_lt35", "ef_lt20",
+                           "e_gt100", "e_gt140", "e_gt220",
                            "see_fruit_1", "fruit_seen", "pred_seen", "tree_seen", "agent_seen",
                            "stat_frac", "req_d", "disp", "g_speed", "g_sprint", "g_hear", "g_vis",
                            "g_maxE", "g_maxE_sd", "g_age", "sd_x", "sd_y"):
@@ -371,7 +405,7 @@ def run_seed(seed, horizon, bucket, hive_seed=0):
 
 
 def _run(job):
-    return run_seed(job[0], job[1], job[2], job[3])
+    return run_seed(job[0], job[1], job[2], job[3], job[4], job[5])
 
 
 def parse_seeds(spec):
@@ -397,6 +431,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--hive-seed", type=int, default=0,
                     help="hive's own RNG seed; the deployed server.py uses the default 0")
+    ap.add_argument("--params", default=None, help='JSON dict of hive param overrides, e.g. {"pop_cap_early":28}')
+    ap.add_argument("--rescue", default=None, help='"lowpop" = force a replacement birth when pop<=12 after t>=600 s')
     ap.add_argument("--chunk", type=int, default=1)
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
@@ -416,7 +452,7 @@ def main():
         return
     t0 = time.time()
     ctx = get_context("spawn")
-    jobs = [(s, args.horizon, args.bucket, args.hive_seed) for s in seeds]
+    jobs = [(s, args.horizon, args.bucket, args.hive_seed, args.params, args.rescue) for s in seeds]
     with open(raw, "a") as f, ctx.Pool(args.workers) as pool:
         for k, res in enumerate(pool.imap_unordered(_run, jobs), 1):
             f.write(json.dumps(res) + "\n")
