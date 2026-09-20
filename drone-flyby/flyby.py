@@ -325,6 +325,28 @@ CLASS_SIZE = {
 # exactly as high as one just seen. 1.0 is the served behaviour; 0.85 is the
 # value to try.
 MISS_PENALTY = float(os.environ.get('DRONE_MISS_PENALTY', '1.0'))
+# DIAGNOSTIC, not a score knob: never answer for these classes.
+#
+#   DRONE_SUPPRESS=condor,ta-ta,medium_plane,medium_launcher
+#
+# What it measures. local_evaluator.score() builds `evaluated_classes` from the
+# GROUND TRUTH alone, so which classes are scored does not depend on what we
+# predict. That means the "add a zero-confidence box for a suspect class" probe
+# cannot work -- a detection ranked below every real one changes AP by exactly
+# zero (verified against faster_coco_eval), so it is a no-op whether the class
+# is present or absent.
+#
+# Suppressing a class is the test that DOES work. If the class is absent from
+# the truth it is not in catIds and the score is unchanged; if it is present,
+# its AP falls to 0 and the macro mean drops by AP/N. One run per subset.
+#
+# Why it is worth a run: our mined truth contains 12 classes, but the real
+# ground truth may contain up to 16. If it holds 16 and four of them score ~0,
+# then the twelve we do detect are averaging 0.73, not 0.55 -- and the headroom
+# is somewhere completely different from where we have been looking. Suppress
+# condor, ta-ta, medium_plane and medium_launcher (the four absent from our
+# truth) and read the delta.
+SUPPRESS = {c.strip() for c in os.environ.get('DRONE_SUPPRESS', '').split(',') if c.strip()}
 # How much a track is trusted when only SOME of the loaded models have ever
 # found it. With BOTH_MODELS every model sees every frame, so a real object is
 # normally found by several of them and a false alarm on a bush or a rooftop
@@ -856,6 +878,9 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         w, h = (x2 - x1) * BOX_SCALE / 2, (y2 - y1) * BOX_SCALE / 2
         return np.array([cx - w, cy - h, cx + w, cy + h])
 
+    def suppressed(name):
+        return bool(SUPPRESS) and name in SUPPRESS
+
     def reported(box, name):
         """Track box -> the bbox we answer with, grown for this class.
 
@@ -876,6 +901,8 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
         ))
 
     for name, confidence, box in transient:
+        if suppressed(name):
+            continue
         bbox = reported(scaled(box), name)
         if bbox is not None:
             annotations.append(DroneFlybyPredictionDto(
@@ -917,6 +944,8 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             if rank and share < RUNNER_UP_SHARE:
                 break
             named.add(name)
+            if suppressed(name):
+                continue
             confidence = base if rank == 0 else base * 0.9 * share
             bbox = reported(box, name)
             if bbox is None:

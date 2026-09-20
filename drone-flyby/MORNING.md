@@ -88,6 +88,34 @@ apparent object size as L1@2560 **with real detail at a quarter of the compute**
 
 ---
 
+## Worth one run whatever else happens: how many classes are actually scored?
+
+```bash
+DRONE_SUPPRESS=condor,ta-ta,medium_plane,medium_launcher   # added to the config above
+```
+
+**What it settles.** The scorer builds its class list from the **ground truth
+alone** — what we predict cannot change it. Our mined truth has 12 classes, but
+the real ground truth may have up to 16. Those four are the ones absent from our
+truth, and we currently emit 27 % of all our answers for them
+(`medium_launcher` alone is our single most-emitted class).
+
+* **Score unchanged** → those classes are absent; the denominator is 12 and our
+  twelve known classes really do average ~0.55.
+* **Score drops** → they are present and we are scoring something on them, so
+  the denominator is larger and **the twelve we detect are averaging ~0.73, not
+  0.55** — which would mean the headroom is somewhere completely different from
+  where we have been looking, and the remaining work is those four classes.
+
+Either answer changes what to do next, which makes it the highest
+information-per-run experiment available. One run.
+
+*(Note: the inverse probe — adding a zero-confidence box for a suspect class —
+**cannot** work. A detection ranked below every real one changes AP by exactly
+zero, verified against `faster_coco_eval`. Only suppression is informative.)*
+
+---
+
 ## Knob queue (if the above fails) — ~+0.01 each, no code
 
 1. `DRONE_SET=MAX_MISSES=3` then `=12` — the last untouched v3-era knob
