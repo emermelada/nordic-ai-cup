@@ -52,6 +52,26 @@ Both checkpoints live on instance 51489967's disk, so the build cannot be served
 anywhere else without copying them. Out-of-fold evidence, seed sensitivity and the rules
 that lost are in [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md).
 
+**Before submitting anything, run `/workspace/preflight.sh`** (kept at
+`tools/serving/preflight.sh`). It checks what a 200 response cannot show: vLLM and the API
+answering, both producers in the log, no producer errors, one real conversation whose vote line
+shows both producers contributing, no unexpected supervisor restarts, and whether the platform
+has already called this endpoint. It exits non-zero and says not to submit.
+
+`serve_ranker.sh` now sets `MEDICAL_REQUIRE_PRODUCERS=1`, so a configured producer that fails to
+load makes startup fail in seconds with a message naming it, instead of serving a build that
+quietly falls back to stage B spans. Requests keep their per-request fallbacks either way.
+
+It also supervises uvicorn in a `while` loop: a crash mid-attempt used to return connection
+errors for every remaining conversation, which is how two attempts in the history scored 0.0 and
+0.3158. Measured recovery after `kill -9` on the server process: **~18 s**, both producers
+reloaded, one `SUPERVISOR: uvicorn exited` line in the log.
+
+**Killing the server needs an exact match.** The supervisor's own `bash -c` command line contains
+the string `python3 -m uvicorn api:app`, so `pgrep -f`/`grep` matches it too; killing that
+instead of the server takes the tmux session and the supervisor with it. Match on argv:
+`ps -eo pid,args | awk '$2=="python3" && /uvicorn api:app/ {print $1; exit}'`.
+
 **Restart order matters:** starting training while vLLM is still loading kills vLLM with
 `No available memory for the cache blocks`, and it stays EXITED under supervisor. Wait for
 `curl 127.0.0.1:18000/v1/models` before any GPU job, and check `supervisorctl status vllm`

@@ -31,6 +31,8 @@ echo "$vote" | grep -qE 'Producer vote: [1-9][0-9]* extractor span\(s\), [1-9][0
 after=$(grep -c 'Producer vote' $LOG)
 check "the vote ran once more" "$((after - before))" 1
 
+check "no unexpected restarts" "$(grep -c 'SUPERVISOR: uvicorn exited' $LOG)" 0
+
 echo '--- is a platform attempt in flight? ---'
 recent=$(grep '46.62.240.126' $LOG | tail -1)
 [ -n "$recent" ] && echo "NOTE  the platform has called this endpoint; check /status before restarting" \
