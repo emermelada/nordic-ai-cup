@@ -194,3 +194,12 @@ controller that already existed, and was never deployed, is +37.6% (t=8.84) over
 The highest-value action available is therefore not more ML on the incumbent: it is deploying hive
 (`DEPLOY_PLAN_HIVE_2026-09-20.md`), and then re-basing the residual ML on hive, since every script here
 (`es_rec.py --base hive`, `ppo_hive.py`, `eval_ckpt.py --base hive`) already takes the base as a switch.
+
+## 10. END-STATE VERIFICATION (priority 1: V2 preserved)
+
+Checked on the graded box at the end of the window, not assumed:
+`docker ps` = `nac-survival-vps | Up 20 hours`, `restarts=0`; `sha256(/app/best_controller.py)` =
+**252f0ba1e060…** (unchanged, the same hash as at the start); live params still the 52-key GS set
+(`genome_select 1.0`, `gs_w_energy 3.0`, `evade_mode 0.0`); public `https://survival.zaitzev.com/`
+**200 in 19 ms**; the predict log is idle (no attempt in flight); zero ML processes left on the serving
+box. Nothing was deployed, nothing was restarted, and the serving container was never written to.
