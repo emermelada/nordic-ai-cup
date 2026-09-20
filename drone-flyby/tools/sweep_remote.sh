@@ -53,3 +53,10 @@ one 'D + MAX_MISSES=20'    "${NEW[@]}" -- "${B[@]}" MAX_MISSES=20
 one 'D + MAX_MISSES=40'    "${NEW[@]}" -- "${B[@]}" MAX_MISSES=40
 one 'D + UNSEEN_DECAY=1.0' "${NEW[@]}" -- "${B[@]}" MAX_MISSES=12 UNSEEN_DECAY=1.0
 one 'D + track_conf 0.05'  "${NEW[@]}" -- BOTH_MODELS=1 NEW_TRACK_CONFIDENCE=0.05 MAX_MISSES=12
+
+# Class aliasing: answer the same box under a class we are measurably confused
+# with. Offline (scene truth) +0.010, neutral under the other truth file.
+AL=DRONE_CLASS_ALIAS='mine_roller>large_launcher,tank>large_launcher,medium_plane>large_launcher,small_tower>small_plane'
+one 'D + alias 0.30'       "${NEW[@]}" "$AL" DRONE_CLASS_ALIAS_CONF=0.30 -- "${B[@]}" MAX_MISSES=12
+one 'D + alias 0.20'       "${NEW[@]}" "$AL" DRONE_CLASS_ALIAS_CONF=0.20 -- "${B[@]}" MAX_MISSES=12
+one 'D + alias 0.45'       "${NEW[@]}" "$AL" DRONE_CLASS_ALIAS_CONF=0.45 -- "${B[@]}" MAX_MISSES=12

@@ -266,6 +266,58 @@ def _parse_box_grow(spec: str):
 
 
 BOX_GROW = _parse_box_grow(os.environ.get('DRONE_BOX_GROW', ''))
+
+
+def _parse_class_weight(spec: str) -> Dict[str, float]:
+    """'large_launcher=1.4,tank=0.9' -> {class: multiplier on its votes}.
+
+    Empty (the default) means the decision is untouched.
+    """
+    spec = (spec or '').strip()
+    if not spec:
+        return {}
+    out = {}
+    for item in spec.split(','):
+        name, _, value = item.partition('=')
+        name = name.strip()
+        if name not in OBJECT_CLASSES:
+            raise SystemExit(f'DRONE_CLASS_WEIGHT: unknown class {name!r}')
+        out[name] = float(value)
+    return out
+
+
+CLASS_VOTE_WEIGHT = _parse_class_weight(os.environ.get('DRONE_CLASS_WEIGHT', ''))
+
+
+def _parse_class_alias(spec: str) -> Dict[str, List[str]]:
+    """'mine_roller>large_launcher,tank>large_launcher' -> {emitted: [also emit as]}.
+
+    The same box is answered again under a class we are measurably confused
+    with, at CLASS_ALIAS_CONF times its confidence. AP is computed per class,
+    so the extra copy is one more low-ranked false positive in a class that
+    already has thousands, while the copy landing in the RIGHT class is a new
+    true positive. Measured against scene_objects.json: large_launcher loses
+    26% of its object-frames to mine_roller and tank while being correctly
+    located, and these four edges recover +0.010 macro with no loss under the
+    other truth file. Above ~0.6 the alias starts outranking real detections
+    and the gain reverses, so the default is well inside the bracket.
+    """
+    spec = (spec or '').strip()
+    if not spec:
+        return {}
+    out: Dict[str, List[str]] = {}
+    for item in spec.split(','):
+        src, _, dst = item.partition('>')
+        src, dst = src.strip(), dst.strip()
+        for name in (src, dst):
+            if name not in OBJECT_CLASSES:
+                raise SystemExit(f'DRONE_CLASS_ALIAS: unknown class {name!r}')
+        out.setdefault(src, []).append(dst)
+    return out
+
+
+CLASS_ALIAS = _parse_class_alias(os.environ.get('DRONE_CLASS_ALIAS', ''))
+CLASS_ALIAS_CONF = float(os.environ.get('DRONE_CLASS_ALIAS_CONF', '0.30'))
 # A response may carry 500 annotations and we send ~10, so naming every class
 # on every object looked free. It is not: validation with v4 scored 0.134 with
 # it at 0.01, against 0.143 without, because those floor boxes outrank genuine
@@ -735,7 +787,15 @@ class Track:
     seen_frame: int = -1
 
     def label(self) -> Tuple[str, float]:
-        name = max(self.votes, key=self.votes.get)
+        # CLASS_VOTE_WEIGHT tilts the class decision only, never the track's
+        # confidence, so it cannot reorder detections within a class (which AP
+        # is blind to anyway) -- it only changes WHICH class a track is called.
+        # Measured against scene_objects.json, large_launcher loses 26% of its
+        # object-frames to mine_roller and tank while being correctly located.
+        if CLASS_VOTE_WEIGHT:
+            name = max(self.votes, key=lambda c: self.votes[c] * CLASS_VOTE_WEIGHT.get(c, 1.0))
+        else:
+            name = max(self.votes, key=self.votes.get)
         return name, self.votes[name]
 
 
@@ -903,15 +963,30 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
         ))
 
+    def add(box_src, name, confidence):
+        """Answer `name`, then the same box under any class it aliases to."""
+        if not suppressed(name):
+            bbox = reported(box_src, name)
+            if bbox is not None:
+                annotations.append(DroneFlybyPredictionDto(
+                    object_id=name, bbox=[round(c, 6) for c in bbox],
+                    confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
+                ))
+        for alt in CLASS_ALIAS.get(name, ()):
+            if suppressed(alt):
+                continue
+            # Grown for the ALIAS class: growth is per class, and the alias is
+            # a claim about that class's geometry, not the emitted one's.
+            bbox = reported(box_src, alt)
+            if bbox is not None:
+                annotations.append(DroneFlybyPredictionDto(
+                    object_id=alt, bbox=[round(c, 6) for c in bbox],
+                    confidence=round(float(np.clip(
+                        confidence * CLASS_ALIAS_CONF, 0.001, 1.0)), 4),
+                ))
+
     for name, confidence, box in transient:
-        if suppressed(name):
-            continue
-        bbox = reported(scaled(box), name)
-        if bbox is not None:
-            annotations.append(DroneFlybyPredictionDto(
-                object_id=name, bbox=[round(c, 6) for c in bbox],
-                confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
-            ))
+        add(scaled(box), name, confidence)
     for track in state.tracks:
         box = scaled(track.box)
         # Whether the track is on screen at all is judged on the ungrown box, so
@@ -947,17 +1022,7 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             if rank and share < RUNNER_UP_SHARE:
                 break
             named.add(name)
-            if suppressed(name):
-                continue
-            confidence = base if rank == 0 else base * 0.9 * share
-            bbox = reported(box, name)
-            if bbox is None:
-                continue
-            annotations.append(DroneFlybyPredictionDto(
-                object_id=name,
-                bbox=[round(c, 6) for c in bbox],
-                confidence=round(float(np.clip(confidence, 0.001, 1.0)), 4),
-            ))
+            add(box, name, base if rank == 0 else base * 0.9 * share)
         if FLOOR_ALL_CLASSES:
             for name in OBJECT_CLASSES:
                 if name not in named:

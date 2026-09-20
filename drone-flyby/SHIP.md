@@ -282,3 +282,64 @@ beat 0.5450, fall back: `DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3`.
 `tools/diagnosis/scene.py` re-scores any config against either truth;
 `tools/diagnosis/both.py` finds the factors safe under both. **Run every future
 offline claim through both truth files before believing it.**
+
+---
+
+# Under the CORRECT truth: what is actually wrong (20 Sep 13:10)
+
+Per-class AP against `scene_objects.json`:
+
+    jammer .848   large_tower .594   small_tower .557   small_plane .531
+    tank .494     helicopter .441    hangar .381        jet_plane .368
+    large_launcher .335   mine_roller .334
+    ta-ta .076    medium_launcher .002
+
+`medium_launcher` and `ta-ta` do not exist in `validation_objects.json` at all,
+so **they were invisible for the whole project**. They are worth 1/12 each.
+
+MISSED / MISNAMED / FOUND against scene truth:
+
+| class | FOUND | MISNAMED | MISSED |
+|---|---|---|---|
+| medium_launcher | 0.00 | 0.02 | **0.88** |
+| ta-ta | 0.17 | 0.05 | **0.62** |
+| large_launcher | 0.53 | **0.26** | 0.05 |
+
+* `medium_launcher` and `ta-ta` are **blind spots** -- geometry does nothing
+  (medium_launcher is 0.000 at every box scale from 0.6 to 1.3). Only training
+  reaches them.
+* `large_launcher` is **located correctly and called the wrong name** 26% of the
+  time: mine_roller x93, tank x70, medium_plane x44. Misnaming IS real under
+  this truth, unlike under `validation_objects.json` where it measured ~zero.
+
+## Shipped: class aliasing (+0.010 scene, neutral validation)
+
+Answer the same box again under a class we are confused with, at 0.30x
+confidence. AP is per class, so the extra copy is one more low-ranked false
+positive in a class that already has thousands, while the copy landing in the
+right class is a new true positive -- the "additions work, replacements fail"
+pattern, now six for six.
+
+    DRONE_CLASS_ALIAS=mine_roller>large_launcher,tank>large_launcher,\
+    medium_plane>large_launcher,small_tower>small_plane
+    DRONE_CLASS_ALIAS_CONF=0.30
+
+Every edge was tested individually under BOTH truths and only the four that
+hurt neither were kept (16 of 20 candidates were dropped). Bracketed: 0.1 gives
++0.007, 0.3 +0.010, 0.45 +0.010, 0.6 +0.003, 1.0 **-0.048** -- above ~0.6 the
+alias outranks real detections.
+
+large_launcher .332 -> .412, small_plane .532 -> .572.
+
+## Also added, untested: DRONE_CLASS_WEIGHT
+
+Per-class multiplier on a track's class votes -- tilts WHICH class a track is
+called without touching its confidence. Aimed at the same large_launcher
+confusion. It needs `--replay` (GPU) to evaluate and has never been run.
+Default empty = no change.
+
+## Dead under the correct truth too
+
+Top-K per class per frame (wash at every K) and a confidence floor (monotonic
+loss). The harmful false positives are **high**-confidence, so trimming the
+tail cannot help. Post-processing on what we emit is exhausted.
