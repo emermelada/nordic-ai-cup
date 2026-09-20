@@ -72,11 +72,25 @@ At 1 acquire : 7 cover the coverage is identical to `full` (simulated: 217 L1,
 31 L2, 0 refused, median 63 looks per cell), so this isolates the Level-2
 *detections* from any coverage cost.
 
-**Why retest something that scored −0.049:** that measurement used v4/v6/v8 with
-no 2560 pass and no v9. A Level-2 view is *native* — L1 throws away half the
-linear resolution before we ever see it — and size is the dominant predictor of
-per-class recall (+0.582 on log object size, measured). L2@1280 gives the same
-apparent object size as L1@2560 **with real detail at a quarter of the compute**.
+**Why retest something that scored −0.049 — now measured, not argued.** 132
+confirmed objects rendered as both L1 and L2 views, through v8 and v9:
+
+| | finds | names correctly | product |
+|---|---|---|---|
+| v8 @ L1 | 0.681 | 0.796 | 0.542 |
+| v8 @ L2 | 0.769 | 0.706 | 0.543 ← **wash** |
+| v9 @ L1 | 0.693 | 0.805 | 0.558 |
+| **v9 @ L2** | **0.763** | **0.762** | **0.581** |
+
+Level 2 finds ~0.07–0.09 **more** objects. v8 gives it all back in misnaming
+(−0.090) — which is why hybrid scored −0.049 with v4/v6/v8: the detections never
+improved, so the coverage cost was pure loss. **v9 loses only 0.043**, so the
+product turns positive. And the test *understates* it: `data/scene` is only 5.9 %
+genuinely native, so these "L2" views are mostly not sharp.
+
+**Watch `hangar`** — its correct-class collapses to 0.00 at L2 (it is 108 source
+px and fills much of the view). If the score moves and `hangar` is the only
+casualty, exclude it from L2 answers rather than abandoning the camera.
 
 **Read the per-class column, not the total:**
 
