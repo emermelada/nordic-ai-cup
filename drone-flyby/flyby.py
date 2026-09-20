@@ -510,6 +510,16 @@ SWEEPS = {
     # so Level-0 detection is model- and imgsz-sensitive in a way Helsinki does
     # not show. v9 is the P2 model (stride 4) and should be the best of them.
     'l0': [(0, 1920, 1080)],
+    # 'row0x2' = the same idea as row0, pushed. row0 measured 0.5733/0.5639
+    # against full's 0.5418 mean -- both runs beat every baseline run ever
+    # recorded here -- and the mechanism is the whole-frame Level-0 look, which
+    # attacks the largest coverage bucket (16.8 % of objects are missed simply
+    # because the sweep had not reached them yet, worth 0.129 of score).
+    # row0 spends 2 frames of 8 at Level 0; this spends 6 of 12. The trade is
+    # Level-1 detail, so it can go the other way -- measure it, do not assume.
+    'row0x2': [TL, (0, 1920, 1080), TM, (0, 1920, 1080), TR, (0, 1920, 1080),
+               BR, (0, 1920, 1080), BM, (0, 1920, 1080), BL, (0, 1920, 1080)],
+
 
     # Level-2 entry band: every new object at NATIVE resolution.
     #
