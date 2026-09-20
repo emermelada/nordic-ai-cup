@@ -64,6 +64,41 @@ Two rules follow, and the rest of this work should be read through them:
 2. **A local gain is a hypothesis, not a result.** Local +0.018 became platform
    −0.0007. Only the platform closes the question, and it costs one validation.
 
+## Generated in-domain data, 20 September 2026 — it does not help
+
+`generate_indomain.py` picked spans on the real ASR word grid and had the served
+27B write the clinical yes/no question each one answers, keeping only spans the
+passage answers alone and that the rest of the transcript does not: **342 verified
+examples from 2,990 candidates** (11.4%), covering all 39 conversations. Training
+rows joined only folds already holding their conversation.
+
+Out-of-fold on the same three folds, against the current build's 0.718340 tIoU:
+
+| Extractor training data | Mean tIoU | Raw | vs current build |
+| --- | ---: | ---: | ---: |
+| External pretraining only | **0.7270** | 0.8362 | +0.0052 |
+| + generated, spans <= 12 words (221 rows) | 0.7096 | 0.8258 | −0.0052 |
+| + generated, all spans (342 rows) | 0.6786 | 0.8072 | −0.0238 |
+
+**Generated data hurt, and span length explains most of it.** Simply dropping the
+rows longer than 12 words recovered +0.031 tIoU. A question written *from* a span
+teaches the model to return that whole span, so generated gold ran to a median of
+11 words against real gold's 8. This is the third time in one session that
+training data with the wrong span length cost accuracy, after MASH-QA (median 55)
+and SIMORD (median 43).
+
+The residue is more interesting than the headline. Short-span generated data gave
+the **best boundary precision of any configuration measured** — 113 questions at
+IoU >= 0.9, against 109 for pretraining alone and 105 for the current build —
+while producing the **worst localization**, 29 zero-overlap against 22 and 21.
+
+That is the uniqueness filter showing through. Keeping only spans that are the
+sole answer to their question means every generated example is an easy
+localization and a precise boundary, so the corpus sharpens boundaries and
+dilutes the 195 real examples that carry the occurrence convention. Generating
+more of it cannot fix that: the preference between two true passages is recorded
+nowhere except those 195 spans.
+
 ## Second experiment — external rationale pretraining, 20 September 2026
 
 Intermediate training on 43,812 checked question/evidence pairs from CoQA and
