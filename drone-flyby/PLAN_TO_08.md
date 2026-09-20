@@ -38,12 +38,129 @@ Nothing else needs to change. `jammer` at 5.2 cells and `helicopter` at 17 cells
 prove the limit is not pixels for most of them — it is that **the training data
 does not teach what these objects look like**.
 
-**Therefore: the only lever with 0.8-shaped upside is the training data, and
-there is exactly one documented, unfixed defect in it.**
+**I tested the obvious answer -- "the training data" -- and it does not hold.**
+See §1. The evidence points at resolution instead, and at one cheap untested
+combination. Read §1 before §2; §2's retrain is now the FALLBACK, not the plan.
 
 ---
 
-## 1. The defect: our cut-outs are blurry
+## 1. FALSIFIED: more/better cut-outs is not the answer
+
+I built this plan around HANDOVER's documented defect -- that only 36 of 262
+validation cut-outs are native resolution, which it names as the cause of v7's
+failure. Before recommending a three-hour retrain on it, I checked whether patch
+supply predicts per-class recall at all. **It does not, and the sign is wrong.**
+
+| predictor of per-class recall | Pearson | Spearman |
+|---|---|---|
+| **log(object size in source px)** | **+0.582** | +0.462 |
+| native patch count | **-0.287** | -0.343 |
+| total patch count | -0.175 | -0.238 |
+
+`mine_roller` has **2** native patches and beats its size-predicted recall by
++0.30. `small_launcher` has **25** -- the most available -- and misses by -0.37.
+`tank` has 101 patches in total and sits at 0.59. Whatever limits these classes,
+it is not how many cut-outs we have of them.
+
+Extraction is also already optimal: of 235 eligible Helsinki instances (after
+dropping edge-cut and sub-10 px boxes), **235 are extracted, zero lost**.
+`mine_roller` has 2 because it only *appears* in 2 of the 25 Helsinki frames.
+
+**What the residuals say.** Fitting recall to log size and looking at who
+underperforms their size:
+
+| worse than size predicts | | better than size predicts | |
+|---|---|---|---|
+| small_launcher | -0.37 | large_tower | +0.34 |
+| jammer | -0.34 | mine_roller | +0.30 |
+| helicopter | -0.24 | jet_plane | +0.28 |
+| hangar | -0.15 | small_plane | +0.18 |
+
+With twelve classes and noisy per-class recall this is close to the limit of
+what can be read, so I will not build a plan on the residuals. **The robust
+conclusion is that object size in pixels dominates, which points at resolution,
+not data.**
+
+## 3. THE PLAN: unlock Level 2, and use it to gate the retrain
+
+Size dominates recall (§1), and there are only two ways to give the detector
+more pixels per object:
+
+* **`imgsz`** — exhausted. 2560 is in the served stack and is what took
+  `small_launcher` from 0.000 to 0.512; 3200 blew the frame budget (514 ms,
+  scored 0.264).
+* **the camera** — *not* exhausted, and it is the better of the two, because a
+  Level-2 view is **native**: no information was ever thrown away. Level 1
+  discards half the linear resolution before we see it, and no amount of
+  upscaling puts it back.
+
+The arithmetic, for a 34 px object:
+
+| view | inference px @1280 | inference px @2560 | real detail? |
+|---|---|---|---|
+| L1 | 23 | 45 | **no** — interpolated from a 2x downsample |
+| **L2** | **45** | 91 | **yes** |
+
+**L2 at 1280 gives the same apparent size as L1 at 2560, with real detail and at
+a quarter of the compute.** That is the strongest unexploited lever in the
+system.
+
+### Why L2 failed before, and why it is worth one more test
+
+`DRONE_CAMERA=hybrid` scored **-0.049** with coverage tuned to match `full`
+exactly. The per-class cause was measured: at native resolution the models
+*misname* objects — `hangar` correct-class 0.43 -> 0.14, `mine_roller`
+1.00 -> 0.48.
+
+**Here is the synthesis that makes §2 matter after all.** Our cut-outs are
+L1-derived, i.e. blurry. Pasted into a training view they teach "blurry at this
+scale = object". At L1 serving that is consistent — real objects are also
+downsampled, so blurry matches blurry, and this is exactly why patch supply does
+*not* predict recall (§1). **At L2 the real objects are sharp and the learned
+appearance no longer matches**, which is precisely the misnaming we measured.
+
+So the blurry-patch defect is not a general defect — it is **specifically what
+blocks Level 2**, and Level 2 is where the remaining resolution lives. That
+makes the retrain worth doing, but only *after* a cheap test tells us the
+mechanism is real.
+
+### Step 3a — the cheap test, ~15 minutes, no training
+
+The earlier hybrid measurement used v4/v6/v8 with no 2560 pass and no v9. Retest
+it on the current stack:
+
+```bash
+DRONE_CAMERA=hybrid DRONE_SET=BOTH_MODELS=1,NEW_TRACK_CONFIDENCE=0.10,HYBRID_ACQUIRE=1,HYBRID_COVER=7 \
+DRONE_LEVEL0_WEIGHT=1.5 DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3 \
+DRONE_MODEL=models/drone-yolo11n-v4.pt \
+DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-v8.pt,models/drone-yolo11m-p2-v9.pt \
+DRONE_IMGSZ=960,1280,1280,2560,1280 DRONE_DEVICE=cuda python3 api.py
+```
+
+At 1 acquire : 7 cover the coverage is identical to `full` (simulated: 217 L1,
+31 L2, 0 refused, median 63 looks per cell), so this isolates the L2 *detections*
+from any coverage cost.
+
+**Read the per-class column, not the total.** Three outcomes:
+
+| result | meaning | next |
+|---|---|---|
+| **> 0.56, or `small_launcher`/`spacecraft` up** | v9's P2 head handles native scale | raise the L2 duty cycle: 2:6, then 3:5 |
+| ~0.55 and misnaming persists (`hangar`, `mine_roller` down) | **the blurry-patch mechanism is confirmed** | **do §5's retrain — it is the unlock** |
+| clearly below 0.53 | L2 is dead on this detector, full stop | go to §6's knob queue |
+
+That middle outcome is the valuable one: it converts the retrain from a hunch
+into a targeted fix with a named mechanism.
+
+### Step 3b — if the retrain is indicated
+
+Then `survey4` (§2) is the data-collection step, and the retrain must use
+**native patches at L2 scale**. Weight the harvest toward the classes that
+underperform their size: `small_launcher`, `jammer`, `helicopter`, `hangar`.
+
+---
+
+## 2. FALLBACK ONLY: the blurry-cut-out retrain
 
 `HANDOVER.md` records this and nobody has fixed it:
 
@@ -96,7 +213,7 @@ every object is caught at native resolution roughly once per pass, and a
 
 ---
 
-## 2. The schedule, with go/no-go gates
+## 4. The schedule, with go/no-go gates
 
 Times assume a start at 08:00 and the 16:00 deadline. Every gate has a stop
 rule; **if a gate fails, fall back to shipping what is already validated.**
@@ -120,7 +237,7 @@ attempt, no recovery.
 
 ---
 
-## 3. The retrain, precisely
+## 5. The retrain, precisely (only if §3 fails)
 
 ```bash
 MODEL=training/yolo11m-p2.yaml      # NOT yolo11-p2.yaml -- that silently builds NANO
@@ -152,7 +269,7 @@ five-model stack runs at 82 ms of 333 ms.
 
 ---
 
-## 4. If the harvest gate fails — the fallback queue
+## 6. If everything fails — the knob queue
 
 If step 3 yields fewer than 300 native patches, do not retrain. Spend the time
 on these instead, in this order. None needs training.
@@ -168,7 +285,7 @@ Realistically these sum to **+0.01 to +0.02**. They are insurance, not a plan.
 
 ---
 
-## 5. What I ruled out tonight, so you do not spend the morning on it
+## 7. What I ruled out tonight, so you do not spend the morning on it
 
 * **SAHI / tiled inference.** The VisDrone-winning recipe is ensemble +
   multi-scale + SAHI merged with WBF, and SAHI reports +6.8 AP inference-only
@@ -194,7 +311,7 @@ Realistically these sum to **+0.01 to +0.02**. They are insurance, not a plan.
 
 ---
 
-## 6. My honest expectation
+## 8. My honest expectation
 
 **If the harvest and retrain both work: 0.58–0.63.** That would be a real
 result — roughly +0.08 in a day on a system that had plateaued for a week.
