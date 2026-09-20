@@ -1,3 +1,35 @@
+# START HERE — instructions for a fresh session
+
+You are picking up the Nordic AI Cup **Drone Flyby** task with a few hours left.
+Read this whole file before changing anything. It is self-contained.
+
+**Do these five things first:**
+
+1. `curl -s http://93.91.156.85:41241/api` — confirm what is serving. Never
+   change config without checking this, and never trust the launch command.
+2. After ANY restart, wait ~125 s for the models to load before validating. A
+   run fired 28 s after a restart scored 0.5458 instead of ~0.58 and cost an
+   experiment.
+3. After every batch of validations run `python3 probe/frame_loss.py` on the
+   box. About 1 run in 10 loses frames to an external stall; one lost 94 and
+   scored 0.3264. Never read a dropped-frame run as a config result.
+4. Change ONE variable at a time and take at least 3 runs. sd is ~0.013, so two
+   runs cannot separate a 0.01 effect.
+5. **Do not use `src/helsinki` to decide anything.** It gave the wrong SIGN
+   twice in one day. Section 5 explains why. Use it only for class mapping and
+   imgsz curve shape.
+
+**The current best config is `row0x2` + 5 passes, mean 0.5841.** Restore it with
+`cp data/serve_env.sh.row0x2_BEST_0.584 data/serve_env.sh` then
+`bash probe/serve_passes.sh 5`. If you run out of time or ideas, serve that and
+stop — it is the best measured configuration.
+
+**The single best untested idea is in section 10, item 2** (box fusion instead
+of concatenation). The only identified route to 0.70 is section 10, item 1
+(hand-harvest real patches for the dead classes and retrain).
+
+---
+
 # Drone Flyby — why we are at 0.58 and not 0.70
 
 Written 2026-09-20 ~09:45 UTC. Deadline 14:00 UTC. Paste this whole file into a
@@ -34,7 +66,8 @@ them. That circularity is the actual wall.
 | 5-pass, `row0` (25 % L0) | 2 | 0.5686 | 0.0066 | 0.5733 0.5639 |
 | **5-pass, `row0x2` (50 % L0)** | **7** | **0.5841** | **0.0135** | 0.5820 **0.6071** 0.5821 0.5966 0.5683 0.5724 0.5801 |
 | 5-pass, `l0` (100 % L0) | 3 | 0.5376 | 0.0033 | 0.5403 0.5338 0.5387 |
-| 6-pass, `row0x2` | pending | — | — | — |
+| 6-pass, `row0x2` (adds v9@2560) | 3 | 0.5738 | 0.0081 | 0.5700 0.5831 0.5682 |
+| 5-pass, `row0x2`, AGREEMENT_WEIGHT=0.7 | in flight | — | — | — |
 
 Best known configuration: **`row0x2` + 5 passes, mean 0.5841**. Saved on the box
 at `data/serve_env.sh.row0x2_BEST_0.584`.
@@ -441,6 +474,17 @@ release jobs out of order.
    Weighted box fusion with a class vote across models attacks the 0.157
    precision bucket directly and needs no retraining. **Untested, and it is the
    best untested idea in this document.**
+2b. **Ranking knobs — cheap, untested, aimed at the 0.157 bucket.** All are
+   one-line `DRONE_SET` changes, all pure ranking so they cannot cost recall:
+   `AGREEMENT_WEIGHT=0.7` (a track only one of the five models found is scaled
+   by 0.7^4 and sinks; a real object is usually found by several models, a bush
+   by one) — IN FLIGHT as of 10:00 UTC;
+   `CLASS_SHARE_POWER` (ranks a track by how cleanly its class votes agree —
+   0.95 for one class beats a 0.35/0.33/0.32 split);
+   `MISS_PENALTY=0.85` (demotes a track the camera looked straight at and did
+   not confirm; today a track refuted five times ranks exactly as high as one
+   just seen).
+
 3. **imgsz per pass.** v8@2560 is off its peak (0.887 vs 0.972 at 1280) and
    v9@1600 beat v9@1280 on Helsinki. Cheap to test, small expected gain,
    Helsinki-derived so treat with suspicion.
