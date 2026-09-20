@@ -9,9 +9,11 @@ claim below was re-measured from the repository and the live systems.
 | | controller | mean ticks (80 fresh paired seeds) | score | p10 | min |
 |---|---|---|---|---|---|
 | **served now** | `best_controller.py` 252f0ba1 on survival.zaitzev.com | 8,110 | **811** | 3,881 | 1,201 |
-| **available** | `hive.py` 829e4147 (survival-v2 branch) | **11,517** | **1,152** | 7,139 | 1,677 |
+| **available** | `hive.py` 829e4147 (survival-v2 branch) | **11,383** | **1,138** | 5,916 | 1,527 |
 
-Paired: **+3,406 ± 438 ticks, t = 7.78, W/L = 65/15, +42.0%**, same simulator, same seeds, same harness
+Paired: **+3,406 ± 438 ticks, t = 7.78, W/L = 65/15, +42.0%** on block 1 (80 seeds), reproduced on an
+independent second block (**+2,835, W/L 30/9**, 39 seeds): **pooled +3,219 ± 388, t = 8.30, W/L 95/24,
++39.4% over 119 fresh paired seeds**. Same simulator, same seeds, same harness
 (`experiments/mech_ab.py --policy {heuristic|hive}`). Latency of hive: mean 4.09 ms/tick, p99 11.72 ms
 = 29 s of the ~600 s grader budget. Full write-up: `FINDING_HIVE_VS_SERVED_2026-09-20.md`.
 

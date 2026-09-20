@@ -16,6 +16,18 @@ code, the same seeding, fresh process per episode, paired per seed.
 **Paired: hive − heuristic = +3,406 ± 438 ticks, t = 7.78, W/L = 65/15 (n=80), +42.0%.**
 The lower tail improves too: p10 +84%, min +40%. Per-seed SD of the paired difference: 3,916 ticks.
 
+CONFIRMED on a second, independent fresh block (seeds 300640-300679, 40 seeds, same horizon):
+
+| block | n | paired | W/L |
+|---|---|---|---|
+| 1 (300560-300639) | 80 | +3,406 | 65/15 |
+| 2 (300640-300679) | 39 | +2,835 | 30/9 |
+| **pooled** | **119** | **+3,219 +- 388, t = 8.30, +39.4%** | **95/24** |
+
+Pooled means: heuristic 8,164 ticks (816 score) vs hive 11,383 ticks (1,138 score); p10 4,381 → 5,916;
+min 1,201 → 1,527. Two independent blocks agree, and the second does not depend on any seed the first
+used.
+
 Fairness checks, done before believing the number:
 - hive reads only `step["sim_time"]` and `step["agent_status"]` (verified by grepping every `step.get`),
   which is exactly what the harness passes and exactly what the official `simulation_server.py` sends.

@@ -1,91 +1,142 @@
 {
-  "date": "2026-09-20",
-  "session": "recovery takeover after the previous Claude session was lost",
-  "deadline": "2026-09-20T16:00:00+02:00",
-
-  "best_controller_found": {
-    "name": "hive (survival-v2 branch)",
-    "file": "survival-v2/hive.py",
-    "sha256": "829e4147fb309c5e08ef99ad5d25d811d0819f3c9c2db6a83210fa72e8f5e4a1",
-    "origin": "git show origin/survival-v2:survival-v2/hive.py",
-    "server": "server.py (bare ASGI + orjson), systemd unit 'surv' under /opt/surv, port 9052",
-    "deployed": false,
-    "deployed_where": "copies exist at /opt/sv2 (64-core box) and on 212.147.249.39 (survival-v67 endpoint, no SSH from here)",
-    "latency_ms": {"mean": 4.09, "p95": 9.33, "p99": 11.72, "max": 19.02,
-                   "projected_grader_wait_s_per_game": 29.3, "budget_s": 600}
+ "date": "2026-09-20",
+ "session": "recovery takeover after the previous Claude session was lost",
+ "deadline": "2026-09-20T16:00:00+02:00",
+ "best_controller_found": {
+  "name": "hive (survival-v2 branch)",
+  "file": "survival-v2/hive.py",
+  "sha256": "829e4147fb309c5e08ef99ad5d25d811d0819f3c9c2db6a83210fa72e8f5e4a1",
+  "origin": "git show origin/survival-v2:survival-v2/hive.py",
+  "server": "server.py (bare ASGI + orjson), systemd unit 'surv' under /opt/surv, port 9052",
+  "deployed": false,
+  "deployed_where": "copies exist at /opt/sv2 (64-core box) and on 212.147.249.39 (survival-v67 endpoint, no SSH from here)",
+  "latency_ms": {
+   "mean": 4.09,
+   "p95": 9.33,
+   "p99": 11.72,
+   "max": 19.02,
+   "projected_grader_wait_s_per_game": 29.3,
+   "budget_s": 600
+  }
+ },
+ "baseline_deployed_controller": {
+  "file": "best_controller.py",
+  "sha256_in_container": "252f0ba1e0607be854f52cc93edfdbf4dfbb375ec085cd72eccc67a452210ff0",
+  "endpoint": "https://survival.zaitzev.com -> 94.237.34.245, container nac-survival-vps (up 16h, 0 restarts)",
+  "params": "52 keys: genome_select 1.0, gs_w_energy 3.0, gs_topk 3.0, evade_mode 0.0, reserve_frac 0.0, blind_explore_frac 0.12, wander_weight 0.03",
+  "hive_present_in_image": false,
+  "official_attempt_distribution_from_own_predict_log": {
+   "n_complete_attempts": 28,
+   "mean": 731,
+   "median": 759,
+   "p25": 633,
+   "p75": 857,
+   "max": 1165
   },
-
-  "baseline_deployed_controller": {
-    "file": "best_controller.py",
-    "sha256_in_container": "252f0ba1e0607be854f52cc93edfdbf4dfbb375ec085cd72eccc67a452210ff0",
-    "endpoint": "https://survival.zaitzev.com -> 94.237.34.245, container nac-survival-vps (up 16h, 0 restarts)",
-    "params": "52 keys: genome_select 1.0, gs_w_energy 3.0, gs_topk 3.0, evade_mode 0.0, reserve_frac 0.0, blind_explore_frac 0.12, wander_weight 0.03",
-    "hive_present_in_image": false,
-    "official_attempt_distribution_from_own_predict_log": {
-      "n_complete_attempts": 28, "mean": 731, "median": 759, "p25": 633, "p75": 857, "max": 1165
-    },
-    "local_paired_mean_ticks": 8110,
-    "local_mean_score": 811
+  "local_paired_mean_ticks": 8110,
+  "local_mean_score": 811
+ },
+ "fresh_seed_confirmation": {
+  "harness": "experiments/mech_ab.py, same SimulationCore, same seeds, paired per seed, fresh process per episode",
+  "block_1": {
+   "seeds": "300560-300639",
+   "n": 80,
+   "horizon": 18000,
+   "heuristic_mean_ticks": 8110,
+   "hive_mean_ticks": 11517,
+   "paired_delta_ticks": 3406,
+   "se": 438,
+   "t": 7.78,
+   "W": 65,
+   "L": 15,
+   "pct": 42.0,
+   "p10_ticks": {
+    "heuristic": 3881,
+    "hive": 7139
+   },
+   "min_ticks": {
+    "heuristic": 1201,
+    "hive": 1677
+   },
+   "per_seed_sd_of_paired_diff": 3916
   },
-
-  "fresh_seed_confirmation": {
-    "harness": "experiments/mech_ab.py, same SimulationCore, same seeds, paired per seed, fresh process per episode",
-    "block_1": {"seeds": "300560-300639", "n": 80, "horizon": 18000,
-                "heuristic_mean_ticks": 8110, "hive_mean_ticks": 11517,
-                "paired_delta_ticks": 3406, "se": 438, "t": 7.78, "W": 65, "L": 15,
-                "pct": 42.0, "p10_ticks": {"heuristic": 3881, "hive": 7139},
-                "min_ticks": {"heuristic": 1201, "hive": 1677},
-                "per_seed_sd_of_paired_diff": 3916},
-    "block_2": {"seeds": "300640-300679", "n": 40, "horizon": 18000, "status": "running at hand-off"}
+  "block_2": {
+   "seeds": "300640-300679",
+   "n": 39,
+   "horizon": 18000,
+   "heuristic_mean_ticks": 8263,
+   "hive_mean_ticks": 10909,
+   "paired_delta_ticks": 2835,
+   "W": 30,
+   "L": 9
   },
-
-  "training_time_and_compute": {
-    "wall_clock_ml_window_h": 6,
-    "machines": {
-      "64-core (212.147.236.122)": "structural mechanism tests (n=320 paired episodes) + ES es_rec.py",
-      "30-core serving box (94.237.34.245)": "PPO ppo_rec.py behind a latency guard, 26 workers",
-      "user's Mac": "zero experiments (rule 0 respected)"
-    },
-    "killed": "ml_loop.py residual ES of the lost session was stopped deliberately (63 -> 0 workers): its screen was noise-limited (SE ~1060 ticks on a 6-seed screen) and produced +324 +- 205 ticks (t=1.58, n=160), i.e. unproven"
+  "pooled": {
+   "n": 119,
+   "heuristic_mean_ticks": 8164,
+   "hive_mean_ticks": 11383,
+   "paired_delta_ticks": 3219,
+   "se": 388,
+   "t": 8.3,
+   "W": 95,
+   "L": 24,
+   "pct": 39.4,
+   "p10_ticks": {
+    "heuristic": 4381,
+    "hive": 5916
+   },
+   "min_ticks": {
+    "heuristic": 1201,
+    "hive": 1527
+   }
+  }
+ },
+ "training_time_and_compute": {
+  "wall_clock_ml_window_h": 6,
+  "machines": {
+   "64-core (212.147.236.122)": "structural mechanism tests (n=320 paired episodes) + ES es_rec.py",
+   "30-core serving box (94.237.34.245)": "PPO ppo_rec.py behind a latency guard, 26 workers",
+   "user's Mac": "zero experiments (rule 0 respected)"
   },
-
-  "ppo": {
-    "script": "experiments/ppo_rec.py",
-    "did_it_learn": "not yet determined - running at hand-off (updates 0-8, corr usage ~4% of the +-0.5 rad bound)",
-    "zero_change_contract": true,
-    "actor_observations": "build_v2 (61 floats) from legal payload fields only; no fruit age, no hidden coordinates, no simulator internals",
-    "critic": "same GRU trunk on the same legal tensor; no privileged state anywhere in the file",
-    "action_space": "heading +-0.5 rad, speed +-0.3*sprint; reproduction unchanged from the deployed gate",
-    "reward": "r = +0.1 per sim tick, gamma = 1, episode ends at extinction => sum(r) = 0.1*T = the dominant term of the competition score identically; no shaping",
-    "throughput": "~110 updates/hour, ~15M agent-transitions/hour",
-    "acceptance_bar": "paired improvement vs frozen incumbent on 160 unseen seeds; training reward is never evidence"
-  },
-
-  "es": {
-    "script": "experiments/es_rec.py",
-    "did_it_learn": "not yet determined - generation 0 in progress at hand-off",
-    "fixed_vs_old_regime": ["antithetic pairs", "24 rotating seeds/generation instead of 6",
-                            "explicit BASE arm every generation", "held-out centre evaluation",
-                            "weight-hash ledger keys", "per-generation checkpoint",
-                            "sigma large enough to change behaviour (old sigma=0.02 moved heading ~0.03 rad)"],
-    "stop_rule": "no held-out paired gain >= +400 ticks after ~10 generations => stop ES compute"
-  },
-
-  "strongest_mechanism_discovered": {
-    "positive": "the survival-v2 hive controller's dead-reckoning world model + genome/colony logic: +42.0% paired vs the served controller (t=7.78, n=80 fresh seeds)",
-    "negative_but_informative": "search effort is already optimal in BOTH directions: reducing it costs -21% (t=-6.4) and raising it is neutral-to-worse (0 to -2.1 sigma). The fleet's income is coverage-limited, so conserving travel is the wrong sign."
-  },
-
-  "failed_hypotheses": [
-    "energy-conditioned search (esearch): -1637 +- 258 ticks, t=-6.36, n=160 fresh paired seeds",
-    "energy-conditioned search, milder dose: -1649 +- 265, t=-6.23",
-    "search effort up (blind_explore_frac 0.40): -225 +- 241 (null)",
-    "search effort up (blind_explore_frac 0.60): -521 +- 247 (worse)",
-    "the inherited 6-seed residual-ES regime: +324 +- 205 ticks, t=1.58 - not significant",
-    "gs_w_energy capacity-ratchet (wrong sign; 3.0 is causal as a benefit)",
-    "steering / FSM / target commitment (83.67% of agent-ticks see zero fruit)",
-    "BC-cloned recurrent replacement (-16.8% paired)"
+  "killed": "ml_loop.py residual ES of the lost session was stopped deliberately (63 -> 0 workers): its screen was noise-limited (SE ~1060 ticks on a 6-seed screen) and produced +324 +- 205 ticks (t=1.58, n=160), i.e. unproven"
+ },
+ "ppo": {
+  "script": "experiments/ppo_rec.py",
+  "did_it_learn": "not yet determined - running at hand-off (updates 0-8, corr usage ~4% of the +-0.5 rad bound)",
+  "zero_change_contract": true,
+  "actor_observations": "build_v2 (61 floats) from legal payload fields only; no fruit age, no hidden coordinates, no simulator internals",
+  "critic": "same GRU trunk on the same legal tensor; no privileged state anywhere in the file",
+  "action_space": "heading +-0.5 rad, speed +-0.3*sprint; reproduction unchanged from the deployed gate",
+  "reward": "r = +0.1 per sim tick, gamma = 1, episode ends at extinction => sum(r) = 0.1*T = the dominant term of the competition score identically; no shaping",
+  "throughput": "~110 updates/hour, ~15M agent-transitions/hour",
+  "acceptance_bar": "paired improvement vs frozen incumbent on 160 unseen seeds; training reward is never evidence"
+ },
+ "es": {
+  "script": "experiments/es_rec.py",
+  "did_it_learn": "not yet determined - generation 0 in progress at hand-off",
+  "fixed_vs_old_regime": [
+   "antithetic pairs",
+   "24 rotating seeds/generation instead of 6",
+   "explicit BASE arm every generation",
+   "held-out centre evaluation",
+   "weight-hash ledger keys",
+   "per-generation checkpoint",
+   "sigma large enough to change behaviour (old sigma=0.02 moved heading ~0.03 rad)"
   ],
-
-  "exact_next_experiment": "1) deploy hive to the graded endpoint (owner decision) after the running 40-seed second confirmation block; 2) re-base the residual ML (ES/PPO) on hive rather than the heuristic, since the same machinery is base-agnostic; 3) ES: continue es_rec.py to ~10 generations against the +400-tick bar; 4) PPO: continue to 300-500 updates then take the best checkpoint to a 160-seed paired verdict vs the frozen incumbent."
+  "stop_rule": "no held-out paired gain >= +400 ticks after ~10 generations => stop ES compute"
+ },
+ "strongest_mechanism_discovered": {
+  "positive": "the survival-v2 hive controller's dead-reckoning world model + genome/colony logic: +42.0% paired vs the served controller (t=7.78, n=80 fresh seeds)",
+  "negative_but_informative": "search effort is already optimal in BOTH directions: reducing it costs -21% (t=-6.4) and raising it is neutral-to-worse (0 to -2.1 sigma). The fleet's income is coverage-limited, so conserving travel is the wrong sign."
+ },
+ "failed_hypotheses": [
+  "energy-conditioned search (esearch): -1637 +- 258 ticks, t=-6.36, n=160 fresh paired seeds",
+  "energy-conditioned search, milder dose: -1649 +- 265, t=-6.23",
+  "search effort up (blind_explore_frac 0.40): -225 +- 241 (null)",
+  "search effort up (blind_explore_frac 0.60): -521 +- 247 (worse)",
+  "the inherited 6-seed residual-ES regime: +324 +- 205 ticks, t=1.58 - not significant",
+  "gs_w_energy capacity-ratchet (wrong sign; 3.0 is causal as a benefit)",
+  "steering / FSM / target commitment (83.67% of agent-ticks see zero fruit)",
+  "BC-cloned recurrent replacement (-16.8% paired)"
+ ],
+ "exact_next_experiment": "1) deploy hive to the graded endpoint (owner decision) after the running 40-seed second confirmation block; 2) re-base the residual ML (ES/PPO) on hive rather than the heuristic, since the same machinery is base-agnostic; 3) ES: continue es_rec.py to ~10 generations against the +400-tick bar; 4) PPO: continue to 300-500 updates then take the best checkpoint to a 160-seed paired verdict vs the frozen incumbent."
 }
