@@ -157,6 +157,43 @@ Two results worth keeping:
   single seed. Diversity, not accuracy, is what the third voter contributes.
 - **More voters is not better.** Four and five producers both score below three.
 
+### A second encoder family: independence delivered, and it still lost
+
+The redundancy measurement said the extractor and the DeBERTa ranker are the weak link, so the
+same listwise recipe was built on `deepset/roberta-large-squad2` — a different encoder family,
+different pretraining corpus, different tokenizer — to replace one of them.
+
+**The independence was real.** The RoBERTa ranker agrees with the extractor within 0.9 on
+61.0-65.6% of questions, against the DeBERTa ranker's 70.3-72.3%, and the four-way oracle rises
+to 0.8957-0.9013 raw from the three-way 0.8913. It does find spans the others miss.
+
+**It still lost, on every seed and every combination:**
+
+| Producer set | Mean gain (3 seeds) | Worst seed |
+| --- | ---: | ---: |
+| **stage B + extractor + DeBERTa ranker (deployed)** | **+0.017551** | +0.012787 |
+| All four | +0.013683 | +0.009063 |
+| stage B + DeBERTa ranker + RoBERTa ranker | +0.009424 | +0.003750 |
+| stage B + extractor + RoBERTa ranker | +0.008332 | +0.006570 |
+
+The reason is quality, not independence: standalone out-of-fold mean tIoU 0.6628 against the
+DeBERTa ranker's 0.7064 and the extractor's 0.7270. **A 0.044 quality deficit outweighed a 6-9
+point independence gain.** With BM25 (0.4038 standalone) the same trade was catastrophic, so
+the exchange rate is now bracketed from both sides: at roughly 0.72 a voter pays, at 0.66 it
+does not, and at 0.40 it is destructive.
+
+One more instance of the external proxy lying: RoBERTa scored **better** on the external
+development metric (0.5658 against DeBERTa's 0.5584) and worse on the actual task by 0.044.
+That metric has now mispredicted transfer three times — SIMORD, the second DeBERTa epoch, and
+here.
+
+**Conclusion: the vote is finished as a source of gains.** Both structurally motivated moves
+have been tried and measured — a better third voter (platform: −0.0007) and a more independent
+third voter (out of fold: −0.008) — and the whole cheap rule space around them is closed. The
+remaining 13.4 points of selection headroom need a chooser trained on more than 98
+disagreement examples, and the 14 unreachable questions need a producer with a different view
+of the audio. Both are the data program, not a rule.
+
 ### The offline sweep after 0.8307888: what is left and what is closed
 
 With the three producers' out-of-fold spans on disk, a lot of ideas cost nothing to test.
