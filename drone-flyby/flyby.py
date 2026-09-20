@@ -258,7 +258,10 @@ def _parse_box_grow(spec: str):
         name = name.strip()
         if name not in OBJECT_CLASSES:
             raise SystemExit(f'DRONE_BOX_GROW: unknown class {name!r}')
-        out[name] = (cap(float(value)), cap(float(value)))
+        # 'tank=1.3' is one factor for both axes; 'helicopter=1.17x1.87' sets
+        # width and height apart, which the measured per-class geometry needs.
+        width, _, height = value.partition('x')
+        out[name] = (cap(float(width)), cap(float(height or width)))
     return out
 
 
