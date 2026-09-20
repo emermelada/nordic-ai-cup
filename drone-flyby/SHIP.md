@@ -64,3 +64,61 @@ Same as above but `DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3`, no
 
 Frame loss costs 0.0022/frame, calibrated to 40 frames. Do NOT extrapolate
 past that — discard heavier losses instead (a 120-frame loss scored 0.2875).
+
+
+---
+
+# Corroboration and the fallback (added after the held-out test)
+
+`training/box_convention.json` is derived from the **25 official Helsinki
+annotation frames**, and `score_offline.loosen()` already applies it to the
+mined truth -- so the offline truth boxes are in the real ground-truth
+convention, and the correction below is toward real labels, not toward our
+own mining.
+
+Four geometry policies, all five runs:
+
+| policy | macro |
+|---|---|
+| A current, flat 1.3 | 0.473 |
+| B `helsinki` isotropic -- **real labels, nothing fitted** | 0.507 |
+| C `helsinki` w/h at cap 2.2 | 0.480 |
+| **D fitted per-class w/h** | **0.559** |
+
+**B is the corroboration that matters.** It is derived entirely from official
+annotations with zero fitting and still beats current by +0.034, so the
+direction is confirmed by two independent routes. D adds a further +0.052 and
+held out cleanly (+0.080/+0.082 on two runs it was never fitted to).
+
+Under D no class is worse than current.
+
+## Fallback ladder
+
+1. **D** -- the `DRONE_BOX_GROW` above. First choice.
+2. **B** -- `DRONE_BOX_GROW=helsinki DRONE_BOX_GROW_CAP=1.3` (no `_WH`).
+   Nothing fitted; use if D does not reproduce on real runs.
+3. **A** -- `DRONE_BOX_GROW=1.3 DRONE_BOX_GROW_CAP=1.3`, the 0.5450 config.
+
+## Rejected, measured, do not spend runs on
+
+* **Global height factor**: wash, +0.002. The effect is genuinely per class.
+* **Per-class centre shift**: our boxes sit off-centre on the weak classes
+  (spacecraft -0.215 of its height, mine_roller +0.100, jammer +0.093 in x)
+  and correcting it is worth only +0.007 held out -- and **spacecraft flips
+  sign between fitted and held-out runs**, so that class is fitting noise.
+  Not worth new serving-path code.
+* **More resolution**: `large_tower` is 49 px and found 97%; `jammer` is 48 px
+  and found 6%. Size is not the cause, which is why L2, imgsz 2560 and the P2
+  head never moved these classes.
+
+## What is still broken, for whoever picks this up
+
+Roughly half of every object's frames are **out of view**, carried by memory.
+Carrying is worth as much as detection and it is very uneven -- after the box
+fix, `large_tower` carries 0.98 and `jet_plane` 0.93, but `spacecraft` 0.18
+and `jammer` 0.21. `spacecraft` is also genuinely blind: a third of its
+in-view frames have nothing near them at all.
+
+Those need the tracking path (MAX_MISSES, track creation), which **cannot be
+tested offline without a GPU** -- `score_offline --replay` needs model
+detections. That is the next real lever.
