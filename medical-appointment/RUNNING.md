@@ -1,6 +1,30 @@
 # Medical appointment serving state
 
-## FINAL BUILD (locked 2026-09-19) — read this first
+## CURRENT BUILD (2026-09-20 06:05 CEST) — validated 0.8307888
+
+The locked 0.8167711 build plus one change: **evidence spans are the medoid of three
+independent producers** — stage B's quote, the trained span extractor, and a new listwise
+span ranker. Platform validation returned **0.8307887829**, zero errors, +0.0140177 over
+the locked build, and hidden mean tIoU moved 0.69462 -> 0.71798.
+
+| Piece | Value |
+| --- | --- |
+| Everything else | exactly the locked configuration below |
+| Vote | `MEDICAL_EVIDENCE_RANKER=1` (medoid in `pipeline/runtime.py::_rank_evidence`) |
+| Ranker | `MEDICAL_RANKER_MODEL=/workspace/medical-evidence-training-codex/runs/rank-fit-001/model` |
+| Extractor | `MEDICAL_EXTRACTOR_MODEL=/workspace/medical-evidence-training-codex/runs/fit-extractor-001/model` |
+| Start it | `ssh vast '/workspace/serve_ranker.sh 0.24'` (kept at `tools/serving/serve_ranker.sh`) |
+
+Both checkpoints live on instance 51489967's disk, so the build cannot be served from
+anywhere else without copying them. Out-of-fold evidence, seed sensitivity and the rules
+that lost are in [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md).
+
+**Restart order matters:** starting training while vLLM is still loading kills vLLM with
+`No available memory for the cache blocks`, and it stays EXITED under supervisor. Wait for
+`curl 127.0.0.1:18000/v1/models` before any GPU job, and check `supervisorctl status vllm`
+afterwards.
+
+## PREVIOUS FINAL BUILD (locked 2026-09-19) — the fallback
 
 Best validated **0.8167711209** (attempt `b524ca41`), from 0.7431 at the start of the day.
 Five validations of this configuration returned 0.81658-0.81677, a spread of 0.0002, so it

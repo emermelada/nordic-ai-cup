@@ -497,6 +497,9 @@ class Runner:
                                      self.args.stride)
         self.emit('pretrain_features', train=len(features), dev=len(dev_features))
         model = build_model(self.args.model, device=self.device, dropout=self.args.dropout)
+        if self.args.ranker_state:
+            model.load_state_dict(torch.load(self.args.ranker_state, map_location='cpu'))
+            model.to(self.device)
 
         def evaluate(current):
             spans = predict(current, dev_records, dev_features, self.tokenizer, self.device,

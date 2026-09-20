@@ -1,10 +1,15 @@
 # Evidence extractor experiments — 19–20 September 2026
 
-**Decision: retain the locked serving build.** Two GPU experiments were run. The
-first, on the original examples alone, was a clear regression. The second added
-external rationale supervision and **reversed that regression into a small gain
-of +0.0064 raw**, which is below the pre-registered +0.03 substantial-gain gate
-and inside its own confidence interval. Nothing was deployed.
+**Decision: the three-producer medoid is deployed and validated at 0.8307888**, up from
+the locked build's 0.8167711. What made the difference was not a better single evidence
+model but a third *independent* one: a listwise span ranker, which loses to stage B on its
+own and is worth +0.0176 raw out of fold as a voter. Details in
+[the vote section](#span-ranker-and-the-three-producer-vote--20-september-2026).
+
+Earlier in the same effort, two GPU experiments on the extractor alone: the first, on the
+original examples only, was a clear regression; the second added external rationale
+supervision and reversed it into +0.0064 raw, below the +0.03 gate and inside its own
+interval. That extractor is now the vote's second producer, which is where its value was.
 
 The second experiment's most useful output is not its headline: the trained
 extractor and the 27B evidence stage **disagree on 71 of 195 questions, and an
@@ -98,6 +103,98 @@ localization and a precise boundary, so the corpus sharpens boundaries and
 dilutes the 195 real examples that carry the occurrence convention. Generating
 more of it cannot fix that: the preference between two true passages is recorded
 nowhere except those 195 spans.
+
+## Span ranker and the three-producer vote — 20 September 2026
+
+The extractor scores a start and an end independently, so nothing in it can express a
+property of the span as a whole -- and "minimal self-contained span" is exactly such a
+property. `tools/evidence_training/ranker.py` adds a listwise ranker that scores each
+enumerated candidate as a unit from its start, end, mean and width representations, trained
+directly on temporal IoU.
+
+**The pool.** Sentence runs of one to four sentences plus comma-delimited clause spans,
+capped at 40 words. On the 195 public positives its oracle is **0.9243 mean tIoU (0.9546
+raw)**, so the pool is not the constraint; selection inside it is. Adding clause cuts at
+"and"/"so" would raise the oracle to 0.9389, and was left out rather than chosen by its
+effect on the folds.
+
+**Pretraining.** 30,000 CoQA and MASH-QA rationale questions in the same listwise form,
+one epoch (10 minutes on the RTX PRO 6000), starting from the extraction-pretrained
+encoder. External development word-span IoU over the pool reached 0.5584.
+
+**Alone it does not beat stage B.** Out of fold, three seeds:
+
+| Seed | Mean tIoU | Raw | vs control |
+| --- | ---: | ---: | ---: |
+| 17 | 0.718385 | 0.831031 | +0.001322 |
+| 18 | 0.693673 | 0.816204 | −0.013505 |
+| 19 | 0.707205 | 0.824323 | −0.005386 |
+
+**As a third voter it is worth an order of magnitude more.** The parameter-free medoid of
+stage B, the trained extractor and the ranker -- keep the span with the greatest total
+overlap with the others:
+
+| Voters | Raw | Gain | Conversation bootstrap 95% | Above zero |
+| --- | ---: | ---: | --- | ---: |
+| stage B + extractor + ranker (seed 17) | 0.850184 | **+0.020476** | [+0.007924, +0.033806] | 100% |
+| stage B + extractor + ranker (seed 19) | 0.849098 | +0.019389 | [+0.001777, +0.036941] | 98% |
+| stage B + extractor + ranker (seed 18) | 0.842495 | +0.012787 | [−0.004420, +0.029491] | 93% |
+| + retrieved variant as a fourth voter | 0.845287 | +0.015579 | [+0.004981, +0.026464] | 100% |
+| + no-draft variant as a fourth voter | 0.842753 | +0.013044 | [+0.004608, +0.021715] | 100% |
+| three seeds' scores averaged into one voter | 0.841321 | +0.011612 | [−0.004194, +0.026170] | 93% |
+| three seeds as three separate voters | 0.835514 | +0.005805 | [−0.016480, +0.027635] | 69% |
+
+Mean over seeds: **+0.0176 raw**. Leave-one-conversation-out selection over six rule
+families (ranker argmax, argmax restricted to candidates overlapping stage B, two local
+windows, the medoid, and a score-gated fallback) picks the medoid on all 39 splits, so the
+rule is not a family chosen by looking at the answer. Zero-overlap questions fall 21 -> 20
+and IoU >= 0.9 rises 105 -> 116.
+
+Two results worth keeping:
+
+- **Averaging seeds is the wrong ensemble here.** A score-averaged ranker agrees with the
+  other producers more, and the vote pays for disagreement: +0.0116 against +0.0176 for a
+  single seed. Diversity, not accuracy, is what the third voter contributes.
+- **More voters is not better.** Four and five producers both score below three.
+
+### A two-conversation development set cannot select a checkpoint
+
+The first CV run read **−0.0153 raw** and the reason was entirely procedural: folds 1 and 2
+selected epoch 1, because two development conversations saturate immediately (fold 1's dev
+tIoU was 0.9371 at the first evaluation and never beaten). Fold 0 trained seven epochs and
+gained +0.0103. `--select final` trains a fixed eight epochs and uses those two
+conversations for training instead, which turned fold 1 from −0.0333 to +0.0111.
+
+Anything selected on two conversations in this project should be treated the same way.
+
+### It transferred: 0.8307888 on the platform
+
+Validated 2026-09-20 04:00 UTC, zero errors, 4m49s for the 19 hidden conversations.
+
+| Build | Platform score | Against the locked build |
+| --- | ---: | ---: |
+| Locked (perq v3, rescue 0.24) | 0.8167711209 | — |
+| Evidence vote over prompt variants (reverted) | 0.8160730408 | −0.0006981 |
+| **stage B + extractor + ranker medoid** | **0.8307887829** | **+0.0140177** |
+
+Accuracy on the hidden set is 1.0000, so hidden mean tIoU moved **0.69462 -> 0.71798**,
++0.0234. The out-of-fold estimate for the deployed seed was +0.0205 and the mean over seeds
++0.0176, so this transferred at about 70-80% of its local estimate -- unlike the earlier
+prompt-variant vote, whose +0.0138 became −0.0007. Round trips on the hidden set were
+12-17 s against the 60 s budget, and the vote moved 0-4 spans per conversation.
+
+0.85 needs hidden tIoU 0.7500 and 0.90 needs 0.8333, so this closes about a sixth of the
+distance to 0.85 and a fifth of nothing to 0.90; the candidate-pool oracle says the
+remaining headroom exists, but capturing it needs a better selector, not a bigger pool.
+
+### The comparator rule fails, which sharpens why the medoid works
+
+Scoring all three producers' spans with the ranker and taking its argmax scores +0.0013,
+−0.0136 and −0.0054 across the three seeds -- indistinguishable from simply trusting the
+ranker, because its argmax usually *is* the highest-scoring of the three. A model's score
+over its own hypothesis space is not a comparator between systems; this is the same result
+the decode-margin chooser gave. **Agreement between producers is the signal; confidence is
+not.**
 
 ## Second experiment — external rationale pretraining, 20 September 2026
 
