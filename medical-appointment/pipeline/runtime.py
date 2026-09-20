@@ -148,6 +148,39 @@ def _vote_evidence(evidence, response, before, words, questions, duration, envel
         return response
 
 
+# Medoid of stage B, the trained extractor and the trained span ranker. Out of fold on the
+# public conversations this rule is worth +0.0205 raw, and it is parameter-free: only a
+# passage at least two producers place near wins, so no threshold is fitted to 39
+# conversations. Off unless the flag and both checkpoints are set.
+RANK_EVIDENCE = os.environ.get('MEDICAL_EVIDENCE_RANKER') == '1'
+
+
+def _rank_evidence(response, words, questions, deadline, trace=None):
+    """Replace each yes span with the medoid of three independent producers.
+
+    A question with fewer than three spans keeps stage B's, so a missing producer costs
+    the vote rather than the answer.
+    """
+    from pipeline.evidence import vote_response
+    from pipeline.extractor import predict_spans as extractor_spans
+    from pipeline.span_ranker import predict_spans as ranker_spans
+
+    try:
+        extracted = extractor_spans(words, questions, response.answers, deadline)
+        ranked = ranker_spans(words, questions, response.answers, deadline)
+        voted, changed = vote_response(response, [extracted, ranked])
+        if trace is not None:
+            trace['producer_vote'] = {
+                'extractor': {str(k): list(v) for k, v in extracted.items()},
+                'ranker': {str(k): list(v) for k, v in ranked.items()}, 'changed': changed}
+        logger.info('Producer vote: %d extractor span(s), %d ranker span(s), %d moved',
+                    len(extracted), len(ranked), changed)
+        return voted
+    except Exception:
+        logger.exception('Producer vote failed; keeping the stage-B spans')
+        return response
+
+
 def _make_backend():
     if os.environ.get('MEDICAL_BACKEND') == 'vllm':
         from pipeline.vllm_backend import VLLMBackend
@@ -273,6 +306,14 @@ class Pipeline:
                 raise RuntimeError('Previous inference worker is still alive')
             try:
                 self._start_locked()
+                if RANK_EVIDENCE:
+                    # Both run here, in the process that votes, not in the worker, so the
+                    # first conversation is not charged for loading them.
+                    from pipeline.extractor import warmup as warm_extractor
+                    from pipeline.span_ranker import warmup as warm_ranker
+
+                    warm_extractor()
+                    warm_ranker()
             except Exception:
                 self._retire_locked(time.monotonic() + self.cleanup_timeout)
                 raise
@@ -438,6 +479,9 @@ class Pipeline:
                             response = _vote_evidence(
                                 evidence, response, before_evidence, words, request.questions,
                                 duration, envelope, deadline, extend_replies, trace)
+                    if RANK_EVIDENCE:
+                        response = _rank_evidence(response, words, request.questions, deadline,
+                                                  trace)
                     if message.get('second'):
                         secondary_fallback = fallback.model_copy(deep=True)
                         # Missing or invalid secondary answers cannot veto the primary.
