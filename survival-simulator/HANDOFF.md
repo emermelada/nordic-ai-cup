@@ -17,11 +17,21 @@ Companion: PROJECT_STATE.md = authoritative state. This file covers only what is
 - `nac-watchdog` remains: no_agent bash, every 15 min, silent unless something breaks. Safe to keep or remove.
 
 ## 3. MUST NOT BREAK
-- Deployed controller: sha256(best_controller.py) = 252f0ba1... inside container nac-survival-vps,
-  52 params (genome_select 1.0, gs_w_energy 3.0, gs_topk 3.0, reserve_frac 0.0, evade_mode 0.0,
-  blind_explore_frac 0.12, wander_weight 0.03). Verify with:
-  docker exec nac-survival-vps sha256sum /app/best_controller.py
-- NEVER restart the container mid-validation: the grader runs 3-run attempts and the board keeps the best.
+- Deployed controller (as of 2026-09-20 11:26:35 UTC): sha256(best_controller-like hive on the graded box,
+  /opt/surv/hive.py) = **56489acf...** = the pathfinding controller that was live (7f3467cf) **plus the
+  stray-payload guard** (experiments/hive_pf_guard.py). /opt/surv/server.py = 68fac18e (adds
+  controller_sha256 + stray counters to GET /). Backups on the box: hive_pre_guard.py (7f3467cf),
+  server_pre_guard.py (d94e68d0). Verify with:
+  `curl -s https://survival.zaitzev.com/` (reports controller_sha256, strays, strays_restored,
+  games_seen) and `docker start nac-survival-vps` is the older fallback path (see ROLLBACK.md).
+  Deploy/rollback of the guard: `tools/ops/deploy_probe_guard.sh --verify|--rollback`.
+  Why it exists: FINDING_VALIDATION_PROBE_GUARD_2026-09-20.md — the platform injects a synthetic
+  sim_time-0.0 probe into the stream (once mid-game at 09:39:59) and the old reset-on-any-backward-jump
+  rule wiped the live game's state; measured cost on the old rule: -65 score mean, min -200 (n=6).
+- Container nac-survival-vps (heuristic hive 252f0ba1) is the pre-hive fallback; `/opt/surv/hive_prev_829e4147.bak`
+  and `hive_829e4147.py.bak` are the gold-hive copies. NEVER restart the container mid-validation: the
+  grader runs 3-run attempts and the board keeps the best. An attempt queued 10:51:45 was lost to a
+  11:01:17 restart of surv.service by another session.
 - NEVER deploy without >=40 paired seeds on seeds it was never screened on. Measured A/A noise floor is
   0.1-3% (identical configs differ on 5-7 of 40 seeds, occasionally 6 of 20), so effects under ~5% at
   20 seeds are unmeasurable. Two of my own arms reversed sign between screen and holdout.
