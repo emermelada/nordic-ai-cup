@@ -1955,3 +1955,49 @@ excluding it from L2 answers rather than abandoning the camera.
 
 Method note: `flyby.detect` returns 5-tuples since `AGREEMENT_WEIGHT` added the
 model index -- unpack defensively in any offline harness.
+
+## 2026-09-20 morning: Level 2 is dead with v9 too, and class suppression is a wash
+
+**The served configuration is unchanged**: `row0`, `LEVEL0_WEIGHT=1.5`, flat
+growth 1.3, five models at 960/1280/1280/2560/1280, `NEW_TRACK_CONFIDENCE=0.10`.
+
+### Level 2 with v9 in the stack: -0.075, confirmed on complete runs
+
+The overnight offline test predicted this would work: rendering 132 confirmed
+objects as both L1 and L2 views, L2 **found ~7 % more objects**, and v9 lost only
+0.043 of correct-class going to native scale against v8's 0.090, so the
+find x name product went 0.558 -> 0.581. It did not transfer.
+
+| arm | complete runs | mean |
+|---|---|---|
+| `row0` | 0.5391 | 0.5391 |
+| `hybrid` 1:7, same 5 models | **0.4597 / 0.4686** | **0.4642** |
+
+Both 249/249, camera verified (L0=2, L1=217, L2=30). **The offline proxy was
+wrong** -- it scored isolated views, while a real run couples tracking, camera
+dynamics and coverage. Note also the arm was less clean than intended:
+`hybrid` *replaces* `row0`, so it also drops from 67 Level-0 views to 2. Either
+way, **Level 2 is closed for good; do not test it again.**
+
+### `DRONE_SUPPRESS` of the four classes absent from our truth: a wash
+
+Suppressing `condor,ta-ta,medium_plane,medium_launcher` -- 27 % of all answers,
+and `medium_launcher` is the single most-emitted class against zero real objects.
+
+| | complete runs | all runs |
+|---|---|---|
+| `row0` | 0.5391 | 0.5395 (n=4) |
+| + suppress | 0.5379 / 0.5336 | 0.5494 (n=4) |
+
++0.0099 all-runs at **t=0.73**, and slightly negative on complete runs. The two
+high scores (0.5716, 0.5544) were both **incomplete runs** -- the same trap that
+produced false positives twice last night. Not shipped.
+
+It did answer the diagnostic question, though: **the score did not collapse**, so
+those four classes are not carrying a large share of the macro average. The
+denominator is not hiding headroom.
+
+**Mechanism worth recording anyway:** suppressing a class that wins a track's
+argmax promotes the runner-up, so this was never "remove wasted boxes" -- it was
+"let the true class through where a hallucination class had stolen the track".
+The idea is sound; the effect is just not there.
