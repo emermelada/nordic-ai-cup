@@ -2001,3 +2001,45 @@ denominator is not hiding headroom.
 argmax promotes the runner-up, so this was never "remove wasted boxes" -- it was
 "let the true class through where a hallucination class had stolen the track".
 The idea is sound; the effect is just not there.
+
+### A missing frame costs 0.0022 — so stop discarding incomplete runs
+
+Javier asked why incomplete runs kept scoring *higher* than complete ones. The
+obvious mechanism would be that skipping a frame removes more false positives
+than true positives from the global per-class ranking (our precision is
+0.04-0.10, so a frame contributes ~80 FPs against ~1-2 TPs). **Measured, that is
+false.** Dropping random frames from a complete recorded run and rescoring
+(`tools/frame_loss_cost.py`, 12 repeats per point):
+
+| frames dropped | offline score | delta |
+|---|---|---|
+| 0 | 0.42790 | — |
+| 1 | 0.42568 | -0.0022 |
+| 2 | 0.42352 | -0.0044 |
+| 5 | 0.41709 | -0.0108 |
+| 20 | 0.39627 | -0.0316 |
+| 40 | 0.36080 | -0.0671 |
+
+Perfectly monotonic at **-0.0022 per frame**.
+
+**So incomplete runs scoring high is not a mechanism, it is noise.** The
+frame-loss penalty for a typical 246-248 frame run is 0.004-0.007, while
+trajectory variance is +/-0.02 -- roughly ten times larger. The
+"249/249 or discard" rule was therefore throwing away two thirds of our data to
+avoid a small, known, *correctable* bias.
+
+**Use every run, corrected by `+0.0022 * (249 - frames)`.** That roughly triples
+the effective sample size, which matters because the evaluator has been dropping
+frames on about two runs in three. Applied to this morning:
+
+| arm | n | raw | corrected |
+|---|---|---|---|
+| `row0` validated | 4 | 0.5395 | **0.5450** |
+| + `DRONE_SUPPRESS` | 4 | 0.5494 | 0.5516 (t=0.43, wash) |
+| hybrid / Level 2 | 2 | 0.4642 | 0.4642 (dead) |
+
+No conclusion changes -- the crude rule happened to be safe -- but from here the
+correction is the better estimator.
+
+**The earlier claim in this file that "two missing frames cost 0.026" is wrong**
+by an order of magnitude; it was trajectory variance misattributed to frames.
