@@ -1,0 +1,87 @@
+[
+ {
+  "name": "cal00_all",
+  "tile": "2:480,270",
+  "answers": "data/probe/cal_all.json"
+ },
+ {
+  "name": "cal01_tank",
+  "tile": "2:1440,270",
+  "answers": "data/probe/cal_tank.json"
+ },
+ {
+  "name": "cal02_spacecraft",
+  "tile": "2:2400,270",
+  "answers": "data/probe/cal_spacecraft.json"
+ },
+ {
+  "name": "cal03_medium_plane",
+  "tile": "2:3360,270",
+  "answers": "data/probe/cal_medium_plane.json"
+ },
+ {
+  "name": "cal04_condor",
+  "tile": "2:480,810",
+  "answers": "data/probe/cal_condor.json"
+ },
+ {
+  "name": "cal05_medium_launcher",
+  "tile": "2:1440,810",
+  "answers": "data/probe/cal_medium_launcher.json"
+ },
+ {
+  "name": "cal06_ta-ta",
+  "tile": "2:2400,810",
+  "answers": "data/probe/cal_ta-ta.json"
+ },
+ {
+  "name": "cal07_small_launcher",
+  "tile": "2:3360,810",
+  "answers": "data/probe/cal_small_launcher.json"
+ },
+ {
+  "name": "cal08_jammer",
+  "tile": "2:480,1350",
+  "answers": "data/probe/cal_jammer.json"
+ },
+ {
+  "name": "cal09_large_tower",
+  "tile": "2:1440,1350",
+  "answers": "data/probe/cal_large_tower.json"
+ },
+ {
+  "name": "cal10_mine_roller",
+  "tile": "2:2400,1350",
+  "answers": "data/probe/cal_mine_roller.json"
+ },
+ {
+  "name": "cal11_small_plane",
+  "tile": "2:3360,1350",
+  "answers": "data/probe/cal_small_plane.json"
+ },
+ {
+  "name": "cal12_helicopter",
+  "tile": "2:480,1890",
+  "answers": "data/probe/cal_helicopter.json"
+ },
+ {
+  "name": "cal13_jet_plane",
+  "tile": "2:1440,1890",
+  "answers": "data/probe/cal_jet_plane.json"
+ },
+ {
+  "name": "cal14_small_tower",
+  "tile": "2:2400,1890",
+  "answers": "data/probe/cal_small_tower.json"
+ },
+ {
+  "name": "cal15_large_launcher",
+  "tile": "2:3360,1890",
+  "answers": "data/probe/cal_large_launcher.json"
+ },
+ {
+  "name": "cal16_hangar",
+  "tile": "2:480,270",
+  "answers": "data/probe/cal_hangar.json"
+ }
+]
