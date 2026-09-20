@@ -11,7 +11,9 @@ set -eu
 cd "$(dirname "$0")/.."
 SSH_ARGS="$*"
 HOST="${SSH_ARGS##* }"
-SCP_ARGS=$(printf '%s' "$SSH_ARGS" | sed 's/-p /-P /')
+# scp wants -P for the port, and must NOT be handed the host as an argument.
+PORT=$(printf '%s' "$SSH_ARGS" | tr ' ' '\n' | grep -A1 -x -- '-p' | tail -1)
+SCP_ARGS=${PORT:+-P $PORT}
 KEY=${KEY:-$HOME/.ssh/vast_medical}
 REMOTE=/workspace/drone-flyby
 say() { printf '\n== %s\n' "$*"; }
