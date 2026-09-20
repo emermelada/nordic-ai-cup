@@ -6,6 +6,27 @@ extractor run. Builds on
 and the saved control audit beside it. All figures are from the recomputed
 runtime-faithful control on the 390-question public set.
 
+## Measured on the platform, 2026-09-20: the answer half is finished
+
+A validation run with every evidence span deliberately collapsed returned
+**exactly 0.400**, and that score is `0.4 x accuracy` alone. So on the hidden set:
+
+| Quantity | Value |
+| --- | ---: |
+| Answer accuracy | **1.0000** |
+| Mean tIoU | **0.69462** |
+| Score | 0.8167711209 |
+| tIoU for 0.85 | 0.7500 (+0.055) |
+| tIoU for 0.895 | 0.8250 (+0.130) |
+
+**Spend nothing further on answers.** Accuracy is perfect, so the rescue
+threshold, the phonetic-name rule and every yes-rate argument are closed, and the
+0.4 term cannot grow. Each 0.01 of tIoU is worth 0.006 raw, and that is the only
+currency left.
+
+The hidden tIoU (0.6946) also sits below the public one (0.7183), so public
+measurements read about 0.024 tIoU optimistic before any other bias.
+
 ## The headroom is real and it is concentrated
 
 `raw = 0.4 × accuracy + 0.6 × tIoU`. Local accuracy is 1.000, so the whole
@@ -193,9 +214,11 @@ wholesale replacement it is not ready; as the component behind mechanisms 1 and
 2 it is. Full numbers in
 [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md).
 
-### 4. Answer side
+### 4. Answer side — closed
 
-Each 1% of accuracy is worth 0.004 raw. All that is established is
+Measured at accuracy 1.0000 on the hidden validation set, so there is nothing
+here at all. The reasoning below described an older build and no longer applies.
+Each 1% of accuracy would be worth 0.004 raw. All that is established is
 `false negatives − false positives = 3` on the hidden set, so the rescue
 threshold is worth calibrating, but this is a top-up, not a route.
 
@@ -232,6 +255,24 @@ Step 0 is done and it came back positive: external rationale supervision
 question the data program answers is what in-domain examples with the right span
 convention buy on top of that.
 
+## The hard part nobody has solved yet
+
+Locally, 53 of 195 questions carry 76% of the loss, and the research doc's
+examples show what they are. "Will the treatment last two weeks?" has gold
+"After a meal every day for two weeks." while the prediction "Sporanox, 100
+milligrams daily for two weeks." scores zero. Both are true, both name two weeks,
+and the annotators chose one. Likewise "Nothing abnormal to report." against
+"Your chest and heart both sound normal."
+
+These are **occurrence** failures, not comprehension or boundary failures, and the
+preference they encode exists in exactly one place: the 195 annotated spans.
+Generated data teaches clean localization, because a uniqueness filter keeps only
+spans that are the sole answer to their question, which is precisely the easy
+case. Nothing generated can teach which of two true passages an annotator picks.
+
+That is the wall between 0.695 and 0.825, and it is why the mechanisms above are
+worth single-digit thousandths while the target needs 0.130.
+
 ## How to verify anything here
 
 Same protocol every time, or the number means nothing:
@@ -251,6 +292,10 @@ Same protocol every time, or the number means nothing:
 
 - Locked build: **0.8167711209** platform, five validations spread 0.0002.
   Unchanged and still the thing to submit unless a candidate clears the gate.
+- The evidence vote was built, served and validated: **0.8160730408 twice**,
+  0.0007 below the locked build, then reverted. Its local 0.850 was inflated by
+  scoring an all-data extractor on its own training conversations; the honest
+  out-of-fold estimate was +0.0138 and the platform returned -0.0007.
 - Mixed-source pretraining complete: 0.8361 raw on the folds (+0.0064), the
   checkpoint kept at `/workspace/medical-evidence-training-codex/runs/pretrain-mix-001/model`
   on Vast 51489967 (stopped; disk retained). See
