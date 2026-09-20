@@ -18,8 +18,35 @@ third voter buys agreement, and the medoid is paid in disagreement.
 | Everything else | exactly the locked configuration below |
 | Vote | `MEDICAL_EVIDENCE_RANKER=1` (medoid in `pipeline/runtime.py::_rank_evidence`) |
 | Ranker | `MEDICAL_RANKER_MODEL=/workspace/medical-evidence-training-codex/runs/rank-fit-001/model` |
-| Extractor | `MEDICAL_EXTRACTOR_MODEL=/workspace/medical-evidence-training-codex/runs/fit-extractor-001/model` |
-| Start it | `ssh vast '/workspace/serve_ranker.sh 0.24'` (kept at `tools/serving/serve_ranker.sh`) |
+| Extractor | `MEDICAL_EXTRACTOR_MODEL=/workspace/medical-evidence-training-codex/runs/fit-extractor-002/model` |
+| Start it | `ssh vast '/workspace/serve_ranker.sh 0.24 <ranker dir> <extractor dir>'` (kept at `tools/serving/serve_ranker.sh`; the defaults still name `fit-extractor-001`, so pass both paths) |
+
+**The extractor checkpoint was deleted once and the build degraded silently.** On 2026-09-20 at
+09:04 UTC something removed `runs/fit-extractor-001/model/model.safetensors` (the disk was at
+86%), leaving its config and tokenizer behind. The endpoint still started and still answered:
+`pipeline/extractor.py` disables itself on a failed load by design, the vote then had only two
+spans per question, and `vote_response` keeps stage B's span when fewer than three are
+available. So the served build quietly stopped being the 0.8307888 build while looking healthy.
+**Check `grep 'Span extractor loaded' /workspace/api.log` after every start.**
+
+Rebuilding it takes 16 seconds of GPU from the surviving `runs/pretrain-mix-001/model`, using
+the arguments recorded in the original run's `manifest.json`:
+
+```bash
+.venv/bin/python -m tools.evidence_training.train --data dataset.json   --output runs/fit-extractor-002 --mode fit --model runs/pretrain-mix-001/model   --device cuda --epochs 1 --batch-size 4 --accumulation 4 --eval-batch-size 8   --evals-per-epoch 1 --patience 2 --learning-rate 1e-5 --max-length 512 --stride 192   --seed 17 --max-seconds 1800 --min-free-gb 20
+```
+
+The rebuild is not bit-identical (epoch loss 0.7100546 against the original 0.7103700, CUDA
+nondeterminism), so it was re-validated rather than assumed — and it **reproduced
+0.8307887829198248 exactly**, the third identical reading of this build.
+
+**What the degraded endpoint scored, and a second lesson.** A validation submitted at 11:34:46
+UTC by someone else ran against the endpoint while the extractor was missing *and* while the API
+was restarted underneath it, and returned **0.8110364** — below even the old locked build's
+0.8167711. Before restarting the serving process, check that no attempt is in flight: a null
+`finished_at` on `validations[0]` in the platform `/status` response, or recent 46.62.240.126
+lines in `/workspace/api.log`. A disrupted attempt reads exactly like a worse model. Every `--mode fit` and `--mode cv`
+run writes its full argument list to `manifest.json`, which is what made the recipe recoverable.
 
 Both checkpoints live on instance 51489967's disk, so the build cannot be served from
 anywhere else without copying them. Out-of-fold evidence, seed sensitivity and the rules
