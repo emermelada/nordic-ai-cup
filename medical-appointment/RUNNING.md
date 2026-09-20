@@ -4,8 +4,14 @@
 
 The locked 0.8167711 build plus one change: **evidence spans are the medoid of three
 independent producers** — stage B's quote, the trained span extractor, and a new listwise
-span ranker. Platform validation returned **0.8307887829**, zero errors, +0.0140177 over
-the locked build, and hidden mean tIoU moved 0.69462 -> 0.71798.
+span ranker. Platform validation returned **0.8307887829 twice, identically** (04:05 and
+04:39 UTC, zero errors both times), +0.0140177 over the locked build, and hidden mean tIoU
+moved 0.69462 -> 0.71798.
+
+A variant with a more heavily pretrained ranker (`rank2-fit-001`, better standalone and
+better out of fold) validated **0.8301335567** and was reverted. Do not swap the ranker
+checkpoint for a "better" one without a platform validation: in this vote, accuracy in the
+third voter buys agreement, and the medoid is paid in disagreement.
 
 | Piece | Value |
 | --- | --- |

@@ -187,6 +187,50 @@ prompt-variant vote, whose +0.0138 became −0.0007. Round trips on the hidden s
 distance to 0.85 and a fifth of nothing to 0.90; the candidate-pool oracle says the
 remaining headroom exists, but capturing it needs a better selector, not a bigger pool.
 
+### Round two: a second pretraining epoch, and what a better third voter is worth
+
+The first ranker was pretrained on 30,000 of the 43,812 available external questions for one
+epoch. A second epoch over all of them moved external development word-span IoU only
+0.5584 -> 0.5609, but it moved the fold results clearly, and it moved the *worst* seed most:
+
+| | Standalone mean tIoU (3 seeds) | Medoid gain (3 seeds) | Worst seed |
+| --- | --- | --- | ---: |
+| One epoch, 30k questions | 0.7184 / 0.6937 / 0.7072 | +0.0205 / +0.0128 / +0.0194 | +0.0128 |
+| **Two epochs, 43k questions** | **0.7264 / 0.7186 / 0.7118** | **+0.0225 / +0.0194 / +0.0191** | **+0.0191** |
+
+Mean medoid gain +0.0176 -> **+0.0203**, and the spread across seeds narrows from 0.0077 to
+0.0034. The standalone ranker is still no better than stage B on two of three seeds, so the
+vote remains the only way to collect it.
+
+That a nearly flat external metric (+0.0025) produced a visible fold improvement (+0.013
+standalone, +0.003 in the vote) is worth remembering: the external development score is a
+proxy for the transfer, not a measure of it, and it saturates well before the transfer does.
+
+**And the platform said no.** Served and validated 2026-09-20 04:29 UTC, zero errors:
+
+| Third voter | Out-of-fold gain (3 seeds) | Platform |
+| --- | ---: | ---: |
+| One epoch, 30k questions (`rank-fit-001`) | +0.0176 mean, +0.0205 seed 17 | **0.8307887829** |
+| Two epochs, 43k questions (`rank2-fit-001`) | +0.0203 mean, +0.0225 seed 17 | 0.8301335567 |
+
+**−0.0006552.** The build with the better ranker *and* the better out-of-fold estimate lost,
+and the platform resolves differences an order of magnitude smaller than this, so it is a
+real if small loss. `rank-fit-001` was restored.
+
+This is the third measurement of the same mechanism, and together they are the clearest
+statement of what a vote rewards:
+
+| Change to the third voter | Effect on the vote |
+| --- | ---: |
+| Average three seeds' scores (most accurate single voter) | +0.0116 |
+| Two epochs of pretraining (more accurate) | −0.0007 on the platform |
+| One epoch of pretraining (less accurate, more independent) | +0.0140 on the platform |
+
+**Making the third voter better makes the vote worse**, because accuracy buys agreement and
+the medoid is paid in disagreement. Do not tune a voter on its own score. The corollary for
+anyone extending this: the next gain is a *fourth kind* of producer, not a better third one,
+and four producers already measured below three, so it has to replace one.
+
 ### The comparator rule fails, which sharpens why the medoid works
 
 Scoring all three producers' spans with the ranker and taking its argmax scores +0.0013,
