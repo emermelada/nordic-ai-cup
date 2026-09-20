@@ -18,11 +18,18 @@ The lower tail improves too: p10 +84%, min +40%. Per-seed SD of the paired diffe
 
 CONFIRMED on a second, independent fresh block (seeds 300640-300679, 40 seeds, same horizon):
 
-| block | n | paired | W/L |
-|---|---|---|---|
-| 1 (300560-300639) | 80 | +3,406 | 65/15 |
-| 2 (300640-300679) | 39 | +2,835 | 30/9 |
-| **pooled** | **119** | **+3,219 +- 388, t = 8.30, +39.4%** | **95/24** |
+| block | n | paired | W/L | note |
+|---|---|---|---|---|
+| 1 (300560-300639) | 80 | +3,406 | 65/15 | |
+| 2 (300640-300679) | 39 | +2,835 | 30/9 | independent of block 1 |
+| 3 (seeds 101-140) | 40 | +2,299 +- 653, t = 3.52 | 29/11 | **the survival-v2 track's OWN seed block** |
+| **pooled** | **159** | **+3,042 +- 344, t = 8.84, +37.6%** | **124/35** | |
+
+Block 3 matters for a second reason: on that same block the survival-v2 track's own fastsim harness
+reported 1000 -> 1239 (+24%). This harness gets 843 -> 1073 (+27.3%) on it. The two harnesses differ in
+absolute level by ~13% but agree on the direction AND the size of hive's advantage, which is what a
+transfer argument needs. (Their absolute 1239 vs this harness's 1073 is a harness/measurement
+difference, not a disagreement about which controller is better.)
 
 Pooled means: heuristic 8,164 ticks (816 score) vs hive 11,383 ticks (1,138 score); p10 4,381 → 5,916;
 min 1,201 → 1,527. Two independent blocks agree, and the second does not depend on any seed the first

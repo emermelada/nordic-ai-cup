@@ -88,6 +88,29 @@
     "heuristic": 1201,
     "hive": 1527
    }
+  },
+  "block_3_sv2_own_block": {
+   "seeds": "101-140",
+   "n": 40,
+   "horizon": 18000,
+   "heuristic_mean_ticks": 8433,
+   "hive_mean_ticks": 10732,
+   "paired_delta_ticks": 2299,
+   "se": 653,
+   "t": 3.52,
+   "W": 29,
+   "L": 11,
+   "pct": 27.3,
+   "cross_harness_note": "the survival-v2 track's own fastsim reported 1000 -> 1239 (+24%) on this block; this harness gets 843 -> 1073 (+27.3%). Same direction and magnitude, ~13% absolute offset."
+  },
+  "pooled_all_three_blocks": {
+   "n": 159,
+   "paired_delta_ticks": 3042,
+   "se": 344,
+   "t": 8.84,
+   "W": 124,
+   "L": 35,
+   "pct": 37.6
   }
  },
  "training_time_and_compute": {
