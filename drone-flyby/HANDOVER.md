@@ -1857,3 +1857,49 @@ L0's weight does not add boxes; it changes which class a track resolves to when
 L0 and L1 sightings disagree. At imgsz 2560 an L0 view has the same
 cells-per-object as an L1 view had at 1280, so L0 sightings are about as
 informative as L1 ones -- and were being counted at 1.0 against L1's 0.8.
+
+### The night's remaining arms: one wash, two negatives
+
+All on the `row0` + 5-model + LW 1.5 base, all-runs means (the evaluator dropped
+frames on roughly two runs in three during this window, evenly across arms):
+
+| arm | n | mean | verdict |
+|---|---|---|---|
+| **base (LW 1.5)** | 5 | **0.5519** | the reference |
+| `UNSEEN_DECAY=1.0` | 5 | 0.5563 | **wash** -- t=0.41, and its only complete run (0.5415) is below the base's (0.5432). Higher variance too (sd 0.0198 vs 0.0140), which is the wrong direction for a one-shot attempt. Keep 0.97. |
+| `MISS_PENALTY=0.85` | 3 | 0.5288 | **negative**, ~-0.013 |
+| `RUNNER_UPS=1` | 3 | 0.5486 | **negative**, and it killed a theory -- see below |
+
+### The boxes-per-frame correlation was confounded
+
+Across ten runs spanning two arms, score correlated with boxes emitted per frame
+at **Pearson -0.655** -- the three highest-scoring runs averaged 80.7 boxes, the
+three lowest 83.5. With the stack now emitting ~81 boxes/frame against the old
+config's 13, `RUNNER_UPS=4` looked like a stale threshold in a 6x-changed
+regime, and cutting it to 1 was the obvious test.
+
+It cut boxes to ~67 as intended and **the score went down** (0.5486 against
+0.5519; complete runs 0.5381 against 0.5432). The correlation does not survive
+intervention -- it was trajectories that track fewer objects scoring differently
+for other reasons, not box volume causing the score. **Do not re-derive it.**
+
+This also resolves an apparent contradiction with the three suppression
+failures. Those demoted *whole tracks*, which are mostly real objects the truth
+file lacks. `RUNNER_UPS` demotes *duplicate class guesses on one track*, which
+is the one place a false positive really is false -- and it still did not help.
+
+### Timeouts cluster on early frames, not on Level-0 views
+
+One run returned 0.2704 with eight `did not answer within 3333 ms` errors, all
+on Level-0 requests. L0 is only 27 % of frames, so that looked causal. It is
+not:
+
+* service time L0 median 81 ms / p95 100 / max 171, against L1 76/83/92 -- both
+  far inside the 333 ms budget, and **the service answered every frame it
+  received**;
+* the L0 request payload is only **1.09x** an L1 one (1114 KB vs 1026 KB);
+* the timed-out frames were 1, 3, 8, 11, 18, 20, 26, 36 -- **all early in the
+  run**, and `row0` opens with L0 views.
+
+It is the same cold-connection TCP slow-start that costs frame 2 on roughly one
+run in four. Nothing on our side fixes it; do not spend runs chasing it.
