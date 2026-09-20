@@ -1,5 +1,18 @@
 # Route to 0.85 and 0.90 on evidence localization
 
+**Update, 2026-09-20 06:05 CEST — the first step is done and validated.** A medoid vote
+over three independently trained producers (stage B, the extractor, a new listwise span
+ranker) returned **0.8307888** on the platform, +0.0140 over the locked build, taking hidden
+mean tIoU from 0.69462 to **0.71798**. What this document called "the one thing that
+validated" was the right family; what it got wrong was assuming the third voter had to be a
+prompt variant. See [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md).
+
+Remaining distance, restated against the new baseline: **0.85 needs hidden tIoU 0.7500
+(+0.032), 0.90 needs 0.8333 (+0.115)**. The candidate-pool oracle is 0.9243 and the
+word-grid oracle 0.9859, so the room exists; nothing measured so far closes it, and the two
+routes that could — a chooser trained to rank spans, and in-domain data with the right span
+convention — are both now known to be harder than they looked (see the closing sections).
+
 Written 2026-09-20, updated with the measured results of the mixed-source
 extractor run. Builds on
 [research/evidence_research_20260919/RESEARCH.md](research/evidence_research_20260919/RESEARCH.md)
@@ -288,14 +301,18 @@ Same protocol every time, or the number means nothing:
 - Never run an experiment on the box while a scored attempt is in flight;
   contention has already cost 0.016 once.
 
-## Status when this was written
+## Status, updated 2026-09-20 06:05 CEST
 
-- Locked build: **0.8167711209** platform, five validations spread 0.0002.
-  Unchanged and still the thing to submit unless a candidate clears the gate.
-- The evidence vote was built, served and validated: **0.8160730408 twice**,
-  0.0007 below the locked build, then reverted. Its local 0.850 was inflated by
-  scoring an all-data extractor on its own training conversations; the honest
-  out-of-fold estimate was +0.0138 and the platform returned -0.0007.
+- Serving build: **0.8307887829** platform (three-producer medoid), zero errors, round
+  trips 12-17 s of a 60 s budget. This is the thing to submit.
+- Fallback: the locked **0.8167711209** build, five validations spread 0.0002.
+- The earlier vote over stage-B *prompt variants* validated **0.8160730408 twice** and was
+  reverted. Its honest out-of-fold estimate was +0.0138 and the platform returned -0.0007;
+  replacing one prompt-variant voter with a separately trained model turned the same rule
+  into +0.0140. **The voter's independence, not the rule, was the whole difference.**
+- Two measurement traps found and recorded: a two-conversation development set saturates and
+  selects epoch 1 (it faked a -0.0153 result), and averaging seeds into one voter lowers a
+  vote because it removes the disagreement the vote feeds on.
 - Mixed-source pretraining complete: 0.8361 raw on the folds (+0.0064), the
   checkpoint kept at `/workspace/medical-evidence-training-codex/runs/pretrain-mix-001/model`
   on Vast 51489967 (stopped; disk retained). See
