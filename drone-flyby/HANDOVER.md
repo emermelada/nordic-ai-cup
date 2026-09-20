@@ -1903,3 +1903,16 @@ not:
 
 It is the same cold-connection TCP slow-start that costs frame 2 on roughly one
 run in four. Nothing on our side fixes it; do not spend runs chasing it.
+
+### Operational note: never use bare `pkill` from this harness
+
+`pkill -f <pattern>` has killed my own shell mid-command **four times** across
+these two days, because the shell's command line contains the pattern. `pkill -x`
+avoids the self-match but not the wrong-target problem -- `pkill -x python3`
+would have taken the rented box's Jupyter with it, and an earlier
+`pkill -f train_remote` killed the wrapper while leaving its python child alive,
+holding 8.8 GB of VRAM and silently forcing a batch-size fallback that doubled a
+training run's length.
+
+Use a PID file (`tools/arm.sh` does) or `pgrep` the exact child and kill by
+number. It costs ten seconds and it has cost hours.
