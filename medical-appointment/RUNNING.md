@@ -1,6 +1,22 @@
 # Medical appointment serving state
 
-## CURRENT BUILD (2026-09-20 06:05 CEST) — validated 0.8307888
+## FINAL RESULT — evaluation 0.8222490889515863 (2026-09-20 12:38 UTC)
+
+The one evaluation attempt was submitted by the user against this build and returned
+**0.8222490889515863**, zero errors, 19 conversations in 9m53s. Nothing further is submittable:
+the track allows one attempt and it is spent.
+
+It landed 0.0086 below the same build's four identical validations (0.8307888). That is well
+inside the predicted spread: bootstrapping per-conversation results, a fresh 19-conversation draw
+carries **±0.0475 at 95%** (p5 0.79, median 0.83, p95 0.87), and a *perfect* selector over the
+candidate pool still spans ±0.022 on 19 conversations. The difference is which conversations were
+drawn, not the build.
+
+Day's arc: **0.7431 -> 0.8167711 (locked) -> 0.8307888 (validated) -> 0.8222491 (evaluated)**.
+
+The instance is stopped. Everything below describes the build that produced that score.
+
+## THE BUILD (2026-09-20 06:05 CEST) — validated 0.8307888 four times
 
 The locked 0.8167711 build plus one change: **evidence spans are the medoid of three
 independent producers** — stage B's quote, the trained span extractor, and a new listwise
