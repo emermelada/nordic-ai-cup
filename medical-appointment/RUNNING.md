@@ -16,6 +16,17 @@ Day's arc: **0.7431 -> 0.8167711 (locked) -> 0.8307888 (validated) -> 0.8222491 
 
 The instance is stopped. Everything below describes the build that produced that score.
 
+**The weights are off the box and on the Mac**, at `models/final-20260920/` (6.51 GB, 28 files,
+every one verified byte-for-byte against the source, gitignored). Its `README.md` says what each
+directory is and how to serve or verify the build. Contents: `rank-fit-001` (the deployed ranker)
+and `fit-extractor-002` (the deployed extractor), plus `pretrain-mix-001` and `rank-pretrain-001`,
+the two pretrained bases they were built from — the first cost 57 minutes of GPU and is the root of
+both producers. `Qwen/Qwen3.8-27B` is not included and is re-downloadable.
+
+The out-of-fold evidence is committed too, at `runs/rank-20260920/`, so
+`python -m tools.evidence_training.rules runs/rank-20260920/dump-s17.json` reproduces the deployed
+rule's +0.020476 from a clean checkout with no GPU and no weights.
+
 ## THE BUILD (2026-09-20 06:05 CEST) — validated 0.8307888 four times
 
 The locked 0.8167711 build plus one change: **evidence spans are the medoid of three
