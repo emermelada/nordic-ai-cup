@@ -152,7 +152,27 @@
   "diagnosed_fixes": [
    "L2 anchor 0.02 was ~100x too strong for this loss scale (contributing 0.002-0.02 against a policy term of ~0.002) -> 0.0002",
    "1500-tick horizon contained almost no extinctions (0-8%) so survival was invisible -> 6000-tick horizon (~30% of episodes end in extinction)"
-  ]
+  ],
+  "verdict": "no evidence of improvement over the incumbent. Independent fresh-seed verdicts at the full 18000-tick horizon: update 80 -394 +- 390 (t=-1.01, n=80, W/L 33/47); update 85 +114 +- 333 (t=0.34, n=80, W/L 40/40, p10 3959->4602, min 1988->875). A 6000-tick diagnostic on the same seeds: -290 +- 151 (t=-1.92, only 25/80 seeds discriminating). In-run 12-seed tripwire (+331) was a small-sample artifact.",
+  "continuity_lane": {
+   "script": "experiments/ppo_hive.py",
+   "base": "hive",
+   "status": "running",
+   "config": {
+    "workers": 24,
+    "episodes_per_update": 24,
+    "horizon": 2500,
+    "logstd_init": 0.25,
+    "entropy": 0.02,
+    "anchor": 0.0002
+   },
+   "first_update": {
+    "extinct_frac": 0.42,
+    "corr_mean_frac": 0.192,
+    "val_loss": 0.6,
+    "seconds": 311
+   }
+  }
  },
  "es": {
   "script": "experiments/es_rec.py",
@@ -190,7 +210,8 @@
     "head_L1": 0.11,
     "seconds": 2310
    }
-  }
+  },
+  "verdict": "no gain on either base. heuristic base: 2 generations, pop means -241 then +44, centre -81 +- 76 -> stopped. hive base: gen 0 pop mean +331 +- 202 (t=1.6), gen 1 centre -1640 +- 185 after one step. Diagnosis: the ES STEP, not the estimator, is now the problem -> needs a trust region (evaluate post-step centre, roll back unless better, shrink sigma on rejection). Candidate weights are now archived per generation."
  },
  "strongest_mechanism_discovered": {
   "positive": "the survival-v2 hive controller's dead-reckoning world model + genome/colony logic: +42.0% paired vs the served controller (t=7.78, n=80 fresh seeds)",
@@ -206,5 +227,6 @@
   "steering / FSM / target commitment (83.67% of agent-ticks see zero fruit)",
   "BC-cloned recurrent replacement (-16.8% paired)"
  ],
- "exact_next_experiment": "1) deploy hive to the graded endpoint (owner decision) after the running 40-seed second confirmation block; 2) re-base the residual ML (ES/PPO) on hive rather than the heuristic, since the same machinery is base-agnostic; 3) ES: continue es_rec.py to ~10 generations against the +400-tick bar; 4) PPO: continue to 300-500 updates then take the best checkpoint to a 160-seed paired verdict vs the frozen incumbent."
+ "exact_next_experiment": "1) Deploy hive to the graded endpoint (owner decision; staged plan with one-command rollback is written). 2) Continue ppo_hive.py, now running, since hive is the base that matters. 3) Give the ES a trust region (evaluate the post-step centre, roll back on degradation, shrink sigma on rejection) before spending more ES compute; the estimator is already sound. 4) Any candidate is judged only by a fresh-seed, full-horizon paired verdict (eval_ckpt.py).",
+ "answer_to_the_ml_question": "Can recurrent RL discover a policy that beats V2? Not in this budget and not on this base: one insignificant positive (ES on hive t=1.6), one indistinguishable-from-zero (PPO final t=0.34), one negative (PPO update-80 t=-1.0; 6000-tick diagnostic t=-1.92). Meanwhile an existing undeloyed hand-written controller (hive) is +37.6% (t=8.84) over the served one."
 }

@@ -126,3 +126,71 @@ Status at hand-off: updates 0–8 done, corr usage ~4% of the bound, no eval dev
 
 The controller the graded endpoint serves was never touched; `sha256(/app/best_controller.py)` stayed
 252f0ba1 throughout, and the container was never restarted (0 restarts).
+
+
+## 9. FINAL VERDICTS (end of the ML window)
+
+### 9.1 ES over the residual GRU — did not produce a gain on either base
+
+| run | base | result |
+|---|---|---|
+| `es_rec.py --base heuristic` (16 pairs, 24 seeds/gen, h6000) | served controller | gen 0 pop mean **-241** (4/16 pairs up), gen 1 **+44** (9/16), centre **-81 +- 76** (n=24). No signal in 2 generations; stopped and re-pointed. |
+| `es_rec.py --base hive` (12 pairs, 16 seeds/gen, h4500) | hive | gen 0 pop mean **+331 +- 202** (8/12 pairs up, t=1.6) - the only positive reading of the night; gen 1: the centre after ONE ES step measured **-1640 +- 185 (t=-8.9)** against hive. |
+
+The estimator rebuild (antithetic pairs, 24 seeds/generation, BASE arm every generation, weight-hash
+ledger, per-generation checkpoints, held-out centre evaluation) did its job: it produced a *measurable*
+answer instead of an unreadable one. The answer is that the ES step is the problem now, not the
+estimator: sigma=0.15 on the head is small enough to move nothing usable and large enough to destroy a
+tight local optimum in one averaged step. The diagnosed fix (written into the script) is a TRUST REGION -
+evaluate the post-step centre on a few seeds and roll back unless it improved, shrinking sigma on
+rejection. Candidate weights are now archived per generation as well, because gen 0's +331 could not be
+re-tested afterwards (only the centroid was saved) - a search's candidates are its deliverable.
+
+### 9.2 Recurrent residual PPO — did not beat the incumbent
+
+Served base, 86 updates, ~30 M agent-transitions, 26 parallel simulator environments, checkpoint per
+update, deterministic periodic evaluation. Two independent paired verdicts on fresh seeds at the FULL
+18,000-tick horizon:
+
+| checkpoint | seeds | paired | t | W/L | p10 | min |
+|---|---|---|---|---|---|---|
+| update 80 | 310000-310079 (80) | **-394 +- 390** (-4.7%) | -1.01 | 33/47 | - | - |
+| update 85 (final) | 310080-310159 (80) | **+114 +- 333** (+1.5%) | 0.34 | 40/40 | 3,959 -> 4,602 | 1,988 -> 875 |
+
+A horizon diagnostic on the same 80 seeds at 6,000 ticks gave -290 +- 151 (t=-1.92) with only 25 of 80
+seeds discriminating (the rest tie at the cap).
+
+**Verdict: no evidence that recurrent PPO improved on the incumbent.** The final point estimate is
+indistinguishable from zero (40/40 wins/losses, +1.5% +- 4.3%) and its worst case is 56% worse (875 vs
+1,988 ticks). Its in-run tripwire (+175, +331 on 12 fixed seeds at 6,000 ticks) was a small-sample
+artifact: the same policy measures -290 to -394 on 80 fresh seeds at the full horizon. This is the
+project's own rule restated by measurement - only a fresh-seed, full-horizon, paired verdict counts.
+
+Two real defects were found and fixed mid-run (both would have silently produced a null):
+1. **The L2 anchor was ~100x too strong for this loss scale** (it contributed 0.002-0.02 against a policy
+   term of ~0.002, pinning the corrections at zero). Set to 0.0002.
+2. **The 1,500-tick training horizon contained almost no deaths** (extinct 0-8%), so survival - the thing
+   being optimised - was invisible to the learner. Moved to 6,000 ticks, where ~30% of episodes end in
+   extinction. (The hive-base continuity lane at 2,500 ticks sees 42% extinctions.)
+
+### 9.3 Running when this window closed
+
+`ppo_hive.py` on the 64-core box: the same recurrent residual PPO sitting on **hive** rather than the
+served heuristic (base hive 829e4147), zero-change contract verified (actor output exactly 0 at init),
+50 -> 24 workers, checkpointing every update, deterministic paired evaluation every 20 updates. This is
+the lane worth continuing: hive is +37.6% over what is deployed, so a percentage point found there is
+worth more than the same point found on the incumbent, and hive is where the score will come from if the
+deployment is approved.
+
+### 9.4 The honest summary of the ML question
+
+"Can recurrent RL discover a policy that beats V2?" - **Not in this budget, and not on this base.** Two
+independent searches (antithetic ES, recurrent residual PPO) with ~30 M simulator transitions, a
+rebuilt estimator and two diagnosed-and-fixed defects produced: one statistically insignificant positive
+reading (ES on hive, t=1.6), one point estimate indistinguishable from zero (PPO final, t=0.34), and one
+negative (PPO update-80 and the 6,000-tick diagnostic, t=-1.0 to -1.9). Meanwhile a hand-written
+controller that already existed, and was never deployed, is +37.6% (t=8.84) over the one that is.
+
+The highest-value action available is therefore not more ML on the incumbent: it is deploying hive
+(`DEPLOY_PLAN_HIVE_2026-09-20.md`), and then re-basing the residual ML on hive, since every script here
+(`es_rec.py --base hive`, `ppo_hive.py`, `eval_ckpt.py --base hive`) already takes the base as a switch.

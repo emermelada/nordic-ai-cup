@@ -22,6 +22,15 @@ WHAT WAS WRONG WITH THE PREVIOUS ES REGIME (measured, not assumed)
     * an archive of the best centres is retained - the centre is never blindly replaced by the
       single luckiest arm.
 
+DIAGNOSED NEXT FIX (from the two runs on 2026-09-20, neither of which beat the base)
+  The estimator is now adequate but the STEP is not trusted: sigma=0.15 on the head is small enough to
+  show nothing (pop mean +331 +- 202 on the hive base, t=1.6) and large enough that one update moved the
+  centre to -1640 +- 185 (-8.9 sigma) against hive - a tight local optimum is destroyed by a single
+  averaged step. The fix is a trust region: after the step, evaluate the new centre on a few seeds and
+  KEEP THE OLD CENTRE unless the new one is better (rollback), shrinking sigma when a step is rejected.
+  Never commit a centre that has not been measured. Also: the candidate archive below exists because the
+  one interesting signal (above) could not be re-measured - candidates are the deliverable of a search.
+
 ZERO-CHANGE PATH  the actor head is zero-initialised, so generation 0's centre reproduces V2 exactly.
 
     python3 es_rec.py --workers 56 --out /opt/nac_h2h/es2
@@ -110,7 +119,7 @@ def gen_eps(gen, i, sign, shapes, sigmas):
 
 
 # --------------------------------------------------------------------------------------- rollout
-def _mem_update(s, m, bc, n_agents):
+def _mem_update(s, m, bc, n_agents, tick=None):
     energy = float(s.get("energy", 0.0) or 0.0)
     pe = m.get("e")
     inc = 0.0 if pe is None else max(0.0, energy - pe) + 0.1
@@ -126,20 +135,25 @@ def _mem_update(s, m, bc, n_agents):
     else:
         m["tf"] = m.get("tf", 0.0) + 1.0
         m["df"] = m.get("df", 0.0) + float(s.get("speed", 10.0) or 10.0) * 0.12
-    m["tick"] = float(bc._SIM_TICK)
+    m["tick"] = float(tick) if tick is not None else float(bc._SIM_TICK)
     m["n_agents"] = float(n_agents)
-    if bc._GS_LAST is not None:
+    if bc is not None and bc._GS_LAST is not None:
         m["rank"] = float(bc._GS_LAST[1])
     m["e"] = energy
     return m
 
 
 def run_arm(job):
-    """One (arm, seed) episode. weights=None => the exact incumbent (BASE)."""
-    arm, seed, horizon, params_path, weights = job
+    """One (arm, seed) episode. weights=None => the exact base policy.
+
+    base 'heuristic': best_controller.py + the deployed 52-key params (what survival.zaitzev.com serves)
+    base 'hive'     : the survival-v2 controller (hive.py 829e4147), which measured +39.4% over the
+                      heuristic on 119 fresh paired seeds. hive keeps its own genome/colony/breeding
+                      logic; the residual only adds bounded movement direction/magnitude corrections.
+    """
+    arm, seed, horizon, params_path, weights, base = job
     import torch
     torch.set_num_threads(1)
-    import best_controller as bc
     from src.core import SimulationCore
     from src.utils.DTOs import ActionRequest
     try:
@@ -148,13 +162,22 @@ def run_arm(job):
             net = make_net()
             net.load_state_dict({k: torch.tensor(v) for k, v in weights.items()})
             net.eval()
-        P = dict(bc.DEFAULT_PARAMS)
-        with open(params_path) as f:
-            P.update(json.load(f))
+        pol = None
+        bc = None
+        if base == "hive":
+            from hive_v2 import Hive
+            pol = Hive(seed=seed)
+        else:
+            import best_controller as bc_mod
+            bc = bc_mod
+            P = dict(bc.DEFAULT_PARAMS)
+            with open(params_path) as f:
+                P.update(json.load(f))
+            pol = bc.make_policy(P)
         random.seed(seed)
         np.random.seed(seed)
-        bc.reset_memory()
-        base = bc.make_policy(P)
+        if bc is not None:
+            bc.reset_memory()
         core = SimulationCore(env_width=1600, env_height=1200, chunk_size=400, starting_agents=5,
                               starting_predators=0, starting_fruits=32, starting_trees=50, seed=seed)
         memo, hid = {}, {}
@@ -169,28 +192,60 @@ def run_arm(job):
             if not states:
                 break
             acts = []
-            for s in states:
-                aid = s["agent_id"]
-                dist, dr, turn, spawn = base(s)
-                if net is not None:
-                    m = _mem_update(s, memo.setdefault(aid, {}), bc, len(states))
-                    x = np.asarray(build_v2(s, m), np.float32)
-                    with torch.no_grad():
-                        mu, hnew = net(torch.tensor(x)[None, None, :], hid.get(aid))
-                        hnew = torch.clamp(hnew, -10.0, 10.0)
-                        a2 = (torch.tanh(mu[0, 0]) * torch.tensor(CORR)).numpy()
-                    hid[aid] = hnew
-                    csum += float(np.abs(a2).mean())
-                    cmax = max(cmax, float(np.abs(a2).max()) / float(CORR.max()))
-                    cn += 1
-                    sprint = max(1.0, float(s.get("sprint_speed", 20.0) or 20.0))
-                    if a2[0] != 0.0:
-                        dr = dr + float(a2[0])
-                    if a2[1] != 0.0:
-                        dist = dist + float(a2[1]) * sprint
-                acts.append((aid, ActionRequest(agent_id=aid, move_distance=float(dist),
-                                                move_direction=float(dr), turn_angle=float(turn),
-                                                spawn_agent=bool(spawn))))
+            if base == "hive":
+                out = pol.decide({"agent_status": states, "sim_time": i / 10.0, "n_agents": len(states)})
+                byid = {st["agent_id"]: st for st in states}
+                for d in (out or []):
+                    aid = d.get("agent_id")
+                    st = byid.get(aid)
+                    if st is None:
+                        continue
+                    dr = float(d.get("move_direction", 0.0) or 0.0)
+                    dist = float(d.get("move_distance", 0.0) or 0.0)
+                    turn = float(d.get("turn_angle", 0.0) or 0.0)
+                    spawn = bool(d.get("spawn_agent", False))
+                    if net is not None:
+                        m = _mem_update(st, memo.setdefault(aid, {}), None, len(states), tick=i / 10.0)
+                        x = np.asarray(build_v2(st, m), np.float32)
+                        with torch.no_grad():
+                            mu, hnew = net(torch.tensor(x)[None, None, :], hid.get(aid))
+                            hnew = torch.clamp(hnew, -10.0, 10.0)
+                            a2 = (torch.tanh(mu[0, 0]) * torch.tensor(CORR)).numpy()
+                        hid[aid] = hnew
+                        csum += float(np.abs(a2).mean())
+                        cmax = max(cmax, float(np.abs(a2).max()) / float(CORR.max()))
+                        cn += 1
+                        sprint = max(1.0, float(st.get("sprint_speed", 20.0) or 20.0))
+                        if a2[0] != 0.0:
+                            dr = dr + float(a2[0])
+                        if a2[1] != 0.0:
+                            dist = max(0.0, dist + float(a2[1]) * sprint)
+                    acts.append((aid, ActionRequest(agent_id=aid, move_distance=dist,
+                                                    move_direction=dr, turn_angle=turn,
+                                                    spawn_agent=spawn)))
+            else:
+                for st in states:
+                    aid = st["agent_id"]
+                    dist, dr, turn, spawn = pol(st)
+                    if net is not None:
+                        m = _mem_update(st, memo.setdefault(aid, {}), bc, len(states))
+                        x = np.asarray(build_v2(st, m), np.float32)
+                        with torch.no_grad():
+                            mu, hnew = net(torch.tensor(x)[None, None, :], hid.get(aid))
+                            hnew = torch.clamp(hnew, -10.0, 10.0)
+                            a2 = (torch.tanh(mu[0, 0]) * torch.tensor(CORR)).numpy()
+                        hid[aid] = hnew
+                        csum += float(np.abs(a2).mean())
+                        cmax = max(cmax, float(np.abs(a2).max()) / float(CORR.max()))
+                        cn += 1
+                        sprint = max(1.0, float(st.get("sprint_speed", 20.0) or 20.0))
+                        if a2[0] != 0.0:
+                            dr = dr + float(a2[0])
+                        if a2[1] != 0.0:
+                            dist = dist + float(a2[1]) * sprint
+                    acts.append((aid, ActionRequest(agent_id=aid, move_distance=float(dist),
+                                                    move_direction=float(dr), turn_angle=float(turn),
+                                                    spawn_agent=bool(spawn))))
             core.step(acts)
             keep = {a.agent_id for a in core.env.agents}
             hid = {k: v for k, v in hid.items() if k in keep}
@@ -214,6 +269,8 @@ def main():
     ap.add_argument("--holdout-seeds", type=int, default=40)
     ap.add_argument("--holdout-every", type=int, default=3)
     ap.add_argument("--params", default=os.path.join(ROOT, "best_controller", "params.json"))
+    ap.add_argument("--base", default="heuristic", choices=["heuristic", "hive"],
+                    help="controller the residual sits on")
     ap.add_argument("--smoke", action="store_true")
     a = ap.parse_args()
     if a.smoke:
@@ -244,7 +301,7 @@ def main():
 
     # receipt: the centre at generation 0 must be exactly V2 (zero head)
     zh = float(np.abs(centre["mu.weight"]).max()) + float(np.abs(centre["mu.bias"]).max())
-    print(f"es_rec | pairs {a.pairs} | seeds/gen {a.seeds} | horizon {a.horizon} | workers {a.workers}"
+    print(f"es_rec | base {a.base} | pairs {a.pairs} | seeds/gen {a.seeds} | horizon {a.horizon} | workers {a.workers}"
           f" | obs dim {V2_DIM} | head L1 at centre = {zh:.3g} (0 => policy == V2)", flush=True)
 
     for gen in range(start_gen, a.gens):
@@ -263,7 +320,7 @@ def main():
         jobs = []
         for k, w in arms.items():
             for s in seeds:
-                jobs.append((k, s, a.horizon, a.params, w))
+                jobs.append((k, s, a.horizon, a.params, w, a.base))
         with ctx.Pool(a.workers, maxtasksperchild=1) as pool:
             out = []
             with open(LEDGER, "a") as f:
@@ -303,6 +360,24 @@ def main():
                 diffs[i] = float(np.mean(d))
         fits = np.array([diffs[i] for i in sorted(diffs)], float)
 
+        # ---- archive the top candidates BEFORE the centre moves. The hive-base run produced a
+        # +331 population mean at gen 0 that could not be re-tested afterwards, because only the
+        # centroid was checkpointed and the perturbation RNG state was not recoverable. Candidates
+        # are the deliverable of a search, so they must survive the generation that made them.
+        if len(diffs):
+            order = np.argsort([-diffs[i] for i in sorted(diffs)])
+            ids_sorted = sorted(diffs)
+            for rank, oi in enumerate(order[:2]):
+                i = ids_sorted[int(oi)]
+                cand = {k: (centre[k] + eps[("p", i)][k]).astype(np.float32) for k in centre}
+                np.savez(os.path.join(a.out, f"cand_g{gen}_r{rank}.npz"), **cand)
+                with open(os.path.join(a.out, "candidates.jsonl"), "a") as f:
+                    f.write(json.dumps({"gen": gen, "rank": rank, "eps_idx": i,
+                                        "file": f"cand_g{gen}_r{rank}.npz",
+                                        "paired_vs_base_sample": diffs[i]}) + "\n")
+                    f.flush()
+                    os.fsync(f.fileno())
+
         # ---- ES update: rank-normalised antithetic differences, direction = the stored eps
         if len(fits) >= 4 and fits.std() > 0:
             rank = np.argsort(np.argsort(fits)).astype(float)
@@ -327,8 +402,8 @@ def main():
         ho = None
         if a.holdout_every and (gen + 1) % a.holdout_every == 0:
             hs = list(range(a.holdout_base + gen * 100, a.holdout_base + gen * 100 + a.holdout_seeds))
-            hjobs = [("0", s, 18000, a.params, None) for s in hs] + \
-                    [("centre", s, 18000, a.params, dict(centre)) for s in hs]
+            hjobs = [("0", s, 18000, a.params, None, a.base) for s in hs] + \
+                    [("centre", s, 18000, a.params, dict(centre), a.base) for s in hs]
             with ctx.Pool(min(a.workers, len(hjobs)), maxtasksperchild=1) as pool:
                 hres = pool.map(run_arm, hjobs)
             ht = {}
