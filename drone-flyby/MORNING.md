@@ -86,6 +86,27 @@ apparent object size as L1@2560 **with real detail at a quarter of the compute**
 | ~0.55 and `hangar`/`mine_roller` drop | blurry-patch mechanism confirmed | the retrain is the unlock — `PLAN_TO_08.md` §2, §5 |
 | < 0.53 | L2 is dead on this detector | knob queue below |
 
+### Variant worth one run: targeted L2 instead of blanket L2
+
+`DRONE_INSPECT=1` zooms to Level 2 **only on small tracks whose class is still
+unsettled**, then resumes the sweep. That is strictly better targeted than the
+hybrid's blind duty cycle — it spends native-resolution views exactly where the
+uncertainty is. **It has never had a real run.** It was rejected by
+`tools/simulate.py`, which HANDOVER itself says was wrong about the camera.
+
+Two cautions:
+
+* **It may not fire at all.** It needs a track under `INSPECT_MAX_SIDE=60`
+  source px, above `INSPECT_MAX_Y=1500`, with class vote share below
+  `INSPECT_SURE_SHARE=0.75` *and* confidence below 0.6. With five models voting,
+  most tracks are settled well past 0.75. Check the served log for `L2` lines —
+  if there are none, the arm measured nothing.
+* If it does not fire, loosen it and retry:
+  `DRONE_SET=...,INSPECT_SURE_SHARE=0.95,INSPECT_MAX_SIDE=80,INSPECT_EVERY=3`
+
+It cannot be validated offline — a camera simulator with no detections has no
+tracks to inspect, so this needs real runs or `tools/camera_sim.py`.
+
 ---
 
 ## Worth one run whatever else happens: how many classes are actually scored?
