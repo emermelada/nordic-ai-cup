@@ -133,13 +133,23 @@ def windows(record, tokenizer, max_length=512, stride=192):
     result = []
     for window in [context, *context.overflowing]:
         encoded = backend.post_process(question, window, add_special_tokens=True)
-        ids, offsets = encoded.ids, encoded.offsets
+        ids = encoded.ids
         if len(ids) > max_length:
             raise ValueError('Window construction exceeded model context length')
         cls = ids.index(tokenizer.cls_token_id)
+        # Offsets are read from the window before pairing, not from the paired encoding.
+        # RoBERTa's post-processor trims each token's leading space a second time, which
+        # moves a word's first character out of its own token; post-processing only wraps
+        # the context tokens, so their order and count are unchanged.
+        positions = [ti for ti, seq in enumerate(encoded.sequence_ids) if seq == 1]
+        if len(positions) != len(window.ids):
+            raise ValueError('Pairing changed the context tokens; cannot align words')
+        offsets = window.offsets
         start_token, end_token = {}, {}
-        for ti, ((left, right), seq) in enumerate(zip(offsets, encoded.sequence_ids)):
-            if seq != 1 or right <= left:
+        overlap_first, overlap_last = {}, {}
+        for local, (left, right) in enumerate(offsets):
+            ti = positions[local]
+            if right <= left:
                 continue
             lo, hi = bisect_right(ends, left), bisect_left(starts, right) - 1
             if lo > hi or lo >= len(starts) or hi < 0:
@@ -148,6 +158,15 @@ def windows(record, tokenizer, max_length=512, stride=192):
                 start_token[lo] = ti
             if left < ends[hi] <= right:
                 end_token[hi] = ti
+            # Some tokenizers report offsets that miss a word's first character: RoBERTa's
+            # post-processor trims the leading space a second time, so "Doctor" at 9-15
+            # arrives as 10-15 and matches no boundary exactly. Overlap is the fallback.
+            overlap_first.setdefault(lo, ti)
+            overlap_last[hi] = ti
+        for word, ti in overlap_first.items():
+            start_token.setdefault(word, ti)
+        for word, ti in overlap_last.items():
+            end_token.setdefault(word, ti)
         result.append({
             'cls': cls,
             'inputs': {k: v for k, v in {'input_ids': ids, 'attention_mask': encoded.attention_mask,
