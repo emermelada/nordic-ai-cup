@@ -157,6 +157,60 @@ Two results worth keeping:
   single seed. Diversity, not accuracy, is what the third voter contributes.
 - **More voters is not better.** Four and five producers both score below three.
 
+### The offline sweep after 0.8307888: what is left and what is closed
+
+With the three producers' out-of-fold spans on disk, a lot of ideas cost nothing to test.
+Almost all of them are closed. Structure first — the medoid's error is not spread evenly:
+
+| Group | Questions | Medoid tIoU | Oracle over the three | Points left |
+| --- | ---: | ---: | ---: | ---: |
+| All three producers agree (within 0.9) | 97 | 0.8182 | 0.8182 | 0.0 |
+| They disagree | 98 | 0.6831 | 0.8194 | **13.4** |
+
+**Agreement is a correctness signal**: where the three agree the medoid already equals the
+oracle, and where they disagree it captures about a third of what is there. On the 98
+disagreements the sole-best producer is nearly uniform — stage B 20, extractor 10, ranker 11,
+57 ties — which is exactly why picking the middle one leaves 13.4 points (+0.041 raw) behind.
+Separately, **14 questions have no producer in the right region at all**, 29% of the
+remaining leak, and no selection rule can reach those.
+
+Producer redundancy, measured pairwise (seed 17):
+
+| Pair | Agree within 0.9 | Disjoint | Pair oracle |
+| --- | ---: | ---: | ---: |
+| stage B + extractor | 63.1% | 7.7% | 0.802914 |
+| stage B + ranker | 57.9% | 5.6% | 0.791963 |
+| **extractor + ranker** | **70.3%** | 6.2% | **0.790308** |
+
+The extractor and the ranker are the redundant pair — the same base encoder and the same
+external corpus — and the three-way oracle is 0.8188 tIoU, **0.8913 raw**. So the room is in
+replacing one of those two with something genuinely independent.
+
+What was tested and did not clear the deployed rule (all out of fold, three seeds, mean gain):
+
+| Idea | Mean gain | Verdict |
+| --- | ---: | --- |
+| Deployed: medoid of the three | +0.0176 | baseline for this table |
+| Componentwise median of start and end | +0.0198 | better on 3/3 seeds, by +0.002 — the same margin the platform rejected in round two |
+| Pair union / pair intersection / pair medoid | +0.0157 to +0.0183 | indistinguishable |
+| Componentwise **mean** | −0.0202 | one outlier drags the span; never average spans |
+| Fourth voter (retrieved variant) everywhere | +0.0148 | dilutes |
+| Fourth voter only where the three disagree | +0.0149 | **targeting changes nothing**: a fourth span rarely moves a medoid the other three already agree on, so the dilution is on the disagreements themselves |
+| Five voters on the disagreements | +0.0182 | within noise, more machinery |
+| Non-neural lexical producer (BM25 over the pool) | −0.0002 to +0.0162 | **too weak**: 0.4038 tIoU standalone against the neural producers' 0.72 |
+| Ranker score as a comparator between producers | −0.0054 | confidence is not a comparator |
+
+Two refinements to the diversity rule come out of this:
+
+- **A voter must be independent *and* comparable in quality.** The lexical producer is the
+  most independent thing available — it agrees with stage B on 33.8% of questions against the
+  ranker's 57.9% — and it still hurts, because at 0.40 tIoU it pulls the medoid off good
+  spans. Independence is necessary, not sufficient.
+- **Nested selection between near-identical rules costs more than it gains.** Choosing among
+  these six families leave-one-conversation-out landed at +0.0218, +0.0124 and +0.0125 across
+  seeds, below simply fixing the median rule (+0.0198). When candidate rules differ by less
+  than the seed spread, pick one on principle and stop measuring.
+
 ### A two-conversation development set cannot select a checkpoint
 
 The first CV run read **−0.0153 raw** and the reason was entirely procedural: folds 1 and 2
