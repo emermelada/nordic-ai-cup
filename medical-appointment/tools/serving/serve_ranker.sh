@@ -3,7 +3,7 @@
 # Usage: serve_ranker.sh <rescue threshold> [ranker model dir] [extractor model dir]
 # Spans become the medoid of stage B, the extractor and the ranker.
 cd /workspace/medical-appointment
-ENV="MEDICAL_ASR_MODE=base MEDICAL_EVIDENCE_MODE=perq MEDICAL_EVIDENCE_PROMPT=v3 MEDICAL_ANSWER_PROMPT=named MEDICAL_RESCUE_PHONETIC=1 MEDICAL_RESCUE_READING=turbo MEDICAL_RESCUE_THRESHOLD=$1 ASR_CPU_THREADS=16 MEDICAL_EVIDENCE_RANKER=1 MEDICAL_RANKER_MODEL=${2:-/workspace/medical-evidence-training-codex/runs/rank-fit-001/model} MEDICAL_EXTRACTOR_MODEL=${3:-/workspace/medical-evidence-training-codex/runs/fit-extractor-001/model}"
+ENV="MEDICAL_ASR_MODE=base MEDICAL_EVIDENCE_MODE=perq MEDICAL_EVIDENCE_PROMPT=v3 MEDICAL_ANSWER_PROMPT=named MEDICAL_RESCUE_PHONETIC=1 MEDICAL_RESCUE_READING=turbo MEDICAL_RESCUE_THRESHOLD=$1 ASR_CPU_THREADS=16 MEDICAL_EVIDENCE_RANKER=1 MEDICAL_REQUIRE_PRODUCERS=1 MEDICAL_RANKER_MODEL=${2:-/workspace/medical-evidence-training-codex/runs/rank-fit-001/model} MEDICAL_EXTRACTOR_MODEL=${3:-/workspace/medical-evidence-training-codex/runs/fit-extractor-001/model}"
 tmux kill-session -t api 2>/dev/null || true
 for p in $(pgrep -f "[u]vicorn api:app"); do kill $p 2>/dev/null || true; done
 sleep 4

@@ -21,6 +21,7 @@ STRIDE = int(os.environ.get('MEDICAL_RANKER_STRIDE', '192'))
 BATCH_SIZE = int(os.environ.get('MEDICAL_RANKER_BATCH', '16'))
 MIN_SCORE = float(os.environ.get('MEDICAL_RANKER_MIN_SCORE', '-inf'))
 
+
 _lock = threading.Lock()
 _state = {'attempted': False, 'model': None, 'tokenizer': None, 'device': None}
 
@@ -61,10 +62,16 @@ def _load():
     return True
 
 
+def available():
+    """Whether a checkpoint was configured and is loaded, for a startup check to assert on."""
+    return bool(MODEL_PATH) and _state['model'] is not None
+
+
 def warmup():
     """Load the checkpoint during startup instead of inside the first request."""
     if MODEL_PATH and _load():
         logger.info('Span ranker warm')
+
 
 
 def predict_spans(words, questions, answers, deadline=None):

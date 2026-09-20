@@ -18,6 +18,7 @@ STRIDE = int(os.environ.get('MEDICAL_EXTRACTOR_STRIDE', '192'))
 MAX_SPAN_WORDS = int(os.environ.get('MEDICAL_EXTRACTOR_MAX_SPAN_WORDS', '128'))
 BATCH_SIZE = int(os.environ.get('MEDICAL_EXTRACTOR_BATCH', '8'))
 
+
 _lock = threading.Lock()
 _state = {'attempted': False, 'model': None, 'tokenizer': None, 'device': None}
 
@@ -49,10 +50,16 @@ def _load():
     return True
 
 
+def available():
+    """Whether a checkpoint was configured and is loaded, for a startup check to assert on."""
+    return bool(MODEL_PATH) and _state['model'] is not None
+
+
 def warmup():
     """Load the checkpoint during worker startup instead of inside the first request."""
     if MODEL_PATH and _load():
         logger.info('Span extractor warm')
+
 
 
 def predict_spans(words, questions, answers, deadline=None):

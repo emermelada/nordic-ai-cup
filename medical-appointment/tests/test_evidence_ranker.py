@@ -273,3 +273,59 @@ class ServingTest(unittest.TestCase):
                             'MEDICAL_RANKER_STRIDE'):
                     os.environ.pop(key, None)
                 importlib.reload(importlib.import_module('pipeline.span_ranker'))
+
+
+def _unused_backend():
+    raise AssertionError('The producer check must fail before any worker is started')
+
+
+class StrictProducerTest(unittest.TestCase):
+    """A scored build must refuse to start when a configured producer did not load."""
+
+    def test_available_reports_configured_and_loaded(self):
+        import importlib
+        import os
+        for module, key in (('pipeline.span_ranker', 'MEDICAL_RANKER_MODEL'),
+                            ('pipeline.extractor', 'MEDICAL_EXTRACTOR_MODEL')):
+            with self.subTest(module=module):
+                saved = os.environ.get(key)
+                try:
+                    os.environ[key] = ''
+                    loaded = importlib.reload(importlib.import_module(module))
+                    loaded.warmup()
+                    self.assertFalse(loaded.available())
+                    os.environ[key] = str(Path(tempfile.gettempdir()) / 'no-such-checkpoint')
+                    loaded = importlib.reload(importlib.import_module(module))
+                    loaded.warmup()  # defensive by default: disabled, never fatal
+                    self.assertFalse(loaded.available())
+                finally:
+                    if saved is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = saved
+                    importlib.reload(importlib.import_module(module))
+
+    def test_startup_refuses_a_vote_with_a_missing_producer(self):
+        import importlib
+        import os
+        from pipeline import runtime as runtime_module
+
+        saved = {k: os.environ.get(k) for k in
+                 ('MEDICAL_EVIDENCE_RANKER', 'MEDICAL_REQUIRE_PRODUCERS',
+                  'MEDICAL_RANKER_MODEL', 'MEDICAL_EXTRACTOR_MODEL')}
+        try:
+            os.environ.update({'MEDICAL_EVIDENCE_RANKER': '1', 'MEDICAL_REQUIRE_PRODUCERS': '1',
+                               'MEDICAL_RANKER_MODEL': '', 'MEDICAL_EXTRACTOR_MODEL': ''})
+            runtime = importlib.reload(runtime_module)
+            self.assertTrue(runtime.REQUIRE_PRODUCERS)
+            pipeline = runtime.Pipeline(backend_factory=_unused_backend, startup_timeout=20.0)
+            with self.assertRaisesRegex(RuntimeError, 'needs every producer'):
+                pipeline.start()
+            pipeline.close()
+        finally:
+            for key, value in saved.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+            importlib.reload(runtime_module)

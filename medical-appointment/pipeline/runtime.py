@@ -153,6 +153,10 @@ def _vote_evidence(evidence, response, before, words, questions, duration, envel
 # passage at least two producers place near wins, so no threshold is fitted to 39
 # conversations. Off unless the flag and both checkpoints are set.
 RANK_EVIDENCE = os.environ.get('MEDICAL_EVIDENCE_RANKER') == '1'
+# A vote with a producer missing keeps stage B's span for every question, so the endpoint
+# answers normally while serving a different build. On 2026-09-20 a deleted extractor
+# checkpoint did exactly that. With this set, startup fails instead; requests never do.
+REQUIRE_PRODUCERS = os.environ.get('MEDICAL_REQUIRE_PRODUCERS') == '1'
 
 
 def _rank_evidence(response, words, questions, deadline, trace=None):
@@ -305,15 +309,24 @@ class Pipeline:
             if not self._retire_locked(time.monotonic() + self.cleanup_timeout):
                 raise RuntimeError('Previous inference worker is still alive')
             try:
-                self._start_locked()
                 if RANK_EVIDENCE:
-                    # Both run here, in the process that votes, not in the worker, so the
-                    # first conversation is not charged for loading them.
-                    from pipeline.extractor import warmup as warm_extractor
-                    from pipeline.span_ranker import warmup as warm_ranker
+                    # Both load here, in the process that votes, not in the worker, so the
+                    # first conversation is not charged for it -- and before the worker
+                    # starts, so a missing checkpoint fails in seconds.
+                    from pipeline import extractor, span_ranker
 
-                    warm_extractor()
-                    warm_ranker()
+                    extractor.warmup()
+                    span_ranker.warmup()
+                    if REQUIRE_PRODUCERS:
+                        missing = [name for name, module in
+                                   (('extractor', extractor), ('ranker', span_ranker))
+                                   if not module.available()]
+                        if missing:
+                            raise RuntimeError(
+                                'The evidence vote needs every producer, and these did not '
+                                f'load: {", ".join(missing)}. Refusing to serve a build that '
+                                'would silently fall back to stage B spans.')
+                self._start_locked()
             except Exception:
                 self._retire_locked(time.monotonic() + self.cleanup_timeout)
                 raise
