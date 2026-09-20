@@ -1916,3 +1916,42 @@ training run's length.
 
 Use a PID file (`tools/arm.sh` does) or `pgrep` the exact child and kill by
 number. It costs ten seconds and it has cost hours.
+
+### v9 halves the native-scale misnaming penalty — the Level-2 gate, answered
+
+132 confirmed object-observations, each rendered as both a Level-1 and a
+Level-2 view out of `data/scene`, through v8 and v9 at imgsz 1280:
+
+| | finds object | names it correctly | product |
+|---|---|---|---|
+| v8 @ L1 | 0.681 | 0.796 | 0.542 |
+| v8 @ L2 | **0.769** | 0.706 | 0.543 |
+| v9 @ L1 | 0.693 | 0.805 | 0.558 |
+| **v9 @ L2** | **0.763** | **0.762** | **0.581** |
+
+1. **Level 2 finds more objects** — +0.088 for v8, +0.070 for v9. The resolution
+   argument holds directly.
+2. **v9 halves the misnaming penalty at native scale** — v8 loses 0.090 of
+   correct-class going L1 -> L2, v9 loses 0.043. The P2 head handles the scale
+   shift better, which is what the retest was built to check.
+3. **For v8 the two effects cancel** (0.542 vs 0.543). That is almost certainly
+   why `DRONE_CAMERA=hybrid` scored -0.049 with v4/v6/v8: the detections did not
+   improve, so the coverage cost was pure loss. **With v9 the product is
+   +0.023.**
+
+Per class at L2 with v9: `large_launcher` 0.50 -> 0.88, `large_tower`
+0.60 -> 0.90, `tank` 0.62 -> 0.81, `mine_roller` 0.86 -> 1.00. Losers are
+`hangar` (correct-class collapses to 0.00 -- it is 108 source px and fills much
+of an L2 view) and `ta-ta`.
+
+**This understates the real effect.** `data/scene` is only 5.9 % genuinely
+native; the rest is Level-1 upsampled back to 4K. So the "L2" views in this test
+are mostly *not sharp*, and a real Level-2 view carries detail the test could not
+show. Treat 0.581 vs 0.558 as a conservative floor.
+
+**Conclusion: the hybrid retest is worth real runs, and `hangar` is the class to
+watch.** If the score moves and `hangar` is the only thing that falls, consider
+excluding it from L2 answers rather than abandoning the camera.
+
+Method note: `flyby.detect` returns 5-tuples since `AGREEMENT_WEIGHT` added the
+model index -- unpack defensively in any offline harness.
