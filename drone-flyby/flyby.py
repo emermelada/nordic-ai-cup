@@ -495,6 +495,22 @@ SWEEPS = {
     # looks costs more than the earlier acquisition gains, because objects are
     # ~1.5x larger at the bottom and that is where the class votes are reliable.
     'row0': [TL, TM, TR, (0, 1920, 1080), BR, BM, BL, (0, 1920, 1080)],
+    # 'l0' = never move. The whole frame, every frame, at Level 0.
+    #
+    # Measured on the official Helsinki frames with the evaluator's own scorer:
+    # a plain per-frame detector on the whole frame scores mAP 0.92, and on the
+    # 960x540 Level-0 view alone v9@1280 scores 0.97 -- against the 0.52 the
+    # served pipeline gets on the flight. If Level-0 detection holds up on
+    # flight data this is strictly better than any sweep, because the 16.8 % of
+    # misses charged to "the camera had not shown it yet" goes to zero: every
+    # object is in view from the frame it enters.
+    #
+    # The open question is exactly that domain gap. v4@960 was measured finding
+    # 0 of 18 objects at Level 0 on flight data while v6@1280 found 12 of 18,
+    # so Level-0 detection is model- and imgsz-sensitive in a way Helsinki does
+    # not show. v9 is the P2 model (stride 4) and should be the best of them.
+    'l0': [(0, 1920, 1080)],
+
     # Level-2 entry band: every new object at NATIVE resolution.
     #
     # The L2 move limit is 551 px and adjacent L2 centres 480 px apart tile the
