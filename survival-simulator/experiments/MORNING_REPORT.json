@@ -101,18 +101,35 @@
  },
  "ppo": {
   "script": "experiments/ppo_rec.py",
-  "did_it_learn": "not yet determined - running at hand-off (updates 0-8, corr usage ~4% of the +-0.5 rad bound)",
+  "did_it_learn": "positive so far, not yet significant",
   "zero_change_contract": true,
   "actor_observations": "build_v2 (61 floats) from legal payload fields only; no fruit age, no hidden coordinates, no simulator internals",
   "critic": "same GRU trunk on the same legal tensor; no privileged state anywhere in the file",
   "action_space": "heading +-0.5 rad, speed +-0.3*sprint; reproduction unchanged from the deployed gate",
   "reward": "r = +0.1 per sim tick, gamma = 1, episode ends at extinction => sum(r) = 0.1*T = the dominant term of the competition score identically; no shaping",
   "throughput": "~110 updates/hour, ~15M agent-transitions/hour",
-  "acceptance_bar": "paired improvement vs frozen incumbent on 160 unseen seeds; training reward is never evidence"
+  "acceptance_bar": "paired improvement vs frozen incumbent on 160 unseen seeds; training reward is never evidence",
+  "evidence": {
+   "updates": 34,
+   "transitions": 12130624,
+   "updates_per_hour": 65,
+   "actor_head_L1": "0.141 -> 0.224",
+   "residual_advantage_sd": "0.169 -> 0.278",
+   "first_paired_eval": {
+    "update": 19,
+    "base_ticks": 5562,
+    "policy_ticks": 5782,
+    "paired": 219,
+    "W": 5,
+    "L": 2,
+    "n": 12,
+    "note": "n=12 eval seeds => SE ~900 ticks; this is a tripwire, not proof"
+   }
+  }
  },
  "es": {
   "script": "experiments/es_rec.py",
-  "did_it_learn": "not yet determined - generation 0 in progress at hand-off",
+  "did_it_learn": "no measurable signal on the heuristic base after 2 generations (pop mean -241 then +44; centre -81 +- 76 at n=24) -> stopped and re-pointed at the hive base",
   "fixed_vs_old_regime": [
    "antithetic pairs",
    "24 rotating seeds/generation instead of 6",
@@ -122,7 +139,22 @@
    "per-generation checkpoint",
    "sigma large enough to change behaviour (old sigma=0.02 moved heading ~0.03 rad)"
   ],
-  "stop_rule": "no held-out paired gain >= +400 ticks after ~10 generations => stop ES compute"
+  "stop_rule": "no held-out paired gain >= +400 ticks after ~10 generations => stop ES compute",
+  "heuristic_base_stopped_after_generations": 2,
+  "hive_base_lane": {
+   "script": "experiments/es_rec.py --base hive",
+   "status": "running",
+   "zero_change_verified": {
+    "holdout_base_18000_ticks": 13700,
+    "holdout_centre_18000_ticks": 13700
+   },
+   "config": {
+    "pairs": 12,
+    "seeds_per_gen": 16,
+    "horizon": 4500,
+    "holdout_seeds": 16
+   }
+  }
  },
  "strongest_mechanism_discovered": {
   "positive": "the survival-v2 hive controller's dead-reckoning world model + genome/colony logic: +42.0% paired vs the served controller (t=7.78, n=80 fresh seeds)",

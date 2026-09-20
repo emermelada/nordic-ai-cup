@@ -113,3 +113,16 @@ Status at hand-off: updates 0–8 done, corr usage ~4% of the bound, no eval dev
    generations ⇒ stop ES compute and give it to PPO.
 4. PPO: continue to ~300–500 updates, then take the best checkpoint to a 160-seed paired verdict vs the
    frozen incumbent. Training reward is never evidence; only the paired fresh-seed number counts.
+
+
+## 8. LIVE STATUS (updated through the night; 03:15 UTC / 05:15 CEST)
+
+| lane | machine | state | evidence so far |
+|---|---|---|---|
+| hive-residual ES (`es_rec.py --base hive`) | 64-core | **running** (52 workers) | gen 0: centre == hive exactly (holdout 13,700 vs 13,700) - zero-change contract holds on the hive base too |
+| residual PPO (`ppo_rec.py`) | 30-core serving box, 26 workers, latency guard | **running**, update 33 | 12.1M transitions; actor head 0.141 -> 0.224; residual advantage SD 0.169 -> 0.278; first paired eval **+219 ticks, W/L 5/2 (n=12)** - positive, not yet significant; 65 updates/hour |
+| heuristic-residual ES (`es_rec.py --base heuristic`) | 64-core | **STOPPED after 2 generations** | gen 0 pop mean -241 (4/16 pairs up), gen 1 +44 (9/16), centre -81 +- 76 (n=24): no signal, and it is the wrong base. Compute moved to the hive base. Ledger kept at `/opt/nac_h2h/es2/` |
+| structural mechanism tests | 64-core | complete | §3: family closed, n=320 fresh paired episodes |
+
+The controller the graded endpoint serves was never touched; `sha256(/app/best_controller.py)` stayed
+252f0ba1 throughout, and the container was never restarted (0 restarts).
