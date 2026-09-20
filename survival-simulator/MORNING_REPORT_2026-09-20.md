@@ -119,8 +119,8 @@ Status at hand-off: updates 0–8 done, corr usage ~4% of the bound, no eval dev
 
 | lane | machine | state | evidence so far |
 |---|---|---|---|
-| hive-residual ES (`es_rec.py --base hive`) | 64-core | **running** (52 workers) | gen 0: centre == hive exactly (holdout 13,700 vs 13,700) - zero-change contract holds on the hive base too |
-| residual PPO (`ppo_rec.py`) | 30-core serving box, 26 workers, latency guard | **running**, update 33 | 12.1M transitions; actor head 0.141 -> 0.224; residual advantage SD 0.169 -> 0.278; first paired eval **+219 ticks, W/L 5/2 (n=12)** - positive, not yet significant; 65 updates/hour |
+| hive-residual ES (`es_rec.py --base hive`) | 64-core | **running** (52 workers) | gen 0: centre == hive exactly (holdout 13,700 = 13,700, so the zero-change contract holds on the hive base too); population mean **+331** with 8/12 pairs up (SE ~200) - unlike the heuristic base's -241 |
+| residual PPO (`ppo_rec.py`) | 30-core serving box, 26 workers, latency guard | **running**, update 58 | 12M+ transitions; actor head 0.141 -> 0.224; residual advantage SD 0.169 -> 0.278; evals **+219 (W/L 5/2)** then **+10 (W/L 3/4)** at n=12 - i.e. nothing reliable yet. Two diagnosed fixes were applied mid-run: the L2 anchor was 100x too strong (it contributed ~0.002-0.02 to a loss whose policy term was ~0.002, pinning corrections to zero) and the 1,500-tick horizon contained almost no deaths (extinct 0-8%), so survival was invisible to the learner. Now training at a 6,000-tick horizon where ~30% of episodes end in extinction, which is the signal the objective needs |
 | heuristic-residual ES (`es_rec.py --base heuristic`) | 64-core | **STOPPED after 2 generations** | gen 0 pop mean -241 (4/16 pairs up), gen 1 +44 (9/16), centre -81 +- 76 (n=24): no signal, and it is the wrong base. Compute moved to the hive base. Ledger kept at `/opt/nac_h2h/es2/` |
 | structural mechanism tests | 64-core | complete | §3: family closed, n=320 fresh paired episodes |
 

@@ -125,7 +125,11 @@
     "n": 12,
     "note": "n=12 eval seeds => SE ~900 ticks; this is a tripwire, not proof"
    }
-  }
+  },
+  "diagnosed_fixes": [
+   "L2 anchor 0.02 was ~100x too strong for this loss scale (contributing 0.002-0.02 against a policy term of ~0.002) -> 0.0002",
+   "1500-tick horizon contained almost no extinctions (0-8%) so survival was invisible -> 6000-tick horizon (~30% of episodes end in extinction)"
+  ]
  },
  "es": {
   "script": "experiments/es_rec.py",
@@ -153,6 +157,15 @@
     "seeds_per_gen": 16,
     "horizon": 4500,
     "holdout_seeds": 16
+   },
+   "gen0": {
+    "base_mean": 4466,
+    "centre_paired": 0,
+    "pop_mean_diff": 331,
+    "pop_sd": 699,
+    "pairs_up": "8/12",
+    "head_L1": 0.11,
+    "seconds": 2310
    }
   }
  },
