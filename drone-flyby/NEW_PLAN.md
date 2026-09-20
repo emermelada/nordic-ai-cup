@@ -69,31 +69,55 @@ Latency is unchanged: an L0 pass is the same 960x540 input as any other.
 `full`, same host, same session. If `row0` does not clear the baseline mean,
 the whole L0 family is dead -- do not then try the other cadences.
 
-## 3. v9, when it lands
+## 3. v9: trained, measured in simulation, still needs a real run
 
-v9 is `drone-yolo11m-p2-v9`: a **P2 head** (stride 4) with class weights
-favouring the weak classes (`spacecraft` 2.0, `tank` 1.8, `jammer` 1.8,
-`small_launcher` 1.5 ...). It was still training when this was written, so **it
-has not been measured at all.**
+v9 = `models/drone-yolo11m-p2-v9.pt` (pulled off the box before it was
+destroyed; 20,558,096 params, 16 classes, verified by parameter count not file
+size). A **P2 head** at stride 4 with class weights favouring the weak classes.
+Final training metrics: **mAP50 0.623, mAP50-95 0.485, P 0.916, R 0.563**,
+against v7's final 0.567 mAP50. `training/v9_run/` holds its `args.yaml` and
+`results.csv`.
 
-**Verified on the box: the running job really is the medium model** --
-`yolo11m-p2.yaml`, 286 layers, 20,558,096 parameters. That matters because
-`cf0483e` found that `training/yolo11-p2.yaml` silently builds a **nano** P2
-(2.74M params): Ultralytics takes the scale from the filename stem, so a file
-named `yolo11-p2.yaml` selects no scale at all and `PRETRAINED=yolo11m.pt`
-warm-starts almost nothing while logging a cheerful success. Anyone retraining
-P2 must use `training/yolo11m-p2.yaml`, or they will train a nano for hours and
-conclude that P2 does not work.
+Simulated as a 5th pass at 1280, all four arms on the same flight:
 
-**Add it, never replace with it.** v8 failed as a replacement and paid as an
-addition; so did imgsz 1600. A 5th pass at 1280 is ~8 ms on a 5090 and safe; a
-5th pass at 3200 blew the 333 ms budget (514 ms, score 0.264, 115 frames never
-answered), and `tools/preflight.py` **cannot see that cliff** -- it replays
-sequentially against a warm service, so queueing never appears.
+| arm | boxes | offline AP | vs served |
+|---|---|---|---|
+| `full` (4 model, served) | 12261 | 0.3536 | - |
+| `row0` (4 model) | 16461 | 0.3618 | **+0.0082** |
+| `full` + v9@1280 | 13155 | 0.3559 | +0.0023 |
+| `row0` + v9@1280 | 18110 | 0.3667 | **+0.0131** |
 
-First measurement to make, before spending a run: `tools/camera_sim.py` with v9
-appended to the stack, `--camera full` and `--pattern row0`, compared against
-the numbers in §2. That separates the model's contribution from the camera's.
+Deltas only. The simulator's absolute level sits ~0.10 below a real run, so the
+calibration offset fitted on *recorded* runs does not transfer to *simulated*
+ones -- compare arms with each other, never to 0.527.
+
+**Do not read +0.0023 as "v9 does not work."** The mined truth contains **no
+`spacecraft`, `small_launcher`, `condor` or `medium_plane`** -- and v9's two
+highest class weights are `spacecraft` 2.0 and `small_launcher` 1.5. Four of the
+eleven classes it was trained to rescue are invisible to the metric measuring
+it. The simulation under-rates v9 by construction and cannot be used to reject
+it. `small_launcher` is the precedent: it was 0.000 in every configuration ever
+measured until the 2560 pass took it to 0.512.
+
+So v9 still earns a real validation run, on this reasoning rather than on the
+simulated number. **Add it, never replace with it** -- v8 failed as a
+replacement and paid as an addition, and so did imgsz 1600. A 5th pass at 1280
+is ~8 ms on a 5090; a 5th at 3200 blew the 333 ms budget (514 ms, 0.264, 115
+frames unanswered), and `tools/preflight.py` **cannot see that cliff** because
+it replays sequentially against a warm service while the evaluator emits every
+333 ms regardless. Preflight is a config check, not a load test.
+
+**Two traps around the checkpoint**, both hit today:
+* Ultralytics appends a suffix rather than reusing a run directory, so the real
+  weights were in `drone-yolo11m-p2-v9-**2**/`, while the aborted nano run left
+  a stale `best.pt` in `drone-yolo11m-p2-v9/`. The wrong one loads and serves
+  perfectly cleanly.
+* **Size-checking the file does not work after training completes.** Ultralytics
+  strips the optimizer state at the end, so the real model went from 166 MB
+  mid-run to 42 MB final, against the nano's 22 MB. Check the parameter count
+  instead: 20,558,096 (medium) vs 2,668,800 (nano).
+* And `training/yolo11-p2.yaml` silently builds a NANO P2 -- Ultralytics takes
+  the scale from the filename stem. Use `training/yolo11m-p2.yaml` (`cf0483e`).
 
 ## 4. The real work: fix the metric, then fix the ranking
 
@@ -139,9 +163,32 @@ order:
    and nothing downstream can be trusted.
 4. Re-calibrate after each change against BOTH recorded runs.
 
-**The gate that decides everything downstream: offline AP must track the real
-score within ~0.02 on at least two runs of known score.** Until then, treat
-every offline AP -- including §2's columns -- as a bracket, not a number.
+**The gate is now PASSED, by a better test than the one I proposed.** Session
+`drone-flyby-21` calibrated both truth files against **twelve** complete runs of
+known real score spanning 0.4983-0.5339 (`tools/calibrate_truth.py`, `e0994a2`):
+
+| truth | MAE | bias | Pearson | Spearman |
+|---|---|---|---|---|
+| mined (66 obj) | 0.0736 | -0.0736 | **+0.894** | **+0.811** |
+| old (32 obj) | 0.0183 | -0.0167 | -0.039 | **-0.287** |
+
+**Read the correlation, not the MAE.** The old file sits closer in absolute
+terms and has *no* rank correlation over the band that matters -- it cannot tell
+a 0.4983 run from a 0.5339 one, and is slightly inverted. The mined file is
+offset by a near-constant -0.074 and **ranks correctly**, which is all a
+configuration comparison needs. HANDOVER's earlier "+0.94 Spearman" was measured
+across configs spanning 0.24-0.30, where almost anything ranks correctly.
+
+So offline AP on the mined truth IS usable for comparing configurations, and
+§2's `+0.008` for `row0` is signal rather than noise. Discard the `+0.027` from
+the old truth entirely.
+
+**But its class coverage is the binding limit**, and it bites §4b directly: the
+mined truth has no `spacecraft`, `small_launcher`, `condor` or `medium_plane`.
+Two of those are our weakest classes -- exactly where the near-zero-AP classes
+of §4b live, and exactly what v9 was weighted to fix. **Mining those four
+classes is therefore the highest-value single task on this list**, because
+without them the metric is blind precisely where the remaining score is.
 
 **What a mined truth still cannot settle:** its boxes are *our* boxes, so it is
 blind to box growth in exactly the way `score_offline.py` already was (growing
