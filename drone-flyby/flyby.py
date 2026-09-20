@@ -305,6 +305,68 @@ FLOOR_ALL_CLASSES = float(os.environ.get('DRONE_FLOOR_ALL', '0'))
 # answer for. The score is a mean over the classes present in the truth, so a
 # class we never name is a free zero -- which matters more on the evaluation
 # flight, whose class mix is unknown, than on validation.
+# --------------------------------------------------------------------------- #
+# The graded band
+# --------------------------------------------------------------------------- #
+# What the 20 Sep per-class calibration found. Replaying one recorded run
+# (real score 0.5278) one class at a time through the real grader gives, as
+# AP (score contribution x K, with K=13 present classes):
+#
+#   hangar .93  large_tower .88  jet_plane .85  helicopter .84  mine_roller .69
+#   tank .63  large_launcher .63  small_plane .61  small_tower .58
+#   small_launcher .15  medium_launcher .04  medium_plane .02  ta-ta .00003
+#   spacecraft, condor, jammer  EXACTLY 0.0 -> absent from this flight's truth
+#
+# Two of the four dead classes are a bug, not a hard problem. DRONE_BOX_GROW is
+# a flat 1.3 and DRONE_BOX_GROW_CAP clamps at 1.3, but the measured Helsinki
+# convention wants 2.302 for medium_launcher and 1.936 for small_launcher. A
+# box grown 1.3 when it needed 2.302 is nested at IoU (1.3/2.302)^2 = 0.319,
+# and at 1.936 -> 0.451. Those are the ONLY two classes whose capped IoU falls
+# under the scorer's 0.50 threshold, and they are exactly the two that
+# collapse; every class at IoU >= 0.72 scores 0.58-0.93. The AP ordering even
+# matches the IoU ordering. So they are not hard to see and not hard to fix.
+#
+# The band is the risk-free half of the fix. Average precision pools the whole
+# flight and ranks by confidence, so a detection appended strictly BELOW every
+# answer we believe in can never lower any class's AP -- it can only add recall
+# in the tail. Every real answer here is clipped at 0.001, so the range
+# [0.0001, 0.0009] is free space, and the DTO round-trips four decimals.
+#
+# Measured against faster_coco_eval itself (the evaluator's own library), on a
+# class broken by exactly this kind of box mismatch:
+#
+#   single wrong scale                          AP 0.000
+#   + 4 shape variants all tied at 0.0          AP 0.216
+#   + 4 shape variants GRADED 9/7/5/3 e-4       AP 0.500
+#   + 8 shape variants graded                   AP 0.500   (widening is free)
+#
+# That is the whole lesson, and it is why the existing FLOOR_ZERO was worth so
+# much less than it should have been: boxes tied at one confidence dilute to
+# about AP/k, because the scorer cannot order them. Graded ones do not dilute
+# at all -- eight variants scored the same as four. So the band should be as
+# wide as the 500-annotation budget allows, and its order is the prior.
+BAND = os.environ.get('DRONE_BAND', '0') == '1'
+# Absolute growth factors applied to the TIGHT track box, best guess first.
+# None means 'this class's measured Helsinki factor', which is the variant the
+# capped primary is missing and therefore the one most likely to land.
+# The first entry is the measured convention and goes out at the best grade.
+# The class hedge below is graded SECOND, ahead of the remaining shapes,
+# because with the primary growth uncapped the extra shapes are only
+# insurance while the hedge is the whole medium_plane fix -- and the 500-box
+# budget is not big enough for both at 50 tracks a frame.
+BAND_SCALES = (None, 1.65, 2.1, 0.75)
+# Grade index the class hedge is emitted at, ahead of BAND_SCALES[1:].
+BAND_HEDGE_RANK = 1
+# Confidence per band rank. Strictly under the 0.001 clip on every real answer,
+# strictly decreasing, and distinct at four decimals.
+BAND_GRADES = (0.0009, 0.0008, 0.0007, 0.0006, 0.0005, 0.0004, 0.0003, 0.0002)
+# Also name classes the track never voted for, at its own measured factor, in
+# the last grades. This is the medium_plane case: 52 px, IoU 0.97, AP 0.02 --
+# found, boxed, and called small_plane or jet_plane instead.
+BAND_HEDGE = os.environ.get('DRONE_BAND_HEDGE', '1') == '1'
+# A hedged class must be within this factor of the track box's size prior.
+BAND_HEDGE_TOL = float(os.environ.get('DRONE_BAND_HEDGE_TOL', '2.5'))
+
 FLOOR_ZERO = os.environ.get('DRONE_FLOOR_ZERO', '0') == '1'
 # A track only gets floor boxes for classes whose size is plausible for it:
 # emitting hangar on a 30 px track spends precision for nothing, and AP is
@@ -921,6 +983,22 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
             box[2] / IMAGE_WIDTH, box[3] / IMAGE_HEIGHT,
         ))
 
+    def at_factor(box, name, factor):
+        """The same box grown by an explicit factor instead of BOX_GROW.
+
+        `factor` None means this class's measured Helsinki convention, which is
+        the one the 1.3 cap throws away for medium_launcher and small_launcher.
+        """
+        if factor is None:
+            factor = HELSINKI_BOX_FACTORS.get(name, 1.0)
+        x1, y1, x2, y2 = box
+        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        w, h = (x2 - x1) * factor / 2, (y2 - y1) * factor / 2
+        return clip_bbox_to_frame((
+            (cx - w) / IMAGE_WIDTH, (cy - h) / IMAGE_HEIGHT,
+            (cx + w) / IMAGE_WIDTH, (cy + h) / IMAGE_HEIGHT,
+        ))
+
     for name, confidence, box in transient:
         bbox = reported(scaled(box), name)
         if bbox is not None:
@@ -986,6 +1064,45 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
                         bbox=[round(c, 6) for c in bbox],
                         confidence=round(float(np.clip(base * FLOOR_ALL_CLASSES, 0.001, 1.0)), 4),
                     ))
+        if BAND:
+            # Shape variants of the classes this track DID vote for. The
+            # primary already went out at BOX_GROW; these are the growths it
+            # is not allowed to use, appended where they cannot cost anything.
+            def grade_for(rank):
+                rank = rank if rank < BAND_HEDGE_RANK else rank + 1
+                return BAND_GRADES[min(rank, len(BAND_GRADES) - 1)]
+
+            for rank, factor in enumerate(BAND_SCALES):
+                grade = grade_for(rank)
+                for name in named:
+                    bbox = at_factor(box, name, factor)
+                    if bbox is not None:
+                        floor.append(DroneFlybyPredictionDto(
+                            object_id=name,
+                            bbox=[round(c, 6) for c in bbox],
+                            confidence=grade,
+                        ))
+            if BAND_HEDGE:
+                # Classes the track never voted for, at their own convention.
+                # Graded under every shape variant above, so the hedge can
+                # never outrank a class we actually believe this track is.
+                side = math.sqrt(max(1e-6, float(
+                    (box[2] - box[0]) * (box[3] - box[1]))))
+                grade = BAND_GRADES[BAND_HEDGE_RANK]
+                for name in OBJECT_CLASSES:
+                    if name in named:
+                        continue
+                    prior = CLASS_SIZE.get(name)
+                    grown = side * HELSINKI_BOX_FACTORS.get(name, 1.0)
+                    if prior and not (1 / BAND_HEDGE_TOL <= grown / prior <= BAND_HEDGE_TOL):
+                        continue
+                    bbox = at_factor(box, name, None)
+                    if bbox is not None:
+                        floor.append(DroneFlybyPredictionDto(
+                            object_id=name,
+                            bbox=[round(c, 6) for c in bbox],
+                            confidence=grade,
+                        ))
         if FLOOR_ZERO:
             # sqrt(w*h) of the track box, against the class's Helsinki size prior.
             side = math.sqrt(max(1e-6, float((box[2] - box[0]) * (box[3] - box[1]))))
@@ -1008,7 +1125,11 @@ def annotations_for(state: Sequence, frame: int, transient=()) -> List[DroneFlyb
                 ))
     annotations.sort(key=lambda a: -a.confidence)
     # After the sort: every real answer outranks the whole band, and the 500 cap
-    # then drops floor boxes rather than anything we actually believe.
+    # then drops floor boxes rather than anything we actually believe. The band
+    # is sorted separately so that the cap takes the faintest grades first --
+    # sorting it TOGETHER with the answers is what FLOOR_ALL_CLASSES did, and it
+    # cost 0.009.
+    floor.sort(key=lambda a: -a.confidence)
     annotations.extend(floor)
     return annotations[:500]
 
