@@ -13,6 +13,57 @@ oracle that picked the better of the two per question would score 0.8817 raw,
 selector opportunity rather than an estimated one. See
 [SCORE_IMPROVEMENT_PLAN.md](../../SCORE_IMPROVEMENT_PLAN.md).
 
+## Platform results, 20 September 2026 — what actually transferred
+
+Three builds went to the competition's validation endpoint. The locked build's
+five earlier validations spread 0.0002, so differences above that are real.
+
+| Build | Platform score | Against the locked build |
+| --- | ---: | ---: |
+| Locked (perq v3, rescue 0.24) | 0.8167711209 | — |
+| Evidence vote (3 producers) | 0.8160730408 (twice, identical) | **−0.0006981** |
+| Spans deliberately collapsed | 0.4000000000 | diagnostic only |
+
+### The hidden score, decomposed
+
+The third run replaced every evidence span with a worthless one, so its score is
+`0.4 x accuracy` alone. It returned **exactly 0.400**:
+
+| Quantity | Hidden validation set |
+| --- | ---: |
+| Answer accuracy | **1.0000** |
+| Mean tIoU | **0.69462** |
+| Score | 0.8167711209 |
+| tIoU needed for 0.895 | **0.825** |
+
+**The answer half is finished.** Accuracy is perfect, so the rescue threshold, the
+phonetic rule and the yes-rate arguments have nothing left to win, and an earlier
+note treating missed positives as the gap does not describe this build. Every
+remaining point is evidence localization: 0.69462 -> 0.825 is +0.130 tIoU, and
+each 0.01 of tIoU is worth 0.006 raw.
+
+### Why the vote looked good locally and was not
+
+End-to-end on the 39 public conversations the vote scored 0.850 against the
+build's 0.832 (tIoU 0.720 -> 0.751, worst round trip 23.0 s -> 27.3 s of a 60 s
+budget). **That measurement was invalid.** The extractor it deployed,
+`fit-extractor-001`, is trained on all 39 public conversations, and it was then
+scored on those same conversations. The honest out-of-fold estimate for the same
+rule was +0.0138, and the platform returned −0.0007.
+
+The mechanism worked exactly as designed, which is what makes the result
+informative rather than a bug: zero evidence-budget skips, and the vote moved
+spans on 28 of 78 conversations (50 unchanged, 22 with one span moved, 6 with two
+or three). Those relocations simply were not better on unseen conversations.
+
+Two rules follow, and the rest of this work should be read through them:
+
+1. **Never score a model on conversations it trained on.** The out-of-fold number
+   is the only one worth reporting; `--extra-data` now enforces fold discipline
+   for generated rows, with tests pinning it.
+2. **A local gain is a hypothesis, not a result.** Local +0.018 became platform
+   −0.0007. Only the platform closes the question, and it costs one validation.
+
 ## Second experiment — external rationale pretraining, 20 September 2026
 
 Intermediate training on 43,812 checked question/evidence pairs from CoQA and

@@ -41,6 +41,15 @@ WRITE_SYSTEM = (
 SUFFICIENT_SYSTEM = (
     'Answer yes or no. Decide only from the passage given. Reply with one word.'
 )
+# Much of a consultation is greeting and small talk, which the annotators never ask about.
+# Training on it would teach the model to localise conversation rather than clinical fact.
+CLINICAL_SYSTEM = (
+    'A reviewer is building a checklist about a medical appointment. Its questions are about '
+    'clinical content: symptoms, examinations and their findings, diagnoses, medication, '
+    'instructions, referrals, tests, follow-up and the reason for the visit. They are never '
+    'about greetings, small talk, the weather, names, travel, or how the conversation was '
+    'phrased.\n\nWould this question belong on that checklist? Reply yes or no.'
+)
 
 
 def sentences_of(words):
@@ -81,10 +90,14 @@ class Model:
     def ask(self, system, user, max_tokens=60, temperature=0.0):
         payload = {'model': self.name, 'max_tokens': max_tokens, 'temperature': temperature,
                    'messages': [{'role': 'system', 'content': system},
-                                {'role': 'user', 'content': user}]}
+                                {'role': 'user', 'content': user}],
+                   # This model reasons by default and then answers nothing within a small
+                   # budget, exactly as the serving backend disables it.
+                   'chat_template_kwargs': {'enable_thinking': False}}
         response = requests.post(f'{self.url}/chat/completions', json=payload, timeout=self.timeout)
         response.raise_for_status()
-        return response.json()['choices'][0]['message']['content'].strip()
+        text = response.json()['choices'][0]['message'].get('content') or ''
+        return (text.split('</think>')[-1] if '</think>' in text else text).strip()
 
 
 def build_row(model, record, span, index):
@@ -106,6 +119,9 @@ def build_row(model, record, span, index):
     if model.ask(SUFFICIENT_SYSTEM, f'PASSAGE\n{remainder}\n\nQUESTION: {question}\nANSWER:',
                  max_tokens=4).lower().startswith('yes'):
         return None, 'answerable_elsewhere_in_the_transcript'
+    if not model.ask(CLINICAL_SYSTEM, f'QUESTION: {question}\nANSWER:',
+                     max_tokens=4).lower().startswith('yes'):
+        return None, 'not_a_clinical_checklist_question'
     context, ranges = render_words(words)
     a, b = span
     return {'id': f'{record["conversation"]}_gen_q{index:03d}',
