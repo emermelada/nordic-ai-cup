@@ -122,3 +122,59 @@ in-view frames have nothing near them at all.
 Those need the tracking path (MAX_MISSES, track creation), which **cannot be
 tested offline without a GPU** -- `score_offline --replay` needs model
 detections. That is the next real lever.
+
+---
+
+# Rejected after testing: the per-class size gate (20 Sep, 12:40)
+
+Demoting detections whose size falls outside a per-class band looked strong:
+the false positives really are separable (a band keeps 90% of jammer's true
+positives and only 13% of its false ones), and on one split it paid **+0.024**
+held out.
+
+**It does not survive the reversed split.** Fitting the bands on runs A,B,C and
+scoring on D,E gives +0.024; fitting on D,E and scoring on A,B,C gives +0.004,
+and the per-class signs invert:
+
+| class | A,B,C -> D,E | D,E -> A,B,C |
+|---|---|---|
+| spacecraft | **-0.042** | **+0.016** |
+| jet_plane | +0.014 | **-0.075** |
+| large_tower | ~0 | -0.040 |
+| helicopter | +0.008 | -0.037 |
+
+The bands move with whichever runs they are fitted on. That is fitting noise,
+not an effect. **Do not ship it and do not re-derive it** -- the separability
+table that motivates it is genuinely true and will tempt you again.
+
+Contrast with the box geometry fix, which gives +0.080 and +0.082 on the two
+held-out runs, +0.086 across all five, and is independently corroborated by the
+official annotation convention. That asymmetry is the whole reason to trust one
+and not the other.
+
+# Why the last three classes are still broken
+
+`spacecraft` 0.200, `small_launcher` 0.218, `tank` 0.449 did not move.
+
+Their **true detections carry weak confidence** -- median 0.22, 0.61 and 0.53
+against 0.77-0.86 for every healthy class -- so false positives outrank them.
+For `small_launcher`, 2.1 false positives sit above the median true positive
+per true positive. AP punishes exactly that.
+
+That is a detector calibration problem, not a geometry or tracking one, and
+nothing that reranks our own output fixed it without overfitting. It needs
+better weights.
+
+# Untested, needs a GPU: memory carrying
+
+About half of every object's frames are out of view and carried by memory.
+After the box fix, carrying is still wildly uneven:
+
+    large_tower 0.98   jet_plane 0.93   helicopter 0.90
+    small_launcher 0.56   jammer 0.21   spacecraft 0.18
+
+Carrying is worth as much as detection. `tools/sweep_remote.sh` runs
+`score_offline --replay`, which exercises the real predict path (tracking,
+memory, box growth) against cached detections -- seconds per run on a 5090, and
+it spends no validation attempts. That is the next lever and it has never been
+pulled.
