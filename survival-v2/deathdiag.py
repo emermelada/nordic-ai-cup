@@ -91,7 +91,7 @@ def main():
     a, b = sys.argv[1].split("-")
     params = json.loads(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else None
     late = float(sys.argv[3]) if len(sys.argv) > 3 else 400.0
-    with Pool(10) as pool:
+    with Pool(int(os.environ.get("DIAG_WORKERS", "10"))) as pool:
         rows = pool.map(run, [(s, params, late) for s in range(int(a), int(b) + 1)], chunksize=1)
     by = defaultdict(list)
     for r in rows:

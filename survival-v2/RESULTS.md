@@ -62,6 +62,36 @@ survived. Mean ± SE over the seeds listed.
 | no predators (seeds 101-120) | 1608 | the energy economy is the ceiling |
 | tree choice favours trees with a long productive future (seeds 101-140) | 1160 +- 51 | paired diff vs claims -79 +- 69: reverted |
 
+## Evening, 19 Sep: issue -> fix loop (seeds 101-140, paired against the previous row)
+
+| Change | Mean | Paired diff | Notes |
+|---|---|---|---|
+| claims version (pushed at 7ef62df) | 1239 | | |
+| ripe-aware fruit utility + never step on young fruit + scan while waiting | 1259 | +20 +- 85 | energy per fruit 42 -> 50, but fewer fruit and more kills |
+| **A\* paths around known walls** (terrain-weighted grid, scipy Dijkstra field per target) | **1355** | **+96 +- 58** | 12.5% of walking was back-and-forth at walls; no game under 640 |
+| old agents eat only fruit that lets them spawn at once | 1391 | +36 +- 62 | old-age drain 14.9k -> 12.2k per game |
+| flee bonus for ending behind a wall (predators see through nothing) | 1351 | -40 +- 53 | kills 88 -> 81 but shorter games: dropped |
+| agents that moved outside their view stop mapping until a landmark confirms them | 1352 | -38 +- 85 | worse: their own wall sightings keep their collision replay right: dropped |
+| **peer pose fix** (a confirmed agent's sighting sets an unverified agent's exact position), L2 29 px wall fixes | **1484** | **+94 +- 67** | games with > 30 px tracking errors 4-12 -> 2; they were the early deaths |
+| late-game food radius >= 250 px | 1479 | -5 +- 51 | dropped |
+| late-game birth reserve 200 / mid-game cap 12 | | -6 +- 35 each | dropped |
+| threat hysteresis (keep reacting to a predator 30 px longer) | 1415 | -69 +- 56 | kills 93 -> 72, shorter games: dropped |
+| predator-aware fruit and tree choice (hazard penalty) | 1445 | -39 +- 54 | kills 93 -> 79, shorter games: dropped |
+| scan turn rate 0.15 -> 0.08 | 1401 | -83 +- 54 | dropped |
+| less caution (alert 95, keep 140, no drift) | 1351 | -134 +- 68 | dropped |
+
+Every change that made agents more cautious cut kills and still lost score; the one that made them bolder lost
+more. Predator kills are not the binding cost, walking is.
+
+Tracking failures, found with trackfail.py: an agent fleeing backwards (facing the predator) runs into a wall
+it cannot see; the hive's collision replay does not know that wall, so the believed pose drifts, and the
+agent then maps walls, trees and fruit at wrong places for everyone. Games with such failures died early.
+
+Late deaths now (deathdiag.py, 12 seeds, last 400 s): 41% young starvation, 39% old age, 20% predators.
+Young starvers die mid-flee (135 of 256) and flee is their biggest walking item (847 px each).
+fleediag.py: ~3600 flee episodes per game with a median length of 2 ticks (flee/return flicker), half of
+them against predators that are not after that agent.
+
 ## Where the food goes (eatdiag.py, seeds 101-110, claims version)
 
 | Eater's situation | Share of fruit | Mean energy |
