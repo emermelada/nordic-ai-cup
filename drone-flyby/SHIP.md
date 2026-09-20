@@ -205,3 +205,28 @@ answered.
   why the size gate above also failed. Precision is a dead end on this task.
   The remaining headroom in the last three classes is recall and detector
   quality, not ranking.
+
+# Geometry is exhausted (leave-one-run-out, 20 Sep 13:20)
+
+Refitting the factors on four runs and testing on the fifth, against the
+shipped three-run fit on the same held-out run:
+
+    held 7e441f26   shipped 0.597   refit-on-4 0.592   -0.005
+    held 76bef7bb   shipped 0.580   refit-on-4 0.569   -0.011
+    held b5544ad3   shipped 0.584   refit-on-4 0.584   +0.001
+    held 89f751a2   shipped 0.515   refit-on-4 0.525   +0.010
+    held 95f5a5c9   shipped 0.521   refit-on-4 0.530   +0.009
+    mean            shipped 0.559   refit-on-4 0.560   +0.001
+
+A wash. **Thin fitting data was not why `small_launcher` and `spacecraft` did
+not move** -- more of it changes nothing (small_tower +0.034 and tank +0.017 are
+cancelled by helicopter -0.029 and small_plane -0.011). The factors are
+converged, and this also re-validates the shipped config at 0.559 leave-one-out.
+
+Per-class **width** is likewise exhausted: the global optimum is exactly 1.00
+and the per-class gains total +0.006, because the isotropic factor already
+captures that axis. Height was the only axis with anything left in it.
+
+**So every geometry lever is spent.** What remains for `spacecraft` (0.200),
+`small_launcher` (0.218) and `tank` (0.449) is detector quality and memory
+carrying -- the latter untested and needing a GPU (`tools/sweep_remote.sh`).
