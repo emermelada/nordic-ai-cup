@@ -117,6 +117,9 @@ def _stage_b(backend, words, questions, raw, transcript, request_started, rescue
 
 # Collapses evidence to measure the answer half of a score on its own. Never leave it on.
 DIAGNOSTIC_SPANS = os.environ.get('MEDICAL_DIAGNOSTIC_SPANS') == 'floor'
+# Tighten each chosen span's endpoints with the trained extractor, without ever letting
+# it move the span to another passage.
+EVIDENCE_REFINE = os.environ.get('MEDICAL_EVIDENCE_REFINE') == '1'
 
 
 def _vote_evidence(evidence, response, before, words, questions, duration, envelope,
@@ -178,6 +181,33 @@ def _rank_evidence(response, words, questions, deadline, trace=None):
         return voted
     except Exception:
         logger.exception('Producer vote failed; keeping the stage-B spans')
+        return response
+
+
+def _refine_evidence_spans(response, words, questions, deadline=None, trace=None):
+    """Boundary-only pass; a failure or a missing extractor keeps every span as chosen."""
+    from pipeline.extractor import refine_spans
+
+    try:
+        anchors = list(zip(response.evidence_start, response.evidence_end))
+        refined = refine_spans(words, questions, response.answers, anchors, deadline)
+        if not refined:
+            return response
+        result = response.model_copy(deep=True)
+        moved = 0
+        for index, answer in enumerate(result.answers):
+            span = refined.get(index + 1)
+            if not answer or not span or result.evidence_start[index] is None:
+                continue
+            if (span[0], span[1]) != (result.evidence_start[index], result.evidence_end[index]):
+                moved += 1
+            result.evidence_start[index], result.evidence_end[index] = span
+        if trace is not None:
+            trace['refined'] = {'moved': moved, 'spans': {str(k): list(v) for k, v in refined.items()}}
+        logger.info('Boundary refinement adjusted %d of %d span(s)', moved, len(refined))
+        return result
+    except Exception:
+        logger.exception('Boundary refinement failed; the selected spans are kept')
         return response
 
 
@@ -479,6 +509,9 @@ class Pipeline:
                             response = _vote_evidence(
                                 evidence, response, before_evidence, words, request.questions,
                                 duration, envelope, deadline, extend_replies, trace)
+                        if EVIDENCE_REFINE:
+                            response = _refine_evidence_spans(response, words, request.questions,
+                                                              deadline, trace)
                     if RANK_EVIDENCE:
                         response = _rank_evidence(response, words, request.questions, deadline,
                                                   trace)
