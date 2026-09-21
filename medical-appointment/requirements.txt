@@ -1,9 +1,11 @@
-fastapi
-uvicorn[standard]
-pydantic>=2
-# torch
-# faster-whisper
-# transformers
-# pyannote.audio
-# librosa
-# soundfile
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7,<3
+requests>=2.31    # local_evaluator.py, and the local LLM server client to come
+
+# Pinned on purpose: this exact stack reproduces the annotators' word
+# timestamps 390/390 (check_timestamps.py). Re-run that check before bumping.
+faster-whisper==1.2.1
+ctranslate2==4.8.2
+av==18.1.0
+numpy>=2

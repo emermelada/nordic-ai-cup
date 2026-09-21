@@ -16,7 +16,9 @@
 | 2026-09-18 | J | drone-flyby | pycocotools / faster-coco-eval | Offline mAP scoring against recorded runs |
 | 2026-09-19 | F | drone-flyby | Claude Code (claude-opus-5) | Diagnosis and measurement: per-class AP, camera-pattern search, box-geometry and truth-file analysis, serving and validation runs |
 | 2026-09-19 | F | drone-flyby | Ultralytics YOLO11 `yolo11m-p2` architecture (P2 head) | v8 / v9 detectors, trained from the same COCO-pretrained weights |
-| 2026-09-19 | team (unconfirmed) | medical-appointment | faster-whisper 1.2.1 (Whisper `base`), ctranslate2 4.8.2, av 18.1.0 | Speech-to-text with word timestamps; versions pinned because that stack reproduces the annotators' timestamps 390/390 |
 | 2026-09-19 | team (unconfirmed) | survival-simulator | `cma` (CMA-ES), `numba`, `numpy` | Evolutionary policy search and a JIT fast simulator, bit-exact with the supplied one |
+| 2026-09-18 | F | medical-appointment | Claude Code (claude-opus-5) | Found that the evidence labels are faster-whisper `base` int8 word timestamps; exact-timestamp ASR, evidence mapper, offline harness, plan |
+| 2026-09-18 | F | medical-appointment | faster-whisper `base` (Systran/faster-whisper-base, int8, CPU) | Served ASR: word timestamps in the annotators' coordinate system. Also compared small, small.en, base.en, medium.en, large-v3 to identify it |
+| 2026-09-18 | F | medical-appointment | Qwen3.6-35B-A3B (nvidia/Qwen3.6-35B-A3B-NVFP4) via vLLM, on our rented GPU | Answering model behind the endpoint (llm.py), running locally on the serving box |
 
 Rows marked *unconfirmed* were reconstructed from the code's imports; the owner should confirm date and author.
