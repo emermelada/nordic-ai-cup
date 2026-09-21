@@ -1,0 +1,4 @@
+numpy>=2.0
+orjson>=3.10
+uvicorn[standard]>=0.30
+scipy>=1.11
