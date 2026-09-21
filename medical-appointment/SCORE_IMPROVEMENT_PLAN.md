@@ -318,3 +318,91 @@ Same protocol every time, or the number means nothing:
   on Vast 51489967 (stopped; disk retained). See
   [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md) and
   [tools/evidence_training/EXTERNAL_DATA.md](tools/evidence_training/EXTERNAL_DATA.md).
+
+## 2026-09-20, 09:47 CEST — the loss is extent, not occurrence, and extent is undecidable
+
+Everything above frames the remaining loss as **occurrence** selection. Measured, that is the
+smaller half. Anchored on the deployed medoid3 (0.750307 local tIoU on the 195 positives):
+
+| Oracle | Local tIoU |
+| --- | ---: |
+| deployed medoid3 (realized) | 0.750307 |
+| best pool candidate **overlapping the anchor** | **0.844680** |
+| best pool candidate anywhere | 0.907138 |
+
+**178 of 195 questions already have their best pool candidate overlapping the anchor.** Local
+extent is worth **+0.095**; occurrence only **+0.062**. The failing spans are systematically
+*short*: median gold-minus-predicted duration is **+1.98 s in the 0<IoU<0.5 bucket and exactly
+0.00 s overall**, so the often-quoted "median edge offset is 0.000" is a global average that
+hides the entire effect. The gold there is the whole exchange that settles the fact
+("The examination I have done is normal. Normal in all of it? Yes. Nothing abnormal was found
+on examination.") where v3's rule 4 forces the minimal clause.
+
+### Mechanism #1 was never built. It is now, three ways, and all three fail
+
+| Local extent refiner (occurrence fixed, median 10 candidates) | vs deployed medoid3 |
+| --- | ---: |
+| claude-opus-5, conventions + context + enumerated candidates | **−0.013545** |
+| ridge on 19 span/agreement features, nested LOCO | +0.002563 / +0.003200 / +0.001108 |
+| listwise softmax maximising expected tIoU, nested LOCO | +0.000000 / +0.004744 / −0.001129 |
+
+The frontier version behaves exactly as this document predicted — **+0.074 on the 0–0.5 bucket
+and +0.031 on mid** — and then loses **−0.062 on the 116 already-correct spans**, moving 14 of
+them. Gating on producer disagreement does not rescue it at any threshold.
+
+**Why no selector can work here.** The anchor is already optimal within its local set in
+**144 of 195 cases (73.8%)**. Only 51 questions have a better alternative, worth 21.1 points.
+A mover therefore needs **>74% precision** on "should I move?", and no feature comes close:
+the best is the anchor's mean overlap with the other producers at **AUC 0.68**, where roughly
+0.9 would be needed. That is the whole story of the thirteen failed selection mechanisms —
+*the system cannot tell when it is already right.*
+
+Hand-crafted rules fail the same way: whole-sentence snapping −0.040, longest local candidate
+−0.285, smallest strictly-containing candidate −0.114, every extension threshold ≤ 0.
+
+### Producer diversity is spent
+
+Seven producers, including two frontier models run on the pipeline's own `perq`/v3 task in
+base coordinates (development-only; the rules forbid a hosted LLM in the `/predict` path):
+
+| Producer | Local tIoU | | Vote | vs deployed |
+| --- | ---: | --- | --- | ---: |
+| **Qwen3.8-27B stage B** | **0.716181** | | medoid4 + astra | +0.0057 (p=0.89) |
+| trained extractor | 0.727008 | | medoid5 + astra + opus | +0.0006 |
+| trained ranker (seed 17) | 0.718385 | | medoid7 (all) | **−0.0040** |
+| gpt-6-astra | 0.697194 | | medoid4 + exchange-prompt | −0.0057 |
+| claude-opus-5 | 0.644087 | | | |
+| claude-opus-5 + 24 gold examples | 0.625238 | | | |
+
+**Both frontier models lose to the tuned local 27B**, and few-shot with 24 conversation-disjoint
+gold spans did not transfer the convention. The seven-producer oracle is 0.864278, so better
+spans exist and nothing unsupervised extracts them. An `exchange`-prompted producer intended to
+be long-biased was not: its median offset is also +0.00 s.
+
+Ruled out cheaply: question number and serving row order carry no information about gold span
+order (concordance 0.500 / 0.519); two gold spans are annotation defaults at [0.0, 0.26] and
+[0.0, 0.16] ("Good") and are unwinnable. The sentence unit is *correct* — gold boundaries match
+our sentence boundaries 77%/77% at 50 ms tolerance, matching the 0.802 branch's 86%/81%; the
+apparent 19.5% match at float-exact tolerance is purely this box's ~20 ms timestamp drift.
+
+### Correction to the ceiling arithmetic
+
+An earlier version of this session's analysis applied the trained-build offset (−0.032, local
+OOF 0.750307 → platform 0.71798) to oracles that contain no trained parts. The prompt-only
+offset is **−0.0216** (local 0.716181 → platform hidden 0.694618). Under that, the
+seven-producer oracle is ≈0.905 and the pool oracle ≈0.93, so **0.89 is reachable in principle
+by a better selector** — it is the selector, not the ceiling, that is missing.
+
+### What is still deployable
+
+| Rule (local models only) | seed 17 | seed 18 | seed 19 | mean |
+| --- | ---: | ---: | ---: | ---: |
+| **medoid4 + 9B as a fourth voter** | +0.0072 | +0.0091 | +0.0030 | **+0.0064** |
+| median3 (coordinate-wise median, one line) | +0.0055 | +0.0003 | +0.0011 | +0.0023 |
+
+The 9B voter measured here is the Mac MLX **answer-pass** artifact in turbo coordinates, so a
+9B producer served on the box is an approximation of it and the gain may not carry. `median3`
+is exactly reproducible but within noise on two of three seeds.
+
+Artifacts: `runs/frontier-probe-20260920/` (scripts, raw generations, aligned spans for every
+producer above).
