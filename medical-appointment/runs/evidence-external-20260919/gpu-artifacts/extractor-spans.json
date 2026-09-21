@@ -1,0 +1,4880 @@
+{
+  "mode": "extractor-out-of-fold",
+  "rows": [
+    {
+      "question_id": "sample_5_yes_q01",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        47.08,
+        52.84
+      ],
+      "candidate": [
+        49.94,
+        52.82
+      ]
+    },
+    {
+      "question_id": "sample_5_hard_no_q02",
+      "conversation": "sample_5",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        27.52,
+        30.48
+      ]
+    },
+    {
+      "question_id": "sample_5_hard_no_q01",
+      "conversation": "sample_5",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        119.88,
+        122.92
+      ]
+    },
+    {
+      "question_id": "sample_5_yes_q05",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        36.42,
+        41.58
+      ],
+      "candidate": [
+        38.88,
+        42.26
+      ]
+    },
+    {
+      "question_id": "sample_5_yes_q02",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        142.44,
+        147.88
+      ],
+      "candidate": [
+        142.52,
+        147.88
+      ]
+    },
+    {
+      "question_id": "sample_5_yes_q06",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        32.06,
+        34.98
+      ],
+      "candidate": [
+        32.06,
+        34.98
+      ]
+    },
+    {
+      "question_id": "sample_5_off_topic_q02",
+      "conversation": "sample_5",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        102.66,
+        122.92
+      ]
+    },
+    {
+      "question_id": "sample_5_yes_q03",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        102.68,
+        105.42
+      ],
+      "candidate": [
+        102.66,
+        105.42
+      ]
+    },
+    {
+      "question_id": "sample_5_yes_q04",
+      "conversation": "sample_5",
+      "label": true,
+      "answer": true,
+      "gold": [
+        70.44,
+        73.82
+      ],
+      "candidate": [
+        70.24,
+        73.82
+      ]
+    },
+    {
+      "question_id": "sample_5_off_topic_q01",
+      "conversation": "sample_5",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        140.3,
+        141.76
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q04",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        41.82,
+        45.58
+      ],
+      "candidate": [
+        41.36,
+        45.58
+      ]
+    },
+    {
+      "question_id": "sample_18_off_topic_q01",
+      "conversation": "sample_18",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        72.9,
+        79.16
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q02",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        17.24,
+        18.5
+      ],
+      "candidate": [
+        17.2,
+        18.5
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q01",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        69.38,
+        72.04
+      ],
+      "candidate": [
+        70.36,
+        72.04
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q07",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        20.92,
+        26.3
+      ],
+      "candidate": [
+        20.76,
+        24.56
+      ]
+    },
+    {
+      "question_id": "sample_18_hard_no_q01",
+      "conversation": "sample_18",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        62.5,
+        65.92
+      ]
+    },
+    {
+      "question_id": "sample_18_hard_no_q02",
+      "conversation": "sample_18",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        50.74,
+        55.12
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q06",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        62.5,
+        65.94
+      ],
+      "candidate": [
+        62.5,
+        65.92
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q03",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        33.0,
+        38.66
+      ],
+      "candidate": [
+        33.0,
+        38.68
+      ]
+    },
+    {
+      "question_id": "sample_18_yes_q05",
+      "conversation": "sample_18",
+      "label": true,
+      "answer": true,
+      "gold": [
+        50.74,
+        55.1
+      ],
+      "candidate": [
+        50.74,
+        55.12
+      ]
+    },
+    {
+      "question_id": "sample_20_hard_no_q03",
+      "conversation": "sample_20",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        155.0,
+        159.96
+      ]
+    },
+    {
+      "question_id": "sample_20_off_topic_q02",
+      "conversation": "sample_20",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        123.84,
+        126.82
+      ]
+    },
+    {
+      "question_id": "sample_20_off_topic_q01",
+      "conversation": "sample_20",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        116.18,
+        119.68
+      ]
+    },
+    {
+      "question_id": "sample_20_yes_q01",
+      "conversation": "sample_20",
+      "label": true,
+      "answer": true,
+      "gold": [
+        182.44,
+        186.3
+      ],
+      "candidate": [
+        182.44,
+        186.3
+      ]
+    },
+    {
+      "question_id": "sample_20_hard_no_q01",
+      "conversation": "sample_20",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        33.3,
+        35.4
+      ]
+    },
+    {
+      "question_id": "sample_20_hard_no_q02",
+      "conversation": "sample_20",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        75.84,
+        83.94
+      ]
+    },
+    {
+      "question_id": "sample_20_yes_q05",
+      "conversation": "sample_20",
+      "label": true,
+      "answer": true,
+      "gold": [
+        182.44,
+        184.98
+      ],
+      "candidate": [
+        42.120000000000005,
+        43.76
+      ]
+    },
+    {
+      "question_id": "sample_20_yes_q02",
+      "conversation": "sample_20",
+      "label": true,
+      "answer": true,
+      "gold": [
+        102.3,
+        105.02
+      ],
+      "candidate": [
+        102.34,
+        105.02
+      ]
+    },
+    {
+      "question_id": "sample_20_yes_q04",
+      "conversation": "sample_20",
+      "label": true,
+      "answer": true,
+      "gold": [
+        105.56,
+        107.46
+      ],
+      "candidate": [
+        102.34,
+        107.46
+      ]
+    },
+    {
+      "question_id": "sample_20_yes_q03",
+      "conversation": "sample_20",
+      "label": true,
+      "answer": true,
+      "gold": [
+        182.44,
+        184.5
+      ],
+      "candidate": [
+        182.44,
+        188.9
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q06",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        13.94,
+        17.42
+      ],
+      "candidate": [
+        13.94,
+        16.38
+      ]
+    },
+    {
+      "question_id": "sample_33_hard_no_q01",
+      "conversation": "sample_33",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        69.02,
+        71.0
+      ]
+    },
+    {
+      "question_id": "sample_33_hard_no_q02",
+      "conversation": "sample_33",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        69.02,
+        71.0
+      ]
+    },
+    {
+      "question_id": "sample_33_off_topic_q01",
+      "conversation": "sample_33",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        82.14,
+        89.06
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q02",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        27.02,
+        31.5
+      ],
+      "candidate": [
+        27.02,
+        28.98
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q04",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        58.82,
+        61.32
+      ],
+      "candidate": [
+        58.82,
+        61.3
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q03",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        55.34,
+        58.28
+      ],
+      "candidate": [
+        25.88,
+        26.56
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q05",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        44.86,
+        52.62
+      ],
+      "candidate": [
+        44.86,
+        46.88
+      ]
+    },
+    {
+      "question_id": "sample_33_yes_q01",
+      "conversation": "sample_33",
+      "label": true,
+      "answer": true,
+      "gold": [
+        69.06,
+        71.0
+      ],
+      "candidate": [
+        69.02,
+        71.0
+      ]
+    },
+    {
+      "question_id": "sample_33_hard_no_q03",
+      "conversation": "sample_33",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        50.2,
+        52.62
+      ]
+    },
+    {
+      "question_id": "sample_43_yes_q02",
+      "conversation": "sample_43",
+      "label": true,
+      "answer": true,
+      "gold": [
+        4.82,
+        6.24
+      ],
+      "candidate": [
+        4.82,
+        6.24
+      ]
+    },
+    {
+      "question_id": "sample_43_hard_no_q03",
+      "conversation": "sample_43",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        44.26,
+        46.78
+      ]
+    },
+    {
+      "question_id": "sample_43_yes_q05",
+      "conversation": "sample_43",
+      "label": true,
+      "answer": true,
+      "gold": [
+        31.76,
+        34.28
+      ],
+      "candidate": [
+        31.78,
+        34.28
+      ]
+    },
+    {
+      "question_id": "sample_43_off_topic_q01",
+      "conversation": "sample_43",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        4.82,
+        6.24
+      ]
+    },
+    {
+      "question_id": "sample_43_yes_q04",
+      "conversation": "sample_43",
+      "label": true,
+      "answer": true,
+      "gold": [
+        23.06,
+        23.78
+      ],
+      "candidate": [
+        23.04,
+        23.78
+      ]
+    },
+    {
+      "question_id": "sample_43_yes_q01",
+      "conversation": "sample_43",
+      "label": true,
+      "answer": true,
+      "gold": [
+        44.22,
+        46.78
+      ],
+      "candidate": [
+        44.26,
+        46.78
+      ]
+    },
+    {
+      "question_id": "sample_43_hard_no_q01",
+      "conversation": "sample_43",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        4.82,
+        6.24
+      ]
+    },
+    {
+      "question_id": "sample_43_hard_no_q02",
+      "conversation": "sample_43",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        31.78,
+        34.28
+      ]
+    },
+    {
+      "question_id": "sample_43_yes_q03",
+      "conversation": "sample_43",
+      "label": true,
+      "answer": true,
+      "gold": [
+        59.48,
+        63.9
+      ],
+      "candidate": [
+        59.52,
+        63.8
+      ]
+    },
+    {
+      "question_id": "sample_43_hard_no_q04",
+      "conversation": "sample_43",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        31.78,
+        34.28
+      ]
+    },
+    {
+      "question_id": "sample_50_yes_q04",
+      "conversation": "sample_50",
+      "label": true,
+      "answer": true,
+      "gold": [
+        60.36,
+        69.66
+      ],
+      "candidate": [
+        60.36,
+        62.7
+      ]
+    },
+    {
+      "question_id": "sample_50_hard_no_q01",
+      "conversation": "sample_50",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        35.38,
+        39.0
+      ]
+    },
+    {
+      "question_id": "sample_50_off_topic_q01",
+      "conversation": "sample_50",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        73.44,
+        75.16
+      ]
+    },
+    {
+      "question_id": "sample_50_yes_q01",
+      "conversation": "sample_50",
+      "label": true,
+      "answer": true,
+      "gold": [
+        39.68,
+        43.4
+      ],
+      "candidate": [
+        39.7,
+        43.38
+      ]
+    },
+    {
+      "question_id": "sample_50_yes_q03",
+      "conversation": "sample_50",
+      "label": true,
+      "answer": true,
+      "gold": [
+        23.86,
+        25.96
+      ],
+      "candidate": [
+        23.86,
+        25.96
+      ]
+    },
+    {
+      "question_id": "sample_50_hard_no_q03",
+      "conversation": "sample_50",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        47.98,
+        52.52
+      ]
+    },
+    {
+      "question_id": "sample_50_off_topic_q02",
+      "conversation": "sample_50",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        73.44,
+        74.56
+      ]
+    },
+    {
+      "question_id": "sample_50_yes_q05",
+      "conversation": "sample_50",
+      "label": true,
+      "answer": true,
+      "gold": [
+        20.38,
+        22.78
+      ],
+      "candidate": [
+        16.04,
+        23.18
+      ]
+    },
+    {
+      "question_id": "sample_50_yes_q02",
+      "conversation": "sample_50",
+      "label": true,
+      "answer": true,
+      "gold": [
+        35.38,
+        39.0
+      ],
+      "candidate": [
+        35.38,
+        39.0
+      ]
+    },
+    {
+      "question_id": "sample_50_hard_no_q02",
+      "conversation": "sample_50",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        49.68,
+        52.52
+      ]
+    },
+    {
+      "question_id": "sample_55_yes_q02",
+      "conversation": "sample_55",
+      "label": true,
+      "answer": true,
+      "gold": [
+        79.42,
+        80.84
+      ],
+      "candidate": [
+        79.42,
+        80.84
+      ]
+    },
+    {
+      "question_id": "sample_55_hard_no_q01",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        51.96,
+        55.42
+      ]
+    },
+    {
+      "question_id": "sample_55_off_topic_q01",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        86.38,
+        87.8
+      ]
+    },
+    {
+      "question_id": "sample_55_yes_q03",
+      "conversation": "sample_55",
+      "label": true,
+      "answer": true,
+      "gold": [
+        71.12,
+        74.22
+      ],
+      "candidate": [
+        71.12,
+        74.22
+      ]
+    },
+    {
+      "question_id": "sample_55_yes_q01",
+      "conversation": "sample_55",
+      "label": true,
+      "answer": true,
+      "gold": [
+        32.56,
+        36.72
+      ],
+      "candidate": [
+        32.54,
+        36.72
+      ]
+    },
+    {
+      "question_id": "sample_55_hard_no_q05",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        58.38,
+        60.32
+      ]
+    },
+    {
+      "question_id": "sample_55_hard_no_q04",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        32.54,
+        36.72
+      ]
+    },
+    {
+      "question_id": "sample_55_hard_no_q02",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        56.22,
+        57.98
+      ]
+    },
+    {
+      "question_id": "sample_55_hard_no_q03",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        15.78,
+        20.2
+      ]
+    },
+    {
+      "question_id": "sample_55_off_topic_q02",
+      "conversation": "sample_55",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        86.38,
+        87.8
+      ]
+    },
+    {
+      "question_id": "sample_56_yes_q01",
+      "conversation": "sample_56",
+      "label": true,
+      "answer": true,
+      "gold": [
+        61.66,
+        64.2
+      ],
+      "candidate": [
+        61.66,
+        64.2
+      ]
+    },
+    {
+      "question_id": "sample_56_off_topic_q01",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        95.18,
+        99.56
+      ]
+    },
+    {
+      "question_id": "sample_56_hard_no_q02",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        83.66,
+        85.66
+      ]
+    },
+    {
+      "question_id": "sample_56_yes_q02",
+      "conversation": "sample_56",
+      "label": true,
+      "answer": true,
+      "gold": [
+        48.84,
+        50.82
+      ],
+      "candidate": [
+        48.72,
+        50.82
+      ]
+    },
+    {
+      "question_id": "sample_56_hard_no_q04",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        44.82,
+        46.48
+      ]
+    },
+    {
+      "question_id": "sample_56_yes_q04",
+      "conversation": "sample_56",
+      "label": true,
+      "answer": true,
+      "gold": [
+        44.92,
+        46.5
+      ],
+      "candidate": [
+        44.82,
+        46.48
+      ]
+    },
+    {
+      "question_id": "sample_56_hard_no_q01",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        18.58,
+        19.84
+      ]
+    },
+    {
+      "question_id": "sample_56_hard_no_q03",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        83.66,
+        85.66
+      ]
+    },
+    {
+      "question_id": "sample_56_yes_q03",
+      "conversation": "sample_56",
+      "label": true,
+      "answer": true,
+      "gold": [
+        81.92,
+        85.66
+      ],
+      "candidate": [
+        81.9,
+        85.66
+      ]
+    },
+    {
+      "question_id": "sample_56_off_topic_q02",
+      "conversation": "sample_56",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        5.2,
+        7.64
+      ]
+    },
+    {
+      "question_id": "sample_63_hard_no_q01",
+      "conversation": "sample_63",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        57.22,
+        61.92
+      ]
+    },
+    {
+      "question_id": "sample_63_hard_no_q04",
+      "conversation": "sample_63",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        26.82,
+        27.46
+      ]
+    },
+    {
+      "question_id": "sample_63_hard_no_q02",
+      "conversation": "sample_63",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        65.0,
+        67.42
+      ]
+    },
+    {
+      "question_id": "sample_63_off_topic_q01",
+      "conversation": "sample_63",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        77.04,
+        78.84
+      ]
+    },
+    {
+      "question_id": "sample_63_hard_no_q03",
+      "conversation": "sample_63",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        47.88,
+        49.64
+      ]
+    },
+    {
+      "question_id": "sample_63_yes_q01",
+      "conversation": "sample_63",
+      "label": true,
+      "answer": true,
+      "gold": [
+        57.2,
+        61.92
+      ],
+      "candidate": [
+        57.22,
+        60.04
+      ]
+    },
+    {
+      "question_id": "sample_63_yes_q02",
+      "conversation": "sample_63",
+      "label": true,
+      "answer": true,
+      "gold": [
+        0.0,
+        0.26
+      ],
+      "candidate": [
+        50.44,
+        52.8
+      ]
+    },
+    {
+      "question_id": "sample_63_yes_q03",
+      "conversation": "sample_63",
+      "label": true,
+      "answer": true,
+      "gold": [
+        36.72,
+        41.92
+      ],
+      "candidate": [
+        36.68,
+        41.92
+      ]
+    },
+    {
+      "question_id": "sample_63_yes_q05",
+      "conversation": "sample_63",
+      "label": true,
+      "answer": true,
+      "gold": [
+        64.76,
+        70.16
+      ],
+      "candidate": [
+        64.78,
+        70.16
+      ]
+    },
+    {
+      "question_id": "sample_63_yes_q04",
+      "conversation": "sample_63",
+      "label": true,
+      "answer": true,
+      "gold": [
+        24.46,
+        27.46
+      ],
+      "candidate": [
+        24.46,
+        27.46
+      ]
+    },
+    {
+      "question_id": "sample_64_yes_q04",
+      "conversation": "sample_64",
+      "label": true,
+      "answer": true,
+      "gold": [
+        39.42,
+        41.64
+      ],
+      "candidate": [
+        39.42,
+        41.64
+      ]
+    },
+    {
+      "question_id": "sample_64_yes_q01",
+      "conversation": "sample_64",
+      "label": true,
+      "answer": true,
+      "gold": [
+        72.26,
+        73.98
+      ],
+      "candidate": [
+        72.24,
+        73.98
+      ]
+    },
+    {
+      "question_id": "sample_64_hard_no_q01",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        88.04,
+        91.22
+      ]
+    },
+    {
+      "question_id": "sample_64_yes_q03",
+      "conversation": "sample_64",
+      "label": true,
+      "answer": true,
+      "gold": [
+        88.04,
+        91.22
+      ],
+      "candidate": [
+        88.04,
+        91.22
+      ]
+    },
+    {
+      "question_id": "sample_64_hard_no_q03",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        63.16,
+        64.52
+      ]
+    },
+    {
+      "question_id": "sample_64_hard_no_q04",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        39.42,
+        41.64
+      ]
+    },
+    {
+      "question_id": "sample_64_hard_no_q02",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        39.42,
+        41.64
+      ]
+    },
+    {
+      "question_id": "sample_64_hard_no_q05",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        72.24,
+        73.98
+      ]
+    },
+    {
+      "question_id": "sample_64_yes_q02",
+      "conversation": "sample_64",
+      "label": true,
+      "answer": true,
+      "gold": [
+        0.0,
+        0.16
+      ],
+      "candidate": [
+        63.16,
+        64.52
+      ]
+    },
+    {
+      "question_id": "sample_64_off_topic_q01",
+      "conversation": "sample_64",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        123.98,
+        127.02
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q02",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        30.92,
+        33.08
+      ],
+      "candidate": [
+        32.3,
+        33.06
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q01",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        42.5,
+        43.68
+      ],
+      "candidate": [
+        42.48,
+        43.7
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q03",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        44.22,
+        45.46
+      ],
+      "candidate": [
+        44.22,
+        45.44
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q04",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        68.26,
+        69.96
+      ],
+      "candidate": [
+        68.24,
+        69.96
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q06",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        57.68,
+        58.9
+      ],
+      "candidate": [
+        57.18,
+        58.9
+      ]
+    },
+    {
+      "question_id": "sample_69_yes_q05",
+      "conversation": "sample_69",
+      "label": true,
+      "answer": true,
+      "gold": [
+        59.28,
+        60.52
+      ],
+      "candidate": [
+        59.28,
+        60.5
+      ]
+    },
+    {
+      "question_id": "sample_69_hard_no_q01",
+      "conversation": "sample_69",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        49.1,
+        51.48
+      ]
+    },
+    {
+      "question_id": "sample_69_off_topic_q01",
+      "conversation": "sample_69",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        80.78,
+        81.38
+      ]
+    },
+    {
+      "question_id": "sample_69_hard_no_q02",
+      "conversation": "sample_69",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        42.48,
+        43.7
+      ]
+    },
+    {
+      "question_id": "sample_69_hard_no_q03",
+      "conversation": "sample_69",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        59.28,
+        60.5
+      ]
+    },
+    {
+      "question_id": "sample_86_off_topic_q01",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        147.46,
+        151.44
+      ]
+    },
+    {
+      "question_id": "sample_86_yes_q01",
+      "conversation": "sample_86",
+      "label": true,
+      "answer": true,
+      "gold": [
+        35.14,
+        35.74
+      ],
+      "candidate": [
+        32.5,
+        35.74
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q03",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        55.62,
+        57.44
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q01",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        109.6,
+        111.2
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q05",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        66.54,
+        69.94
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q04",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        32.5,
+        35.74
+      ]
+    },
+    {
+      "question_id": "sample_86_yes_q03",
+      "conversation": "sample_86",
+      "label": true,
+      "answer": true,
+      "gold": [
+        66.5,
+        69.94
+      ],
+      "candidate": [
+        66.54,
+        69.94
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q02",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        80.04,
+        82.42
+      ]
+    },
+    {
+      "question_id": "sample_86_hard_no_q06",
+      "conversation": "sample_86",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        20.64,
+        23.56
+      ]
+    },
+    {
+      "question_id": "sample_86_yes_q02",
+      "conversation": "sample_86",
+      "label": true,
+      "answer": true,
+      "gold": [
+        50.66,
+        54.7
+      ],
+      "candidate": [
+        50.66,
+        54.7
+      ]
+    },
+    {
+      "question_id": "sample_92_off_topic_q01",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        23.24,
+        32.98
+      ]
+    },
+    {
+      "question_id": "sample_92_hard_no_q02",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        108.64,
+        110.96
+      ]
+    },
+    {
+      "question_id": "sample_92_hard_no_q03",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        88.32,
+        90.02
+      ]
+    },
+    {
+      "question_id": "sample_92_yes_q03",
+      "conversation": "sample_92",
+      "label": true,
+      "answer": true,
+      "gold": [
+        108.62,
+        110.98
+      ],
+      "candidate": [
+        108.64,
+        110.96
+      ]
+    },
+    {
+      "question_id": "sample_92_yes_q02",
+      "conversation": "sample_92",
+      "label": true,
+      "answer": true,
+      "gold": [
+        74.38,
+        78.22
+      ],
+      "candidate": [
+        74.24,
+        79.18
+      ]
+    },
+    {
+      "question_id": "sample_92_hard_no_q04",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        69.66,
+        71.88
+      ]
+    },
+    {
+      "question_id": "sample_92_yes_q01",
+      "conversation": "sample_92",
+      "label": true,
+      "answer": true,
+      "gold": [
+        23.24,
+        26.38
+      ],
+      "candidate": [
+        23.24,
+        26.38
+      ]
+    },
+    {
+      "question_id": "sample_92_off_topic_q02",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        74.24,
+        77.4
+      ]
+    },
+    {
+      "question_id": "sample_92_yes_q04",
+      "conversation": "sample_92",
+      "label": true,
+      "answer": true,
+      "gold": [
+        30.92,
+        33.0
+      ],
+      "candidate": [
+        30.92,
+        32.98
+      ]
+    },
+    {
+      "question_id": "sample_92_hard_no_q01",
+      "conversation": "sample_92",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        83.8,
+        87.38
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q03",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        24.4,
+        26.34
+      ],
+      "candidate": [
+        24.4,
+        26.32
+      ]
+    },
+    {
+      "question_id": "sample_6_hard_no_q02",
+      "conversation": "sample_6",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        14.9
+      ]
+    },
+    {
+      "question_id": "sample_6_off_topic_q01",
+      "conversation": "sample_6",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        1.92
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q04",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        62.9,
+        69.68
+      ],
+      "candidate": [
+        64.18,
+        69.68
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q05",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        72.96,
+        77.6
+      ],
+      "candidate": [
+        12.96,
+        14.9
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q07",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        17.9,
+        19.18
+      ],
+      "candidate": [
+        17.86,
+        19.18
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q01",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        73.52,
+        77.6
+      ],
+      "candidate": [
+        73.52,
+        75.58
+      ]
+    },
+    {
+      "question_id": "sample_6_hard_no_q01",
+      "conversation": "sample_6",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        62.96,
+        69.68
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q02",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        9.06,
+        12.28
+      ],
+      "candidate": [
+        9.04,
+        12.28
+      ]
+    },
+    {
+      "question_id": "sample_6_yes_q06",
+      "conversation": "sample_6",
+      "label": true,
+      "answer": true,
+      "gold": [
+        64.18,
+        69.68
+      ],
+      "candidate": [
+        62.96,
+        69.68
+      ]
+    },
+    {
+      "question_id": "sample_10_hard_no_q01",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        60.42,
+        62.62
+      ]
+    },
+    {
+      "question_id": "sample_10_hard_no_q04",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        22.2,
+        23.58
+      ]
+    },
+    {
+      "question_id": "sample_10_yes_q01",
+      "conversation": "sample_10",
+      "label": true,
+      "answer": true,
+      "gold": [
+        63.18,
+        64.58
+      ],
+      "candidate": [
+        63.18,
+        65.24
+      ]
+    },
+    {
+      "question_id": "sample_10_off_topic_q02",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        6.66,
+        7.2
+      ]
+    },
+    {
+      "question_id": "sample_10_off_topic_q01",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_10_hard_no_q05",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        75.12,
+        77.88
+      ]
+    },
+    {
+      "question_id": "sample_10_hard_no_q03",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        53.76,
+        57.56
+      ]
+    },
+    {
+      "question_id": "sample_10_yes_q02",
+      "conversation": "sample_10",
+      "label": true,
+      "answer": true,
+      "gold": [
+        53.76,
+        57.56
+      ],
+      "candidate": [
+        53.76,
+        55.86
+      ]
+    },
+    {
+      "question_id": "sample_10_yes_q03",
+      "conversation": "sample_10",
+      "label": true,
+      "answer": true,
+      "gold": [
+        22.2,
+        23.56
+      ],
+      "candidate": [
+        22.2,
+        23.58
+      ]
+    },
+    {
+      "question_id": "sample_10_hard_no_q02",
+      "conversation": "sample_10",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q03",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        23.12,
+        25.66
+      ],
+      "candidate": [
+        23.14,
+        26.96
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q05",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        75.26,
+        79.54
+      ],
+      "candidate": [
+        75.26,
+        82.06
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q02",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        85.28,
+        88.5
+      ],
+      "candidate": [
+        19.84,
+        20.84
+      ]
+    },
+    {
+      "question_id": "sample_23_off_topic_q02",
+      "conversation": "sample_23",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        75.26,
+        79.52
+      ]
+    },
+    {
+      "question_id": "sample_23_hard_no_q01",
+      "conversation": "sample_23",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        75.26,
+        77.32
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q04",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        90.2,
+        92.2
+      ],
+      "candidate": [
+        68.06,
+        69.96
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q06",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        43.44,
+        45.58
+      ],
+      "candidate": [
+        43.42,
+        45.56
+      ]
+    },
+    {
+      "question_id": "sample_23_yes_q01",
+      "conversation": "sample_23",
+      "label": true,
+      "answer": true,
+      "gold": [
+        53.3,
+        56.2
+      ],
+      "candidate": [
+        53.34,
+        56.2
+      ]
+    },
+    {
+      "question_id": "sample_23_off_topic_q01",
+      "conversation": "sample_23",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        75.26,
+        79.52
+      ]
+    },
+    {
+      "question_id": "sample_23_hard_no_q02",
+      "conversation": "sample_23",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        32.9,
+        36.74
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q05",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        28.5,
+        30.0
+      ],
+      "candidate": [
+        29.02,
+        30.0
+      ]
+    },
+    {
+      "question_id": "sample_37_hard_no_q01",
+      "conversation": "sample_37",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        30.7,
+        32.6
+      ]
+    },
+    {
+      "question_id": "sample_37_hard_no_q03",
+      "conversation": "sample_37",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        7.28,
+        46.76
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q03",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        30.68,
+        32.62
+      ],
+      "candidate": [
+        30.7,
+        32.6
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q04",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        17.58,
+        22.18
+      ],
+      "candidate": [
+        17.56,
+        18.84
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q06",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        60.02,
+        61.34
+      ],
+      "candidate": [
+        60.08,
+        61.34
+      ]
+    },
+    {
+      "question_id": "sample_37_off_topic_q01",
+      "conversation": "sample_37",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        9.18
+      ]
+    },
+    {
+      "question_id": "sample_37_hard_no_q02",
+      "conversation": "sample_37",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        17.56,
+        22.16
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q01",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        13.74,
+        14.52
+      ],
+      "candidate": [
+        7.28,
+        9.18
+      ]
+    },
+    {
+      "question_id": "sample_37_yes_q02",
+      "conversation": "sample_37",
+      "label": true,
+      "answer": true,
+      "gold": [
+        56.02,
+        59.34
+      ],
+      "candidate": [
+        56.08,
+        61.34
+      ]
+    },
+    {
+      "question_id": "sample_39_yes_q02",
+      "conversation": "sample_39",
+      "label": true,
+      "answer": true,
+      "gold": [
+        22.64,
+        23.92
+      ],
+      "candidate": [
+        22.62,
+        25.36
+      ]
+    },
+    {
+      "question_id": "sample_39_hard_no_q04",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_39_off_topic_q02",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_39_off_topic_q01",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_39_yes_q04",
+      "conversation": "sample_39",
+      "label": true,
+      "answer": true,
+      "gold": [
+        47.34,
+        53.04
+      ],
+      "candidate": [
+        47.4,
+        51.04
+      ]
+    },
+    {
+      "question_id": "sample_39_yes_q03",
+      "conversation": "sample_39",
+      "label": true,
+      "answer": true,
+      "gold": [
+        63.56,
+        65.8
+      ],
+      "candidate": [
+        68.06,
+        69.96
+      ]
+    },
+    {
+      "question_id": "sample_39_hard_no_q01",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        25.84,
+        32.06
+      ]
+    },
+    {
+      "question_id": "sample_39_yes_q01",
+      "conversation": "sample_39",
+      "label": true,
+      "answer": true,
+      "gold": [
+        55.32,
+        60.68
+      ],
+      "candidate": [
+        53.8,
+        60.68
+      ]
+    },
+    {
+      "question_id": "sample_39_hard_no_q03",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_39_hard_no_q02",
+      "conversation": "sample_39",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        72.18,
+        75.18
+      ]
+    },
+    {
+      "question_id": "sample_48_hard_no_q02",
+      "conversation": "sample_48",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        28.34,
+        36.76
+      ]
+    },
+    {
+      "question_id": "sample_48_off_topic_q01",
+      "conversation": "sample_48",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.84
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q03",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        28.34,
+        35.82
+      ],
+      "candidate": [
+        34.86,
+        36.76
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q06",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        38.96,
+        43.04
+      ],
+      "candidate": [
+        38.96,
+        43.0
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q05",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        41.74,
+        44.36
+      ],
+      "candidate": [
+        41.74,
+        44.38
+      ]
+    },
+    {
+      "question_id": "sample_48_hard_no_q01",
+      "conversation": "sample_48",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        13.26,
+        15.38
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q04",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        77.42,
+        81.2
+      ],
+      "candidate": [
+        77.4,
+        81.2
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q02",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        11.18,
+        18.78
+      ],
+      "candidate": [
+        13.26,
+        18.78
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q07",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        48.06,
+        52.34
+      ],
+      "candidate": [
+        48.06,
+        52.36
+      ]
+    },
+    {
+      "question_id": "sample_48_yes_q01",
+      "conversation": "sample_48",
+      "label": true,
+      "answer": true,
+      "gold": [
+        28.34,
+        35.82
+      ],
+      "candidate": [
+        34.86,
+        36.76
+      ]
+    },
+    {
+      "question_id": "sample_54_hard_no_q02",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        38.88,
+        40.24
+      ]
+    },
+    {
+      "question_id": "sample_54_yes_q04",
+      "conversation": "sample_54",
+      "label": true,
+      "answer": true,
+      "gold": [
+        51.62,
+        54.6
+      ],
+      "candidate": [
+        51.62,
+        54.6
+      ]
+    },
+    {
+      "question_id": "sample_54_off_topic_q01",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        15.76
+      ]
+    },
+    {
+      "question_id": "sample_54_hard_no_q04",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        14.24,
+        15.76
+      ]
+    },
+    {
+      "question_id": "sample_54_hard_no_q01",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.16
+      ]
+    },
+    {
+      "question_id": "sample_54_yes_q03",
+      "conversation": "sample_54",
+      "label": true,
+      "answer": true,
+      "gold": [
+        13.82,
+        15.76
+      ],
+      "candidate": [
+        14.24,
+        15.76
+      ]
+    },
+    {
+      "question_id": "sample_54_yes_q02",
+      "conversation": "sample_54",
+      "label": true,
+      "answer": true,
+      "gold": [
+        80.38,
+        82.2
+      ],
+      "candidate": [
+        80.34,
+        82.18
+      ]
+    },
+    {
+      "question_id": "sample_54_hard_no_q03",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        82.7,
+        84.42
+      ]
+    },
+    {
+      "question_id": "sample_54_off_topic_q02",
+      "conversation": "sample_54",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        4.18
+      ]
+    },
+    {
+      "question_id": "sample_54_yes_q01",
+      "conversation": "sample_54",
+      "label": true,
+      "answer": true,
+      "gold": [
+        68.74,
+        70.98
+      ],
+      "candidate": [
+        68.74,
+        70.98
+      ]
+    },
+    {
+      "question_id": "sample_66_hard_no_q02",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.18
+      ]
+    },
+    {
+      "question_id": "sample_66_yes_q03",
+      "conversation": "sample_66",
+      "label": true,
+      "answer": true,
+      "gold": [
+        31.34,
+        35.18
+      ],
+      "candidate": [
+        31.32,
+        35.18
+      ]
+    },
+    {
+      "question_id": "sample_66_hard_no_q01",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.18
+      ]
+    },
+    {
+      "question_id": "sample_66_yes_q04",
+      "conversation": "sample_66",
+      "label": true,
+      "answer": true,
+      "gold": [
+        113.08,
+        114.86
+      ],
+      "candidate": [
+        113.02,
+        114.84
+      ]
+    },
+    {
+      "question_id": "sample_66_hard_no_q03",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        113.02,
+        114.84
+      ]
+    },
+    {
+      "question_id": "sample_66_off_topic_q01",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.18
+      ]
+    },
+    {
+      "question_id": "sample_66_hard_no_q05",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        125.3,
+        127.54
+      ]
+    },
+    {
+      "question_id": "sample_66_hard_no_q04",
+      "conversation": "sample_66",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        116.9,
+        119.12
+      ]
+    },
+    {
+      "question_id": "sample_66_yes_q02",
+      "conversation": "sample_66",
+      "label": true,
+      "answer": true,
+      "gold": [
+        93.14,
+        96.36
+      ],
+      "candidate": [
+        97.44,
+        99.48
+      ]
+    },
+    {
+      "question_id": "sample_66_yes_q01",
+      "conversation": "sample_66",
+      "label": true,
+      "answer": true,
+      "gold": [
+        116.96,
+        122.94
+      ],
+      "candidate": [
+        121.2,
+        127.54
+      ]
+    },
+    {
+      "question_id": "sample_67_hard_no_q02",
+      "conversation": "sample_67",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        25.36,
+        27.72
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q02",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        70.32,
+        72.42
+      ],
+      "candidate": [
+        71.28,
+        72.42
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q05",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        89.12,
+        90.98
+      ],
+      "candidate": [
+        89.12,
+        90.98
+      ]
+    },
+    {
+      "question_id": "sample_67_off_topic_q01",
+      "conversation": "sample_67",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        89.12,
+        93.02
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q04",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        72.78,
+        74.44
+      ],
+      "candidate": [
+        72.76,
+        74.42
+      ]
+    },
+    {
+      "question_id": "sample_67_hard_no_q01",
+      "conversation": "sample_67",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        89.12,
+        93.02
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q01",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        21.8,
+        24.62
+      ],
+      "candidate": [
+        21.799999999999997,
+        24.6
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q06",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        25.36,
+        27.72
+      ],
+      "candidate": [
+        25.36,
+        27.72
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q07",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        39.48,
+        40.44
+      ],
+      "candidate": [
+        39.48,
+        40.44
+      ]
+    },
+    {
+      "question_id": "sample_67_yes_q03",
+      "conversation": "sample_67",
+      "label": true,
+      "answer": true,
+      "gold": [
+        51.68,
+        55.5
+      ],
+      "candidate": [
+        51.68,
+        55.5
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q04",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        80.46000000000001,
+        83.34
+      ],
+      "candidate": [
+        56.88,
+        58.64
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q06",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        54.54,
+        56.32
+      ],
+      "candidate": [
+        54.54,
+        56.32
+      ]
+    },
+    {
+      "question_id": "sample_70_hard_no_q03",
+      "conversation": "sample_70",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.68
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q01",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        116.98,
+        118.92
+      ],
+      "candidate": [
+        116.98,
+        118.9
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q05",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        19.48,
+        25.54
+      ],
+      "candidate": [
+        19.48,
+        25.54
+      ]
+    },
+    {
+      "question_id": "sample_70_hard_no_q01",
+      "conversation": "sample_70",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.68
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q02",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        116.98,
+        124.66
+      ],
+      "candidate": [
+        113.14,
+        116.2
+      ]
+    },
+    {
+      "question_id": "sample_70_off_topic_q01",
+      "conversation": "sample_70",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.68
+      ]
+    },
+    {
+      "question_id": "sample_70_yes_q03",
+      "conversation": "sample_70",
+      "label": true,
+      "answer": true,
+      "gold": [
+        80.46000000000001,
+        83.34
+      ],
+      "candidate": [
+        80.44,
+        83.36
+      ]
+    },
+    {
+      "question_id": "sample_70_hard_no_q02",
+      "conversation": "sample_70",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.68
+      ]
+    },
+    {
+      "question_id": "sample_71_hard_no_q02",
+      "conversation": "sample_71",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.82
+      ]
+    },
+    {
+      "question_id": "sample_71_off_topic_q01",
+      "conversation": "sample_71",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        124.74,
+        126.2
+      ]
+    },
+    {
+      "question_id": "sample_71_yes_q03",
+      "conversation": "sample_71",
+      "label": true,
+      "answer": true,
+      "gold": [
+        78.86,
+        80.46
+      ],
+      "candidate": [
+        78.84,
+        80.44
+      ]
+    },
+    {
+      "question_id": "sample_71_hard_no_q03",
+      "conversation": "sample_71",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        70.36,
+        74.32
+      ]
+    },
+    {
+      "question_id": "sample_71_yes_q04",
+      "conversation": "sample_71",
+      "label": true,
+      "answer": true,
+      "gold": [
+        53.7,
+        57.78
+      ],
+      "candidate": [
+        53.14,
+        57.78
+      ]
+    },
+    {
+      "question_id": "sample_71_hard_no_q01",
+      "conversation": "sample_71",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        78.84,
+        80.44
+      ]
+    },
+    {
+      "question_id": "sample_71_off_topic_q02",
+      "conversation": "sample_71",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.82
+      ]
+    },
+    {
+      "question_id": "sample_71_yes_q05",
+      "conversation": "sample_71",
+      "label": true,
+      "answer": true,
+      "gold": [
+        89.46,
+        91.64
+      ],
+      "candidate": [
+        89.46,
+        91.62
+      ]
+    },
+    {
+      "question_id": "sample_71_yes_q01",
+      "conversation": "sample_71",
+      "label": true,
+      "answer": true,
+      "gold": [
+        70.34,
+        74.32
+      ],
+      "candidate": [
+        70.36,
+        74.32
+      ]
+    },
+    {
+      "question_id": "sample_71_yes_q02",
+      "conversation": "sample_71",
+      "label": true,
+      "answer": true,
+      "gold": [
+        85.68,
+        88.92
+      ],
+      "candidate": [
+        86.26,
+        88.92
+      ]
+    },
+    {
+      "question_id": "sample_75_off_topic_q01",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        88.66,
+        90.04
+      ]
+    },
+    {
+      "question_id": "sample_75_yes_q01",
+      "conversation": "sample_75",
+      "label": true,
+      "answer": true,
+      "gold": [
+        45.06,
+        46.48
+      ],
+      "candidate": [
+        45.06,
+        46.46
+      ]
+    },
+    {
+      "question_id": "sample_75_yes_q02",
+      "conversation": "sample_75",
+      "label": true,
+      "answer": true,
+      "gold": [
+        31.08,
+        31.94
+      ],
+      "candidate": [
+        29.62,
+        31.94
+      ]
+    },
+    {
+      "question_id": "sample_75_hard_no_q05",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        65.34,
+        74.02
+      ]
+    },
+    {
+      "question_id": "sample_75_yes_q04",
+      "conversation": "sample_75",
+      "label": true,
+      "answer": true,
+      "gold": [
+        81.4,
+        83.6
+      ],
+      "candidate": [
+        81.46,
+        83.6
+      ]
+    },
+    {
+      "question_id": "sample_75_hard_no_q02",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        40.2,
+        46.46
+      ]
+    },
+    {
+      "question_id": "sample_75_hard_no_q03",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        84.26,
+        87.58
+      ]
+    },
+    {
+      "question_id": "sample_75_yes_q03",
+      "conversation": "sample_75",
+      "label": true,
+      "answer": true,
+      "gold": [
+        29.62,
+        35.9
+      ],
+      "candidate": [
+        29.62,
+        33.1
+      ]
+    },
+    {
+      "question_id": "sample_75_hard_no_q04",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        57.46,
+        58.38
+      ]
+    },
+    {
+      "question_id": "sample_75_hard_no_q01",
+      "conversation": "sample_75",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        0.14
+      ]
+    },
+    {
+      "question_id": "sample_79_yes_q02",
+      "conversation": "sample_79",
+      "label": true,
+      "answer": true,
+      "gold": [
+        82.96,
+        87.4
+      ],
+      "candidate": [
+        81.48,
+        86.82
+      ]
+    },
+    {
+      "question_id": "sample_79_hard_no_q03",
+      "conversation": "sample_79",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        125.32,
+        128.3
+      ]
+    },
+    {
+      "question_id": "sample_79_off_topic_q01",
+      "conversation": "sample_79",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        125.32,
+        128.3
+      ]
+    },
+    {
+      "question_id": "sample_79_yes_q05",
+      "conversation": "sample_79",
+      "label": true,
+      "answer": true,
+      "gold": [
+        24.72,
+        28.16
+      ],
+      "candidate": [
+        40.64,
+        41.48
+      ]
+    },
+    {
+      "question_id": "sample_79_hard_no_q04",
+      "conversation": "sample_79",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        58.16,
+        62.9
+      ]
+    },
+    {
+      "question_id": "sample_79_yes_q03",
+      "conversation": "sample_79",
+      "label": true,
+      "answer": true,
+      "gold": [
+        24.72,
+        26.9
+      ],
+      "candidate": [
+        24.72,
+        26.9
+      ]
+    },
+    {
+      "question_id": "sample_79_yes_q01",
+      "conversation": "sample_79",
+      "label": true,
+      "answer": true,
+      "gold": [
+        0.0,
+        2.8
+      ],
+      "candidate": [
+        0.0,
+        1.26
+      ]
+    },
+    {
+      "question_id": "sample_79_hard_no_q02",
+      "conversation": "sample_79",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        125.32,
+        128.3
+      ]
+    },
+    {
+      "question_id": "sample_79_hard_no_q01",
+      "conversation": "sample_79",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        40.64,
+        45.88
+      ]
+    },
+    {
+      "question_id": "sample_79_yes_q04",
+      "conversation": "sample_79",
+      "label": true,
+      "answer": true,
+      "gold": [
+        80.88,
+        87.4
+      ],
+      "candidate": [
+        81.48,
+        86.82
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q03",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        21.62,
+        26.24
+      ],
+      "candidate": [
+        21.58,
+        24.12
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q07",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        43.5,
+        44.98
+      ],
+      "candidate": [
+        43.5,
+        44.98
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q06",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        28.520000000000003,
+        42.72
+      ],
+      "candidate": [
+        28.520000000000003,
+        30.96
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q05",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        40.68,
+        44.98
+      ],
+      "candidate": [
+        40.68,
+        44.98
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q02",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        51.48,
+        54.4
+      ],
+      "candidate": [
+        51.48,
+        54.4
+      ]
+    },
+    {
+      "question_id": "sample_4_hard_no_q01",
+      "conversation": "sample_4",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        65.92,
+        72.26
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q01",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        55.64,
+        61.64
+      ],
+      "candidate": [
+        56.82,
+        61.08
+      ]
+    },
+    {
+      "question_id": "sample_4_yes_q04",
+      "conversation": "sample_4",
+      "label": true,
+      "answer": true,
+      "gold": [
+        24.88,
+        26.24
+      ],
+      "candidate": [
+        24.88,
+        26.24
+      ]
+    },
+    {
+      "question_id": "sample_4_off_topic_q01",
+      "conversation": "sample_4",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        6.3,
+        9.42
+      ]
+    },
+    {
+      "question_id": "sample_4_hard_no_q02",
+      "conversation": "sample_4",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        28.520000000000003,
+        30.96
+      ]
+    },
+    {
+      "question_id": "sample_17_yes_q03",
+      "conversation": "sample_17",
+      "label": true,
+      "answer": true,
+      "gold": [
+        46.1,
+        47.52
+      ],
+      "candidate": [
+        46.2,
+        47.52
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q06",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        33.3,
+        38.46
+      ]
+    },
+    {
+      "question_id": "sample_17_yes_q02",
+      "conversation": "sample_17",
+      "label": true,
+      "answer": true,
+      "gold": [
+        42.84,
+        44.42
+      ],
+      "candidate": [
+        41.52,
+        44.42
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q05",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        27.76,
+        30.16
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q03",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        19.78,
+        22.94
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q02",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        41.52,
+        44.42
+      ]
+    },
+    {
+      "question_id": "sample_17_off_topic_q01",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        64.54,
+        66.2
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q01",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        41.52,
+        45.48
+      ]
+    },
+    {
+      "question_id": "sample_17_hard_no_q04",
+      "conversation": "sample_17",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        46.2,
+        47.52
+      ]
+    },
+    {
+      "question_id": "sample_17_yes_q01",
+      "conversation": "sample_17",
+      "label": true,
+      "answer": true,
+      "gold": [
+        48.18,
+        50.7
+      ],
+      "candidate": [
+        41.52,
+        45.48
+      ]
+    },
+    {
+      "question_id": "sample_19_yes_q04",
+      "conversation": "sample_19",
+      "label": true,
+      "answer": true,
+      "gold": [
+        26.3,
+        28.12
+      ],
+      "candidate": [
+        26.3,
+        28.12
+      ]
+    },
+    {
+      "question_id": "sample_19_off_topic_q01",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        1.24,
+        2.72
+      ]
+    },
+    {
+      "question_id": "sample_19_hard_no_q03",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        43.08,
+        44.72
+      ]
+    },
+    {
+      "question_id": "sample_19_hard_no_q01",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        26.3,
+        29.82
+      ]
+    },
+    {
+      "question_id": "sample_19_yes_q01",
+      "conversation": "sample_19",
+      "label": true,
+      "answer": true,
+      "gold": [
+        68.24,
+        71.64
+      ],
+      "candidate": [
+        70.9,
+        71.66
+      ]
+    },
+    {
+      "question_id": "sample_19_off_topic_q02",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        80.42,
+        81.62
+      ]
+    },
+    {
+      "question_id": "sample_19_yes_q02",
+      "conversation": "sample_19",
+      "label": true,
+      "answer": true,
+      "gold": [
+        68.24,
+        71.64
+      ],
+      "candidate": [
+        68.24,
+        71.66
+      ]
+    },
+    {
+      "question_id": "sample_19_yes_q03",
+      "conversation": "sample_19",
+      "label": true,
+      "answer": true,
+      "gold": [
+        68.24,
+        71.64
+      ],
+      "candidate": [
+        68.24,
+        70.48
+      ]
+    },
+    {
+      "question_id": "sample_19_hard_no_q04",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        70.9,
+        71.66
+      ]
+    },
+    {
+      "question_id": "sample_19_hard_no_q02",
+      "conversation": "sample_19",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        68.24,
+        70.48
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q02",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        39.16,
+        42.54
+      ],
+      "candidate": [
+        39.14,
+        42.54
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q07",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        62.26,
+        65.16
+      ],
+      "candidate": [
+        130.72,
+        132.36
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q06",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        89.86,
+        93.12
+      ],
+      "candidate": [
+        89.86,
+        93.06
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q05",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        56.18,
+        58.38
+      ],
+      "candidate": [
+        135.24,
+        137.84
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q03",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        89.86,
+        91.76
+      ],
+      "candidate": [
+        89.86,
+        91.76
+      ]
+    },
+    {
+      "question_id": "sample_42_hard_no_q02",
+      "conversation": "sample_42",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        130.72,
+        132.36
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q01",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        17.22,
+        18.48
+      ],
+      "candidate": [
+        17.22,
+        18.5
+      ]
+    },
+    {
+      "question_id": "sample_42_yes_q04",
+      "conversation": "sample_42",
+      "label": true,
+      "answer": true,
+      "gold": [
+        11.92,
+        14.14
+      ],
+      "candidate": [
+        11.92,
+        14.14
+      ]
+    },
+    {
+      "question_id": "sample_42_hard_no_q01",
+      "conversation": "sample_42",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        39.14,
+        42.54
+      ]
+    },
+    {
+      "question_id": "sample_42_off_topic_q01",
+      "conversation": "sample_42",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        1.02
+      ]
+    },
+    {
+      "question_id": "sample_47_yes_q03",
+      "conversation": "sample_47",
+      "label": true,
+      "answer": true,
+      "gold": [
+        71.86,
+        79.4
+      ],
+      "candidate": [
+        71.88,
+        74.04
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q04",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        9.56,
+        11.7
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q03",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        71.88,
+        74.04
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q01",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        9.56,
+        11.7
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q05",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        71.88,
+        74.04
+      ]
+    },
+    {
+      "question_id": "sample_47_off_topic_q01",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        71.88,
+        74.04
+      ]
+    },
+    {
+      "question_id": "sample_47_yes_q01",
+      "conversation": "sample_47",
+      "label": true,
+      "answer": true,
+      "gold": [
+        25.72,
+        28.66
+      ],
+      "candidate": [
+        25.76,
+        28.66
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q06",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        54.66,
+        56.22
+      ]
+    },
+    {
+      "question_id": "sample_47_yes_q02",
+      "conversation": "sample_47",
+      "label": true,
+      "answer": true,
+      "gold": [
+        8.32,
+        11.7
+      ],
+      "candidate": [
+        8.3,
+        10.48
+      ]
+    },
+    {
+      "question_id": "sample_47_hard_no_q02",
+      "conversation": "sample_47",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        25.76,
+        28.66
+      ]
+    },
+    {
+      "question_id": "sample_52_yes_q02",
+      "conversation": "sample_52",
+      "label": true,
+      "answer": true,
+      "gold": [
+        83.42,
+        86.4
+      ],
+      "candidate": [
+        83.12,
+        86.4
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q06",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        83.12,
+        86.4
+      ]
+    },
+    {
+      "question_id": "sample_52_yes_q03",
+      "conversation": "sample_52",
+      "label": true,
+      "answer": true,
+      "gold": [
+        59.06,
+        62.7
+      ],
+      "candidate": [
+        59.02,
+        62.72
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q05",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        83.12,
+        86.4
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q04",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        70.2,
+        75.36
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q02",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        60.62,
+        62.72
+      ]
+    },
+    {
+      "question_id": "sample_52_yes_q01",
+      "conversation": "sample_52",
+      "label": true,
+      "answer": true,
+      "gold": [
+        70.22,
+        75.36
+      ],
+      "candidate": [
+        70.2,
+        75.36
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q03",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        12.4,
+        14.86
+      ]
+    },
+    {
+      "question_id": "sample_52_off_topic_q01",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        12.4,
+        14.86
+      ]
+    },
+    {
+      "question_id": "sample_52_hard_no_q01",
+      "conversation": "sample_52",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        12.4,
+        14.86
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q05",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        117.6,
+        122.54
+      ],
+      "candidate": [
+        120.7,
+        122.54
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q07",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        97.54,
+        100.0
+      ],
+      "candidate": [
+        97.52,
+        100.0
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q04",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        59.74,
+        62.1
+      ],
+      "candidate": [
+        59.74,
+        60.64
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q03",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        117.6,
+        122.54
+      ],
+      "candidate": [
+        97.52,
+        101.66
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q06",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        30.06,
+        33.8
+      ],
+      "candidate": [
+        32.059999999999995,
+        33.82
+      ]
+    },
+    {
+      "question_id": "sample_57_off_topic_q01",
+      "conversation": "sample_57",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        4.32
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q01",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        117.6,
+        120.1
+      ],
+      "candidate": [
+        117.64,
+        120.1
+      ]
+    },
+    {
+      "question_id": "sample_57_hard_no_q01",
+      "conversation": "sample_57",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        120.7,
+        122.54
+      ]
+    },
+    {
+      "question_id": "sample_57_hard_no_q02",
+      "conversation": "sample_57",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        97.52,
+        101.66
+      ]
+    },
+    {
+      "question_id": "sample_57_yes_q02",
+      "conversation": "sample_57",
+      "label": true,
+      "answer": true,
+      "gold": [
+        120.9,
+        122.54
+      ],
+      "candidate": [
+        120.7,
+        122.54
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q02",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        77.72,
+        80.36
+      ],
+      "candidate": [
+        77.74,
+        80.34
+      ]
+    },
+    {
+      "question_id": "sample_77_hard_no_q01",
+      "conversation": "sample_77",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        15.14,
+        17.3
+      ]
+    },
+    {
+      "question_id": "sample_77_off_topic_q01",
+      "conversation": "sample_77",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        95.36,
+        97.76
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q03",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        49.56,
+        52.96
+      ],
+      "candidate": [
+        46.52,
+        49.0
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q07",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        16.5,
+        17.3
+      ],
+      "candidate": [
+        15.14,
+        17.3
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q04",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        15.14,
+        19.3
+      ],
+      "candidate": [
+        15.14,
+        16.26
+      ]
+    },
+    {
+      "question_id": "sample_77_hard_no_q02",
+      "conversation": "sample_77",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        32.68,
+        34.9
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q06",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        67.84,
+        69.56
+      ],
+      "candidate": [
+        67.84,
+        69.52
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q05",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        32.7,
+        34.9
+      ],
+      "candidate": [
+        32.68,
+        34.9
+      ]
+    },
+    {
+      "question_id": "sample_77_yes_q01",
+      "conversation": "sample_77",
+      "label": true,
+      "answer": true,
+      "gold": [
+        49.56,
+        52.96
+      ],
+      "candidate": [
+        13.48,
+        19.3
+      ]
+    },
+    {
+      "question_id": "sample_81_yes_q02",
+      "conversation": "sample_81",
+      "label": true,
+      "answer": true,
+      "gold": [
+        63.88,
+        68.32
+      ],
+      "candidate": [
+        63.88,
+        68.14
+      ]
+    },
+    {
+      "question_id": "sample_81_hard_no_q02",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        82.9,
+        84.34
+      ]
+    },
+    {
+      "question_id": "sample_81_hard_no_q04",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        95.06,
+        96.02
+      ]
+    },
+    {
+      "question_id": "sample_81_yes_q03",
+      "conversation": "sample_81",
+      "label": true,
+      "answer": true,
+      "gold": [
+        86.58,
+        89.34
+      ],
+      "candidate": [
+        86.34,
+        89.34
+      ]
+    },
+    {
+      "question_id": "sample_81_hard_no_q01",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        10.5,
+        22.26
+      ]
+    },
+    {
+      "question_id": "sample_81_yes_q01",
+      "conversation": "sample_81",
+      "label": true,
+      "answer": true,
+      "gold": [
+        12.62,
+        14.64
+      ],
+      "candidate": [
+        12.62,
+        14.64
+      ]
+    },
+    {
+      "question_id": "sample_81_yes_q04",
+      "conversation": "sample_81",
+      "label": true,
+      "answer": true,
+      "gold": [
+        63.88,
+        68.32
+      ],
+      "candidate": [
+        12.62,
+        14.64
+      ]
+    },
+    {
+      "question_id": "sample_81_off_topic_q01",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        95.06,
+        123.1
+      ]
+    },
+    {
+      "question_id": "sample_81_hard_no_q03",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        86.34,
+        89.34
+      ]
+    },
+    {
+      "question_id": "sample_81_hard_no_q05",
+      "conversation": "sample_81",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        63.88,
+        68.14
+      ]
+    },
+    {
+      "question_id": "sample_82_hard_no_q02",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        52.68,
+        55.56
+      ]
+    },
+    {
+      "question_id": "sample_82_hard_no_q01",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        40.24,
+        42.26
+      ]
+    },
+    {
+      "question_id": "sample_82_off_topic_q01",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        81.84,
+        84.18
+      ]
+    },
+    {
+      "question_id": "sample_82_hard_no_q03",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        66.06,
+        67.42
+      ]
+    },
+    {
+      "question_id": "sample_82_off_topic_q02",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        10.1,
+        12.0
+      ]
+    },
+    {
+      "question_id": "sample_82_hard_no_q04",
+      "conversation": "sample_82",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        69.96,
+        71.36
+      ]
+    },
+    {
+      "question_id": "sample_82_yes_q03",
+      "conversation": "sample_82",
+      "label": true,
+      "answer": true,
+      "gold": [
+        65.96,
+        67.4
+      ],
+      "candidate": [
+        66.06,
+        67.42
+      ]
+    },
+    {
+      "question_id": "sample_82_yes_q01",
+      "conversation": "sample_82",
+      "label": true,
+      "answer": true,
+      "gold": [
+        52.66,
+        55.56
+      ],
+      "candidate": [
+        52.68,
+        55.56
+      ]
+    },
+    {
+      "question_id": "sample_82_yes_q02",
+      "conversation": "sample_82",
+      "label": true,
+      "answer": true,
+      "gold": [
+        27.16,
+        28.46
+      ],
+      "candidate": [
+        24.58,
+        28.46
+      ]
+    },
+    {
+      "question_id": "sample_82_yes_q04",
+      "conversation": "sample_82",
+      "label": true,
+      "answer": true,
+      "gold": [
+        40.24,
+        45.36
+      ],
+      "candidate": [
+        48.24,
+        50.64
+      ]
+    },
+    {
+      "question_id": "sample_84_hard_no_q01",
+      "conversation": "sample_84",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        154.38,
+        156.98
+      ]
+    },
+    {
+      "question_id": "sample_84_hard_no_q02",
+      "conversation": "sample_84",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        78.3,
+        79.52
+      ]
+    },
+    {
+      "question_id": "sample_84_off_topic_q01",
+      "conversation": "sample_84",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        2.18
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q02",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        20.3,
+        23.42
+      ],
+      "candidate": [
+        20.28,
+        23.44
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q04",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        78.28,
+        79.52
+      ],
+      "candidate": [
+        78.3,
+        79.52
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q06",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        193.64,
+        201.3
+      ],
+      "candidate": [
+        193.62,
+        198.04
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q05",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        119.92,
+        122.96
+      ],
+      "candidate": [
+        119.94,
+        122.96
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q01",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        27.86,
+        31.68
+      ],
+      "candidate": [
+        27.840000000000003,
+        30.7
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q03",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        20.3,
+        25.38
+      ],
+      "candidate": [
+        20.28,
+        25.38
+      ]
+    },
+    {
+      "question_id": "sample_84_yes_q07",
+      "conversation": "sample_84",
+      "label": true,
+      "answer": true,
+      "gold": [
+        69.72,
+        79.52
+      ],
+      "candidate": [
+        69.74,
+        75.94
+      ]
+    },
+    {
+      "question_id": "sample_90_yes_q04",
+      "conversation": "sample_90",
+      "label": true,
+      "answer": true,
+      "gold": [
+        27.84,
+        28.98
+      ],
+      "candidate": [
+        26.16,
+        28.96
+      ]
+    },
+    {
+      "question_id": "sample_90_hard_no_q01",
+      "conversation": "sample_90",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        14.46,
+        36.72
+      ]
+    },
+    {
+      "question_id": "sample_90_off_topic_q01",
+      "conversation": "sample_90",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        39.54,
+        41.28
+      ]
+    },
+    {
+      "question_id": "sample_90_yes_q03",
+      "conversation": "sample_90",
+      "label": true,
+      "answer": true,
+      "gold": [
+        14.46,
+        16.42
+      ],
+      "candidate": [
+        14.46,
+        16.42
+      ]
+    },
+    {
+      "question_id": "sample_90_hard_no_q03",
+      "conversation": "sample_90",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        14.46,
+        16.42
+      ]
+    },
+    {
+      "question_id": "sample_90_yes_q01",
+      "conversation": "sample_90",
+      "label": true,
+      "answer": true,
+      "gold": [
+        10.46,
+        12.1
+      ],
+      "candidate": [
+        10.46,
+        12.08
+      ]
+    },
+    {
+      "question_id": "sample_90_yes_q05",
+      "conversation": "sample_90",
+      "label": true,
+      "answer": true,
+      "gold": [
+        20.08,
+        21.92
+      ],
+      "candidate": [
+        20.08,
+        21.92
+      ]
+    },
+    {
+      "question_id": "sample_90_off_topic_q02",
+      "conversation": "sample_90",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        4.92,
+        7.06
+      ]
+    },
+    {
+      "question_id": "sample_90_hard_no_q02",
+      "conversation": "sample_90",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        14.46,
+        17.84
+      ]
+    },
+    {
+      "question_id": "sample_90_yes_q02",
+      "conversation": "sample_90",
+      "label": true,
+      "answer": true,
+      "gold": [
+        14.46,
+        16.42
+      ],
+      "candidate": [
+        14.46,
+        16.42
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q05",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        58.5,
+        60.46
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q03",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        38.86,
+        44.3
+      ]
+    },
+    {
+      "question_id": "sample_95_yes_q02",
+      "conversation": "sample_95",
+      "label": true,
+      "answer": true,
+      "gold": [
+        38.92,
+        40.52
+      ],
+      "candidate": [
+        38.86,
+        40.12
+      ]
+    },
+    {
+      "question_id": "sample_95_yes_q03",
+      "conversation": "sample_95",
+      "label": true,
+      "answer": true,
+      "gold": [
+        25.52,
+        27.76
+      ],
+      "candidate": [
+        76.26,
+        76.96
+      ]
+    },
+    {
+      "question_id": "sample_95_off_topic_q01",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        1.12
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q04",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        2.8
+      ]
+    },
+    {
+      "question_id": "sample_95_yes_q01",
+      "conversation": "sample_95",
+      "label": true,
+      "answer": true,
+      "gold": [
+        32.22,
+        34.26
+      ],
+      "candidate": [
+        31.92,
+        34.24
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q02",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        31.92,
+        34.24
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q01",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        1.12
+      ]
+    },
+    {
+      "question_id": "sample_95_hard_no_q06",
+      "conversation": "sample_95",
+      "label": false,
+      "answer": false,
+      "gold": null,
+      "candidate": [
+        0.0,
+        1.12
+      ]
+    }
+  ]
+}
