@@ -16,7 +16,11 @@ Day's arc: **0.7431 -> 0.8167711 (locked) -> 0.8307888 (validated) -> 0.8222491 
 
 The instance is stopped. Everything below describes the build that produced that score.
 
-**The weights are off the box and on the Mac**, at `models/final-20260920/` (6.51 GB, 28 files,
+**Start from [REPRODUCE.md](REPRODUCE.md)** for the exact model, GPU, ASR configuration, serving
+commands and the full retraining recipe; it is written for someone who has only this repository.
+
+**The weights are off the box and on the author's machine**, at `models/final-20260920/` (6.51 GB,
+28 files, gitignored and therefore not in this repository,
 every one verified byte-for-byte against the source, gitignored). Its `README.md` says what each
 directory is and how to serve or verify the build. Contents: `rank-fit-001` (the deployed ranker)
 and `fit-extractor-002` (the deployed extractor), plus `pretrain-mix-001` and `rank-pretrain-001`,
