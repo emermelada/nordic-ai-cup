@@ -1,0 +1,6008 @@
+{
+  "sample_4": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        21.68,
+        40.68,
+        null,
+        40.68,
+        50.04,
+        null,
+        57.68,
+        24.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        26.22,
+        42.72,
+        null,
+        42.72,
+        54.52,
+        null,
+        60.98,
+        26.22,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        24.94,
+        40.68,
+        29.07,
+        40.68,
+        51.54,
+        null,
+        57.68,
+        24.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        26.22,
+        42.72,
+        31.04,
+        42.72,
+        54.52,
+        null,
+        60.98,
+        26.22,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true
+      ],
+      "evidence_start": [
+        78.36,
+        43.48,
+        null,
+        40.68,
+        24.94,
+        24.94,
+        54.53,
+        24.94,
+        null,
+        40.68
+      ],
+      "evidence_end": [
+        79.56,
+        45.06,
+        null,
+        42.72,
+        26.22,
+        26.22,
+        58.36,
+        26.22,
+        null,
+        42.72
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        21.68,
+        40.68,
+        null,
+        40.68,
+        50.04,
+        null,
+        57.68,
+        24.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        26.22,
+        42.72,
+        null,
+        42.72,
+        54.52,
+        null,
+        60.98,
+        26.22,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_5": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        50.24,
+        null,
+        null,
+        35.84,
+        142.55,
+        31.27,
+        null,
+        102.78,
+        70.23,
+        null
+      ],
+      "evidence_end": [
+        52.96,
+        null,
+        null,
+        37.94,
+        147.9,
+        33.36,
+        null,
+        105.48,
+        73.84,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        50.24,
+        null,
+        null,
+        35.84,
+        148.77,
+        32.05,
+        null,
+        102.78,
+        72.36,
+        null
+      ],
+      "evidence_end": [
+        52.96,
+        null,
+        null,
+        37.94,
+        150.28,
+        34.92,
+        null,
+        105.48,
+        73.84,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        13.91,
+        31.27,
+        120.14,
+        38.89,
+        47.12,
+        null,
+        null,
+        102.78,
+        69.38,
+        null
+      ],
+      "evidence_end": [
+        14.46,
+        33.36,
+        122.02,
+        42.2,
+        49.6,
+        null,
+        null,
+        105.48,
+        73.84,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        50.24,
+        null,
+        null,
+        35.84,
+        142.55,
+        31.27,
+        null,
+        102.78,
+        70.23,
+        null
+      ],
+      "evidence_end": [
+        52.96,
+        null,
+        null,
+        37.94,
+        147.9,
+        33.36,
+        null,
+        105.48,
+        73.84,
+        null
+      ]
+    }
+  },
+  "sample_6": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.72,
+        null,
+        null,
+        63.04,
+        13.07,
+        18.02,
+        73.26,
+        null,
+        9.07,
+        65.35
+      ],
+      "evidence_end": [
+        26.3,
+        null,
+        null,
+        69.72,
+        18.1,
+        19.2,
+        77.66,
+        null,
+        12.32,
+        69.72
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.72,
+        null,
+        null,
+        65.35,
+        44.2,
+        18.02,
+        73.54,
+        null,
+        9.07,
+        65.35
+      ],
+      "evidence_end": [
+        26.3,
+        null,
+        null,
+        69.72,
+        46.68,
+        19.2,
+        77.66,
+        null,
+        12.32,
+        69.72
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.72,
+        33.04,
+        65.35,
+        65.35,
+        33.04,
+        63.04,
+        72.03,
+        18.02,
+        33.04,
+        72.03
+      ],
+      "evidence_end": [
+        26.3,
+        35.28,
+        69.72,
+        69.72,
+        35.28,
+        64.82,
+        77.66,
+        19.2,
+        35.28,
+        77.66
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.72,
+        null,
+        null,
+        63.04,
+        13.07,
+        18.02,
+        73.26,
+        null,
+        9.07,
+        65.35
+      ],
+      "evidence_end": [
+        26.3,
+        null,
+        null,
+        69.72,
+        18.1,
+        19.2,
+        77.66,
+        null,
+        12.32,
+        69.72
+      ]
+    }
+  },
+  "sample_10": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        62.72,
+        null,
+        null,
+        null,
+        null,
+        53.82,
+        22.31,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        65.22,
+        null,
+        null,
+        null,
+        null,
+        55.86,
+        23.58,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        62.72,
+        null,
+        null,
+        null,
+        null,
+        53.82,
+        22.31,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        65.22,
+        null,
+        null,
+        null,
+        null,
+        55.86,
+        23.58,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        38.25,
+        20.68,
+        62.72,
+        null,
+        null,
+        75.08,
+        55.86,
+        53.82,
+        22.31,
+        null
+      ],
+      "evidence_end": [
+        39.52,
+        23.58,
+        65.22,
+        null,
+        null,
+        77.96,
+        57.56,
+        55.86,
+        23.58,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        62.72,
+        null,
+        null,
+        null,
+        null,
+        53.82,
+        22.31,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        65.22,
+        null,
+        null,
+        null,
+        null,
+        55.86,
+        23.58,
+        null
+      ]
+    }
+  },
+  "sample_17": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        46.19,
+        null,
+        41.480000000000004,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        41.480000000000004
+      ],
+      "evidence_end": [
+        47.56,
+        null,
+        45.5,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        45.5
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        46.19,
+        null,
+        41.480000000000004,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        41.480000000000004
+      ],
+      "evidence_end": [
+        47.56,
+        null,
+        45.5,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        45.5
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true
+      ],
+      "evidence_start": [
+        46.19,
+        36.76,
+        41.480000000000004,
+        null,
+        28.02,
+        null,
+        null,
+        39.33,
+        null,
+        39.33
+      ],
+      "evidence_end": [
+        47.56,
+        38.44,
+        45.5,
+        null,
+        30.1,
+        null,
+        null,
+        42.2,
+        null,
+        42.2
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        46.19,
+        null,
+        41.480000000000004,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        41.480000000000004
+      ],
+      "evidence_end": [
+        47.56,
+        null,
+        45.5,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        45.5
+      ]
+    }
+  },
+  "sample_18": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        41.37,
+        null,
+        17.28,
+        69.47,
+        25.15,
+        null,
+        null,
+        62.5,
+        33.01,
+        50.84
+      ],
+      "evidence_end": [
+        45.6,
+        null,
+        18.54,
+        71.98,
+        26.32,
+        null,
+        null,
+        65.96,
+        38.6,
+        55.2
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        41.96,
+        null,
+        17.28,
+        70.4,
+        21.18,
+        null,
+        null,
+        62.5,
+        33.38,
+        50.84
+      ],
+      "evidence_end": [
+        45.6,
+        null,
+        18.54,
+        71.98,
+        26.32,
+        null,
+        null,
+        65.96,
+        38.6,
+        55.2
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        41.37,
+        null,
+        69.47,
+        69.47,
+        19.51,
+        58.52,
+        75.78,
+        62.5,
+        33.01,
+        50.84
+      ],
+      "evidence_end": [
+        45.6,
+        null,
+        71.98,
+        71.98,
+        26.32,
+        61.64,
+        79.16,
+        65.96,
+        38.6,
+        55.2
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        41.37,
+        null,
+        17.28,
+        69.47,
+        25.15,
+        null,
+        null,
+        62.5,
+        33.01,
+        50.84
+      ],
+      "evidence_end": [
+        45.6,
+        null,
+        18.54,
+        71.98,
+        26.32,
+        null,
+        null,
+        65.96,
+        38.6,
+        55.2
+      ]
+    }
+  },
+  "sample_19": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        26.51,
+        null,
+        null,
+        null,
+        68.22,
+        null,
+        68.22,
+        68.22,
+        null,
+        null
+      ],
+      "evidence_end": [
+        29.74,
+        null,
+        null,
+        null,
+        70.56,
+        null,
+        70.56,
+        70.56,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        26.51,
+        null,
+        null,
+        null,
+        68.22,
+        null,
+        68.22,
+        68.22,
+        null,
+        null
+      ],
+      "evidence_end": [
+        29.74,
+        null,
+        null,
+        null,
+        70.56,
+        null,
+        70.56,
+        70.56,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.91,
+        null,
+        58.64,
+        24.91,
+        70.9,
+        54.46,
+        17.74,
+        17.74,
+        17.74,
+        17.74
+      ],
+      "evidence_end": [
+        29.74,
+        null,
+        59.8,
+        29.74,
+        71.7,
+        56.1,
+        18.96,
+        18.96,
+        18.96,
+        18.96
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        26.51,
+        null,
+        null,
+        null,
+        68.22,
+        null,
+        68.22,
+        68.22,
+        null,
+        null
+      ],
+      "evidence_end": [
+        29.74,
+        null,
+        null,
+        null,
+        70.56,
+        null,
+        70.56,
+        70.56,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_20": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        110.96,
+        206.64,
+        null,
+        null,
+        42.2,
+        96.89,
+        105.72,
+        182.58
+      ],
+      "evidence_end": [
+        null,
+        null,
+        115.28,
+        208.86,
+        null,
+        null,
+        43.78,
+        98.82,
+        107.56,
+        184.46
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        182.58,
+        null,
+        null,
+        30.55,
+        96.89,
+        168.7,
+        182.58
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        186.3,
+        null,
+        null,
+        32.88,
+        98.82,
+        173.44,
+        186.3
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        77.56,
+        null,
+        null,
+        42.2,
+        33.03,
+        143.89,
+        42.2,
+        168.53,
+        168.53,
+        206.64
+      ],
+      "evidence_end": [
+        80.88,
+        null,
+        null,
+        43.78,
+        35.38,
+        146.34,
+        43.78,
+        173.44,
+        173.44,
+        210.62
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        206.64,
+        null,
+        null,
+        42.2,
+        96.89,
+        105.72,
+        182.58
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        208.86,
+        null,
+        null,
+        43.78,
+        98.82,
+        107.56,
+        184.46
+      ]
+    }
+  },
+  "sample_23": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        23.16,
+        75.31,
+        19.98,
+        null,
+        null,
+        68.18,
+        43.46,
+        53.35,
+        null,
+        null
+      ],
+      "evidence_end": [
+        25.66,
+        79.48,
+        20.92,
+        null,
+        null,
+        69.96,
+        45.52,
+        56.24,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        23.16,
+        75.31,
+        85.24,
+        null,
+        null,
+        67.19,
+        43.46,
+        53.35,
+        null,
+        null
+      ],
+      "evidence_end": [
+        25.66,
+        79.48,
+        88.5,
+        null,
+        null,
+        69.96,
+        45.52,
+        56.24,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        23.16,
+        82.54,
+        11.14,
+        null,
+        82.54,
+        67.19,
+        32.92,
+        53.35,
+        null,
+        null
+      ],
+      "evidence_end": [
+        25.66,
+        85.24,
+        13.64,
+        null,
+        85.24,
+        69.96,
+        36.74,
+        56.24,
+        null,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        23.16,
+        75.31,
+        19.98,
+        null,
+        null,
+        68.18,
+        43.46,
+        53.35,
+        null,
+        null
+      ],
+      "evidence_end": [
+        25.66,
+        79.48,
+        20.92,
+        null,
+        null,
+        69.96,
+        45.52,
+        56.24,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_33": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        14.16,
+        null,
+        null,
+        null,
+        27.33,
+        58.97,
+        25.94,
+        44.87,
+        69.07,
+        50.25
+      ],
+      "evidence_end": [
+        16.54,
+        null,
+        null,
+        null,
+        29.08,
+        61.24,
+        26.62,
+        46.92,
+        71.02,
+        52.64
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        14.16,
+        null,
+        null,
+        null,
+        27.33,
+        58.97,
+        25.94,
+        44.87,
+        69.07,
+        null
+      ],
+      "evidence_end": [
+        16.54,
+        null,
+        null,
+        null,
+        29.08,
+        61.24,
+        26.62,
+        46.92,
+        71.02,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        13.04,
+        69.07,
+        null,
+        null,
+        29.79,
+        61.89,
+        25.94,
+        null,
+        69.07,
+        49.49
+      ],
+      "evidence_end": [
+        16.54,
+        71.02,
+        null,
+        null,
+        32.44,
+        64.48,
+        26.62,
+        null,
+        71.02,
+        52.64
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        14.16,
+        null,
+        null,
+        null,
+        27.33,
+        58.97,
+        25.94,
+        44.87,
+        69.07,
+        null
+      ],
+      "evidence_end": [
+        16.54,
+        null,
+        null,
+        null,
+        29.08,
+        61.24,
+        26.62,
+        46.92,
+        71.02,
+        null
+      ]
+    }
+  },
+  "sample_37": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        27.21,
+        null,
+        null,
+        37.5,
+        19.73,
+        58.64,
+        null,
+        null,
+        7.41,
+        58.64
+      ],
+      "evidence_end": [
+        30.0,
+        null,
+        null,
+        39.9,
+        22.14,
+        61.34,
+        null,
+        null,
+        9.32,
+        61.34
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        27.21,
+        null,
+        null,
+        37.5,
+        17.66,
+        58.64,
+        null,
+        null,
+        7.41,
+        58.64
+      ],
+      "evidence_end": [
+        30.0,
+        null,
+        null,
+        39.9,
+        18.92,
+        61.34,
+        null,
+        null,
+        9.32,
+        61.34
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        27.21,
+        30.81,
+        40.88,
+        30.81,
+        19.73,
+        58.64,
+        null,
+        22.63,
+        12.95,
+        22.63
+      ],
+      "evidence_end": [
+        30.0,
+        32.66,
+        44.02,
+        32.66,
+        22.14,
+        61.34,
+        null,
+        24.54,
+        14.48,
+        24.54
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        27.21,
+        null,
+        null,
+        37.5,
+        19.73,
+        58.64,
+        null,
+        null,
+        7.41,
+        58.64
+      ],
+      "evidence_end": [
+        30.0,
+        null,
+        null,
+        39.9,
+        22.14,
+        61.34,
+        null,
+        null,
+        9.32,
+        61.34
+      ]
+    }
+  },
+  "sample_39": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        22.75,
+        null,
+        null,
+        null,
+        47.57,
+        63.6,
+        null,
+        53.97,
+        null,
+        null
+      ],
+      "evidence_end": [
+        24.02,
+        null,
+        null,
+        null,
+        51.08,
+        67.54,
+        null,
+        60.62,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        22.75,
+        null,
+        null,
+        null,
+        47.57,
+        68.41,
+        null,
+        53.97,
+        null,
+        null
+      ],
+      "evidence_end": [
+        24.02,
+        null,
+        null,
+        null,
+        51.08,
+        69.96,
+        null,
+        60.62,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        22.75,
+        null,
+        null,
+        null,
+        47.57,
+        68.41,
+        28.01,
+        53.97,
+        26.06,
+        null
+      ],
+      "evidence_end": [
+        24.02,
+        null,
+        null,
+        null,
+        51.08,
+        69.96,
+        29.56,
+        60.62,
+        27.46,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        22.75,
+        null,
+        null,
+        null,
+        47.57,
+        63.6,
+        null,
+        53.97,
+        null,
+        null
+      ],
+      "evidence_end": [
+        24.02,
+        null,
+        null,
+        null,
+        51.08,
+        67.54,
+        null,
+        60.62,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_42": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        39.17,
+        62.28,
+        89.82,
+        56.26,
+        89.82,
+        null,
+        17.23,
+        11.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        42.5,
+        65.06,
+        93.1,
+        58.22,
+        93.1,
+        null,
+        18.5,
+        14.14,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        39.17,
+        62.28,
+        89.82,
+        56.26,
+        89.82,
+        null,
+        17.23,
+        11.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        42.5,
+        65.06,
+        93.1,
+        58.22,
+        93.1,
+        null,
+        18.5,
+        14.14,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true
+      ],
+      "evidence_start": [
+        39.17,
+        62.28,
+        89.82,
+        null,
+        89.82,
+        null,
+        24.28,
+        11.94,
+        null,
+        24.28
+      ],
+      "evidence_end": [
+        42.5,
+        65.06,
+        93.1,
+        null,
+        93.1,
+        null,
+        26.18,
+        14.14,
+        null,
+        26.18
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        39.17,
+        62.28,
+        89.82,
+        56.26,
+        89.82,
+        null,
+        17.23,
+        11.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        42.5,
+        65.06,
+        93.1,
+        58.22,
+        93.1,
+        null,
+        18.5,
+        14.14,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_43": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        4.95,
+        null,
+        31.81,
+        null,
+        23.16,
+        44.28,
+        null,
+        null,
+        58.82,
+        null
+      ],
+      "evidence_end": [
+        6.24,
+        null,
+        34.34,
+        null,
+        23.78,
+        46.78,
+        null,
+        null,
+        61.38,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        4.95,
+        null,
+        33.72,
+        null,
+        23.16,
+        54.74,
+        null,
+        null,
+        58.82,
+        null
+      ],
+      "evidence_end": [
+        6.24,
+        null,
+        34.34,
+        null,
+        23.78,
+        55.36,
+        null,
+        null,
+        61.38,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        7.03,
+        43.35,
+        31.81,
+        null,
+        15.7,
+        43.35,
+        null,
+        null,
+        58.82,
+        31.81
+      ],
+      "evidence_end": [
+        7.64,
+        46.78,
+        34.34,
+        null,
+        16.48,
+        46.78,
+        null,
+        null,
+        63.92,
+        34.34
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        4.95,
+        null,
+        31.81,
+        null,
+        23.16,
+        44.28,
+        null,
+        null,
+        58.82,
+        null
+      ],
+      "evidence_end": [
+        6.24,
+        null,
+        34.34,
+        null,
+        23.78,
+        46.78,
+        null,
+        null,
+        61.38,
+        null
+      ]
+    }
+  },
+  "sample_47": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        71.92,
+        null,
+        null,
+        null,
+        null,
+        null,
+        25.92,
+        null,
+        8.46,
+        null
+      ],
+      "evidence_end": [
+        74.1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        28.68,
+        null,
+        11.68,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        71.92,
+        null,
+        null,
+        null,
+        null,
+        null,
+        25.92,
+        null,
+        8.46,
+        null
+      ],
+      "evidence_end": [
+        74.1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        28.68,
+        null,
+        11.68,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        71.92,
+        8.46,
+        null,
+        null,
+        118.06,
+        null,
+        53.34,
+        53.34,
+        12.81,
+        53.34
+      ],
+      "evidence_end": [
+        74.1,
+        11.68,
+        null,
+        null,
+        119.2,
+        null,
+        56.22,
+        56.22,
+        15.36,
+        56.22
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        71.92,
+        null,
+        null,
+        null,
+        null,
+        null,
+        25.92,
+        null,
+        8.46,
+        null
+      ],
+      "evidence_end": [
+        74.1,
+        null,
+        null,
+        null,
+        null,
+        null,
+        28.68,
+        null,
+        11.68,
+        null
+      ]
+    }
+  },
+  "sample_48": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        27.8,
+        38.92,
+        43.78,
+        null,
+        77.39,
+        13.26,
+        46.95,
+        27.8
+      ],
+      "evidence_end": [
+        null,
+        null,
+        35.94,
+        43.08,
+        46.32,
+        null,
+        89.7,
+        21.08,
+        54.04,
+        35.94
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        29.46,
+        39.14,
+        43.78,
+        null,
+        49.84,
+        11.96,
+        49.84,
+        29.46
+      ],
+      "evidence_end": [
+        null,
+        null,
+        35.94,
+        43.08,
+        46.32,
+        null,
+        51.36,
+        15.42,
+        51.36,
+        35.94
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        17.8,
+        77.39,
+        27.8,
+        34.86,
+        43.78,
+        11.14,
+        77.39,
+        11.14,
+        52.94,
+        57.15
+      ],
+      "evidence_end": [
+        21.08,
+        81.24,
+        31.42,
+        35.94,
+        46.32,
+        12.78,
+        81.24,
+        12.78,
+        54.04,
+        60.64
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        27.8,
+        38.92,
+        43.78,
+        null,
+        77.39,
+        13.26,
+        46.95,
+        27.8
+      ],
+      "evidence_end": [
+        null,
+        null,
+        35.94,
+        43.08,
+        46.32,
+        null,
+        89.7,
+        21.08,
+        54.04,
+        35.94
+      ]
+    }
+  },
+  "sample_50": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        60.4,
+        null,
+        null,
+        39.74,
+        23.86,
+        null,
+        null,
+        22.25,
+        35.35,
+        null
+      ],
+      "evidence_end": [
+        62.62,
+        null,
+        null,
+        43.38,
+        25.84,
+        null,
+        null,
+        23.22,
+        38.98,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        60.4,
+        null,
+        null,
+        35.35,
+        23.86,
+        null,
+        null,
+        18.78,
+        35.35,
+        null
+      ],
+      "evidence_end": [
+        62.62,
+        null,
+        null,
+        38.98,
+        25.84,
+        null,
+        null,
+        19.96,
+        38.98,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        60.4,
+        null,
+        null,
+        39.74,
+        23.86,
+        14.5,
+        null,
+        22.25,
+        34.08,
+        49.67
+      ],
+      "evidence_end": [
+        62.62,
+        null,
+        null,
+        43.38,
+        25.84,
+        15.32,
+        null,
+        23.22,
+        38.98,
+        52.54
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        60.4,
+        null,
+        null,
+        39.74,
+        23.86,
+        null,
+        null,
+        22.25,
+        35.35,
+        null
+      ],
+      "evidence_end": [
+        62.62,
+        null,
+        null,
+        43.38,
+        25.84,
+        null,
+        null,
+        23.22,
+        38.98,
+        null
+      ]
+    }
+  },
+  "sample_52": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        83.38,
+        null,
+        59.13,
+        null,
+        null,
+        null,
+        70.27,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        86.38,
+        null,
+        62.7,
+        null,
+        null,
+        null,
+        75.32,
+        null,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        83.38,
+        null,
+        60.68,
+        null,
+        null,
+        null,
+        70.27,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        86.38,
+        null,
+        62.7,
+        null,
+        null,
+        null,
+        75.32,
+        null,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        83.38,
+        83.38,
+        59.13,
+        104.64,
+        null,
+        15.76,
+        120.69,
+        12.56,
+        27.64,
+        12.56
+      ],
+      "evidence_end": [
+        86.38,
+        86.38,
+        62.7,
+        109.8,
+        null,
+        18.12,
+        121.62,
+        14.92,
+        29.6,
+        14.92
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        83.38,
+        null,
+        59.13,
+        null,
+        null,
+        null,
+        70.27,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        86.38,
+        null,
+        62.7,
+        null,
+        null,
+        null,
+        75.32,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_54": {
+    "primary": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        50.75,
+        null,
+        null,
+        null,
+        13.82,
+        79.12,
+        null,
+        null,
+        67.87
+      ],
+      "evidence_end": [
+        null,
+        52.62,
+        null,
+        null,
+        null,
+        15.74,
+        84.38,
+        null,
+        null,
+        70.98
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        51.58,
+        null,
+        null,
+        null,
+        14.28,
+        79.72,
+        null,
+        null,
+        68.75
+      ],
+      "evidence_end": [
+        null,
+        52.62,
+        null,
+        null,
+        null,
+        15.74,
+        82.18,
+        null,
+        null,
+        70.98
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true
+      ],
+      "evidence_start": [
+        38.86,
+        53.16,
+        null,
+        13.82,
+        20.08,
+        13.82,
+        79.12,
+        79.12,
+        null,
+        67.87
+      ],
+      "evidence_end": [
+        40.26,
+        54.62,
+        null,
+        15.74,
+        22.1,
+        15.74,
+        84.38,
+        84.38,
+        null,
+        70.98
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        50.75,
+        null,
+        null,
+        null,
+        13.82,
+        79.12,
+        null,
+        null,
+        67.87
+      ],
+      "evidence_end": [
+        null,
+        52.62,
+        null,
+        null,
+        null,
+        15.74,
+        84.38,
+        null,
+        null,
+        70.98
+      ]
+    }
+  },
+  "sample_55": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        78.87,
+        null,
+        null,
+        70.92,
+        32.69,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        80.84,
+        null,
+        null,
+        74.18,
+        36.68,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        79.4,
+        null,
+        null,
+        70.92,
+        32.69,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        80.84,
+        null,
+        null,
+        74.18,
+        36.68,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        78.87,
+        null,
+        null,
+        70.92,
+        31.66,
+        24.81,
+        null,
+        56.43,
+        null,
+        null
+      ],
+      "evidence_end": [
+        80.84,
+        null,
+        null,
+        74.18,
+        36.68,
+        28.34,
+        null,
+        60.28,
+        null,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        78.87,
+        null,
+        null,
+        70.92,
+        32.69,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        80.84,
+        null,
+        null,
+        74.18,
+        36.68,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_56": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        61.73,
+        null,
+        null,
+        48.73,
+        null,
+        44.93,
+        null,
+        null,
+        81.93,
+        null
+      ],
+      "evidence_end": [
+        66.06,
+        null,
+        null,
+        50.78,
+        null,
+        46.52,
+        null,
+        null,
+        89.06,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        61.73,
+        null,
+        null,
+        48.82,
+        null,
+        44.93,
+        null,
+        null,
+        86.8,
+        null
+      ],
+      "evidence_end": [
+        64.14,
+        null,
+        null,
+        50.78,
+        null,
+        46.52,
+        null,
+        null,
+        89.06,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        61.73,
+        null,
+        54.37,
+        null,
+        44.93,
+        44.93,
+        null,
+        null,
+        26.78,
+        null
+      ],
+      "evidence_end": [
+        64.14,
+        null,
+        57.66,
+        null,
+        46.52,
+        46.52,
+        null,
+        null,
+        29.08,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        61.73,
+        null,
+        null,
+        48.73,
+        null,
+        44.93,
+        null,
+        null,
+        81.93,
+        null
+      ],
+      "evidence_end": [
+        66.06,
+        null,
+        null,
+        50.78,
+        null,
+        46.52,
+        null,
+        null,
+        89.06,
+        null
+      ]
+    }
+  },
+  "sample_57": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        117.64,
+        97.52,
+        59.9,
+        97.52,
+        32.26,
+        null,
+        117.64,
+        null,
+        null,
+        117.64
+      ],
+      "evidence_end": [
+        122.56,
+        101.66,
+        60.72,
+        101.66,
+        36.38,
+        null,
+        122.56,
+        null,
+        null,
+        122.56
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        120.64,
+        97.52,
+        59.9,
+        100.52,
+        35.3,
+        null,
+        117.64,
+        null,
+        null,
+        120.64
+      ],
+      "evidence_end": [
+        122.56,
+        100.0,
+        60.72,
+        101.66,
+        36.38,
+        null,
+        120.14,
+        null,
+        null,
+        122.56
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        117.64,
+        97.52,
+        59.9,
+        97.52,
+        82.38,
+        null,
+        123.93,
+        117.64,
+        115.64,
+        10.9
+      ],
+      "evidence_end": [
+        122.56,
+        101.66,
+        60.72,
+        101.66,
+        85.16,
+        null,
+        125.76,
+        122.56,
+        116.56,
+        13.5
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        117.64,
+        97.52,
+        59.9,
+        97.52,
+        32.26,
+        null,
+        117.64,
+        null,
+        null,
+        117.64
+      ],
+      "evidence_end": [
+        122.56,
+        101.66,
+        60.72,
+        101.66,
+        36.38,
+        null,
+        122.56,
+        null,
+        null,
+        122.56
+      ]
+    }
+  },
+  "sample_63": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        57.31,
+        null,
+        null,
+        null,
+        null,
+        57.31,
+        47.92,
+        36.89,
+        64.66,
+        26.81
+      ],
+      "evidence_end": [
+        61.9,
+        null,
+        null,
+        null,
+        null,
+        61.9,
+        52.86,
+        41.9,
+        70.08,
+        27.52
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        57.31,
+        null,
+        null,
+        null,
+        null,
+        57.31,
+        50.44,
+        36.89,
+        68.14,
+        26.81
+      ],
+      "evidence_end": [
+        61.9,
+        null,
+        null,
+        null,
+        null,
+        60.08,
+        52.86,
+        41.9,
+        70.08,
+        27.52
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        56.06,
+        26.81,
+        26.81,
+        null,
+        47.92,
+        56.06,
+        47.92,
+        35.63,
+        63.04,
+        26.81
+      ],
+      "evidence_end": [
+        61.9,
+        27.52,
+        27.52,
+        null,
+        52.86,
+        61.9,
+        52.86,
+        41.9,
+        70.08,
+        27.52
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        57.31,
+        null,
+        null,
+        null,
+        null,
+        57.31,
+        47.92,
+        36.89,
+        64.66,
+        26.81
+      ],
+      "evidence_end": [
+        61.9,
+        null,
+        null,
+        null,
+        null,
+        61.9,
+        52.86,
+        41.9,
+        70.08,
+        27.52
+      ]
+    }
+  },
+  "sample_64": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        38.15,
+        72.39,
+        null,
+        88.53,
+        null,
+        null,
+        null,
+        null,
+        63.38,
+        null
+      ],
+      "evidence_end": [
+        41.64,
+        76.64,
+        null,
+        93.0,
+        null,
+        null,
+        null,
+        null,
+        68.86,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        38.15,
+        72.39,
+        null,
+        88.53,
+        null,
+        null,
+        null,
+        null,
+        63.38,
+        null
+      ],
+      "evidence_end": [
+        38.86,
+        73.98,
+        null,
+        91.16,
+        null,
+        null,
+        null,
+        null,
+        64.46,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        74.82,
+        72.39,
+        88.53,
+        88.53,
+        63.38,
+        100.39,
+        47.9,
+        74.82,
+        69.52,
+        null
+      ],
+      "evidence_end": [
+        76.64,
+        73.98,
+        91.16,
+        91.16,
+        64.46,
+        103.38,
+        49.2,
+        76.64,
+        71.42,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        38.15,
+        72.39,
+        null,
+        88.53,
+        null,
+        null,
+        null,
+        null,
+        63.38,
+        null
+      ],
+      "evidence_end": [
+        41.64,
+        76.64,
+        null,
+        93.0,
+        null,
+        null,
+        null,
+        null,
+        68.86,
+        null
+      ]
+    }
+  },
+  "sample_66": {
+    "primary": {
+      "answers": [
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        31.33,
+        null,
+        113.02,
+        null,
+        null,
+        null,
+        null,
+        97.3,
+        125.55
+      ],
+      "evidence_end": [
+        null,
+        35.2,
+        null,
+        116.34,
+        null,
+        null,
+        null,
+        null,
+        100.66,
+        127.58
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        31.33,
+        null,
+        113.02,
+        null,
+        null,
+        null,
+        null,
+        93.16,
+        125.55
+      ],
+      "evidence_end": [
+        null,
+        35.2,
+        null,
+        114.88,
+        null,
+        null,
+        null,
+        null,
+        94.52,
+        127.58
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        46.1,
+        31.33,
+        97.3,
+        113.02,
+        113.02,
+        null,
+        125.55,
+        113.02,
+        97.3,
+        121.2
+      ],
+      "evidence_end": [
+        47.02,
+        35.2,
+        99.5,
+        114.88,
+        114.88,
+        null,
+        127.58,
+        114.88,
+        99.5,
+        122.98
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        31.33,
+        null,
+        113.02,
+        null,
+        null,
+        null,
+        null,
+        97.3,
+        125.55
+      ],
+      "evidence_end": [
+        null,
+        35.2,
+        null,
+        116.34,
+        null,
+        null,
+        null,
+        null,
+        100.66,
+        127.58
+      ]
+    }
+  },
+  "sample_67": {
+    "primary": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        70.33,
+        87.69,
+        null,
+        72.8,
+        null,
+        24.07,
+        25.52,
+        39.5,
+        51.84
+      ],
+      "evidence_end": [
+        null,
+        72.46,
+        93.02,
+        null,
+        74.46,
+        null,
+        24.66,
+        27.76,
+        40.48,
+        55.52
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        71.3,
+        89.24,
+        null,
+        72.8,
+        null,
+        24.07,
+        25.52,
+        39.5,
+        51.84
+      ],
+      "evidence_end": [
+        null,
+        72.46,
+        90.9,
+        null,
+        74.46,
+        null,
+        24.66,
+        27.76,
+        40.48,
+        55.52
+      ]
+    },
+    "referee": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        70.33,
+        87.69,
+        null,
+        72.8,
+        70.33,
+        22.07,
+        25.52,
+        39.5,
+        51.84
+      ],
+      "evidence_end": [
+        null,
+        72.46,
+        93.02,
+        null,
+        74.46,
+        72.46,
+        24.66,
+        27.76,
+        40.48,
+        55.52
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        70.33,
+        87.69,
+        null,
+        72.8,
+        null,
+        24.07,
+        25.52,
+        39.5,
+        51.84
+      ],
+      "evidence_end": [
+        null,
+        72.46,
+        93.02,
+        null,
+        74.46,
+        null,
+        24.66,
+        27.76,
+        40.48,
+        55.52
+      ]
+    }
+  },
+  "sample_69": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        30.98,
+        42.57,
+        42.57,
+        68.26,
+        57.18,
+        63.22,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        33.08,
+        45.46,
+        45.46,
+        72.32,
+        60.58,
+        65.12,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        31.92,
+        42.57,
+        44.24,
+        68.26,
+        57.7,
+        63.22,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        33.08,
+        43.72,
+        45.46,
+        70.0,
+        58.92,
+        63.48,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        30.98,
+        42.57,
+        42.57,
+        74.63,
+        56.42,
+        56.42,
+        46.09,
+        80.85,
+        42.57,
+        56.42
+      ],
+      "evidence_end": [
+        33.08,
+        45.46,
+        45.46,
+        77.3,
+        60.58,
+        60.58,
+        49.68,
+        83.28,
+        45.46,
+        60.58
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        30.98,
+        42.57,
+        42.57,
+        68.26,
+        57.18,
+        63.22,
+        null,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        33.08,
+        45.46,
+        45.46,
+        72.32,
+        60.58,
+        65.12,
+        null,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_70": {
+    "primary": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        54.87,
+        47.76,
+        null,
+        113.14,
+        27.39,
+        null,
+        121.57,
+        null,
+        80.89,
+        null
+      ],
+      "evidence_end": [
+        58.62,
+        49.14,
+        null,
+        116.18,
+        30.68,
+        null,
+        124.68,
+        null,
+        83.34,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        54.87,
+        54.87,
+        null,
+        116.94,
+        19.51,
+        null,
+        119.5,
+        null,
+        81.76,
+        null
+      ],
+      "evidence_end": [
+        58.62,
+        58.62,
+        null,
+        118.9,
+        22.34,
+        null,
+        121.96,
+        null,
+        83.34,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        53.84,
+        53.84,
+        121.57,
+        116.94,
+        53.84,
+        53.84,
+        null,
+        null,
+        86.48,
+        2.77
+      ],
+      "evidence_end": [
+        58.62,
+        58.62,
+        124.68,
+        118.9,
+        58.62,
+        58.62,
+        null,
+        null,
+        91.54,
+        3.84
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        54.87,
+        47.76,
+        null,
+        113.14,
+        27.39,
+        null,
+        121.57,
+        null,
+        80.89,
+        null
+      ],
+      "evidence_end": [
+        58.62,
+        49.14,
+        null,
+        116.18,
+        30.68,
+        null,
+        124.68,
+        null,
+        83.34,
+        null
+      ]
+    }
+  },
+  "sample_71": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        78.88,
+        null,
+        53.71,
+        null,
+        null,
+        88.92,
+        70.34,
+        85.79
+      ],
+      "evidence_end": [
+        null,
+        null,
+        80.46,
+        null,
+        57.8,
+        null,
+        null,
+        91.66,
+        74.3,
+        88.92
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        78.88,
+        null,
+        53.71,
+        null,
+        null,
+        86.2,
+        70.34,
+        86.2
+      ],
+      "evidence_end": [
+        null,
+        null,
+        80.46,
+        null,
+        57.8,
+        null,
+        null,
+        91.66,
+        74.3,
+        88.92
+      ]
+    },
+    "referee": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        78.88,
+        null,
+        53.71,
+        78.88,
+        null,
+        88.92,
+        70.34,
+        85.79
+      ],
+      "evidence_end": [
+        null,
+        null,
+        80.46,
+        null,
+        57.8,
+        80.46,
+        null,
+        91.66,
+        74.3,
+        88.92
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        78.88,
+        null,
+        53.71,
+        null,
+        null,
+        88.92,
+        70.34,
+        85.79
+      ],
+      "evidence_end": [
+        null,
+        null,
+        80.46,
+        null,
+        57.8,
+        null,
+        null,
+        91.66,
+        74.3,
+        88.92
+      ]
+    }
+  },
+  "sample_75": {
+    "primary": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        45.08,
+        29.67,
+        null,
+        80.96,
+        null,
+        null,
+        33.79,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        46.44,
+        31.94,
+        null,
+        83.74,
+        null,
+        null,
+        35.96,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        45.08,
+        29.67,
+        null,
+        80.96,
+        null,
+        null,
+        31.94,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        46.44,
+        31.94,
+        null,
+        83.74,
+        null,
+        null,
+        33.1,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        40.26,
+        29.67,
+        63.93,
+        80.58,
+        40.26,
+        84.26,
+        33.79,
+        56.31,
+        29.67
+      ],
+      "evidence_end": [
+        null,
+        42.5,
+        31.94,
+        69.74,
+        83.74,
+        42.5,
+        87.68,
+        35.96,
+        58.38,
+        31.94
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        45.08,
+        29.67,
+        null,
+        80.96,
+        null,
+        null,
+        33.79,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        46.44,
+        31.94,
+        null,
+        83.74,
+        null,
+        null,
+        35.96,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_77": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        77.84,
+        null,
+        null,
+        46.54,
+        16.54,
+        15.22,
+        null,
+        67.9,
+        40.4,
+        13.5
+      ],
+      "evidence_end": [
+        80.36,
+        null,
+        null,
+        48.98,
+        17.3,
+        17.3,
+        null,
+        69.52,
+        42.6,
+        14.46
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        77.84,
+        null,
+        null,
+        49.64,
+        16.54,
+        15.22,
+        null,
+        67.9,
+        32.98,
+        46.54
+      ],
+      "evidence_end": [
+        80.36,
+        null,
+        null,
+        53.02,
+        17.3,
+        17.3,
+        null,
+        69.52,
+        34.98,
+        48.98
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        77.84,
+        46.54,
+        null,
+        46.54,
+        19.93,
+        15.22,
+        32.98,
+        67.9,
+        32.98,
+        13.5
+      ],
+      "evidence_end": [
+        80.36,
+        48.98,
+        null,
+        48.98,
+        20.88,
+        17.3,
+        34.98,
+        69.52,
+        34.98,
+        14.46
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        77.84,
+        null,
+        null,
+        46.54,
+        16.54,
+        15.22,
+        null,
+        67.9,
+        40.4,
+        13.5
+      ],
+      "evidence_end": [
+        80.36,
+        null,
+        null,
+        48.98,
+        17.3,
+        17.3,
+        null,
+        69.52,
+        42.6,
+        14.46
+      ]
+    }
+  },
+  "sample_79": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        100.92,
+        null,
+        null,
+        39.17,
+        null,
+        24.9,
+        0.08,
+        null,
+        null,
+        100.92
+      ],
+      "evidence_end": [
+        105.78,
+        null,
+        null,
+        41.58,
+        null,
+        27.02,
+        2.74,
+        null,
+        null,
+        105.78
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        82.95,
+        null,
+        null,
+        40.76,
+        null,
+        24.9,
+        0.08,
+        null,
+        null,
+        82.95
+      ],
+      "evidence_end": [
+        86.88,
+        null,
+        null,
+        41.58,
+        null,
+        27.02,
+        1.38,
+        null,
+        null,
+        86.88
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        93.72,
+        157.23,
+        null,
+        200.62,
+        27.18,
+        24.9,
+        44.11,
+        106.02,
+        23.28,
+        100.92
+      ],
+      "evidence_end": [
+        95.62,
+        162.84,
+        null,
+        203.14,
+        28.18,
+        27.02,
+        45.94,
+        107.1,
+        24.04,
+        105.78
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        100.92,
+        null,
+        null,
+        39.17,
+        null,
+        24.9,
+        0.08,
+        null,
+        null,
+        100.92
+      ],
+      "evidence_end": [
+        105.78,
+        null,
+        null,
+        41.58,
+        null,
+        27.02,
+        2.74,
+        null,
+        null,
+        105.78
+      ]
+    }
+  },
+  "sample_81": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        63.88,
+        null,
+        null,
+        86.49,
+        null,
+        10.51,
+        78.56,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        68.28,
+        null,
+        null,
+        91.06,
+        null,
+        11.52,
+        80.96,
+        null,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        63.88,
+        null,
+        null,
+        86.49,
+        null,
+        8.54,
+        63.88,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        68.28,
+        null,
+        null,
+        91.06,
+        null,
+        9.94,
+        68.28,
+        null,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        63.88,
+        null,
+        93.34,
+        86.49,
+        11.68,
+        11.68,
+        11.68,
+        null,
+        86.49,
+        63.88
+      ],
+      "evidence_end": [
+        68.28,
+        null,
+        94.86,
+        91.06,
+        14.66,
+        14.66,
+        14.66,
+        null,
+        91.06,
+        68.28
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        63.88,
+        null,
+        null,
+        86.49,
+        null,
+        10.51,
+        78.56,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        68.28,
+        null,
+        null,
+        91.06,
+        null,
+        11.52,
+        80.96,
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "sample_82": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        66.16,
+        null,
+        24.69,
+        40.31
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        71.44,
+        null,
+        28.5,
+        45.38
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        66.08,
+        null,
+        24.69,
+        40.31
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        67.44,
+        null,
+        26.46,
+        42.28
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        24.69,
+        39.15,
+        null,
+        72.08,
+        51.5,
+        69.98,
+        66.08,
+        null,
+        27.29,
+        48.33
+      ],
+      "evidence_end": [
+        26.46,
+        42.28,
+        null,
+        73.56,
+        55.52,
+        71.44,
+        67.44,
+        null,
+        28.5,
+        50.72
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        66.16,
+        null,
+        24.69,
+        40.31
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        71.44,
+        null,
+        28.5,
+        45.38
+      ]
+    }
+  },
+  "sample_84": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        20.3,
+        76.83,
+        192.56,
+        119.95,
+        31.47,
+        24.17,
+        69.74
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        23.56,
+        79.48,
+        195.0,
+        122.92,
+        34.36,
+        25.4,
+        71.48
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        20.3,
+        78.52,
+        193.75,
+        119.95,
+        27.91,
+        20.3,
+        69.74
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        23.56,
+        79.48,
+        198.18,
+        122.92,
+        31.8,
+        23.56,
+        71.48
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true
+      ],
+      "evidence_start": [
+        154.43,
+        76.83,
+        null,
+        20.3,
+        76.83,
+        202.3,
+        null,
+        27.91,
+        null,
+        100.2
+      ],
+      "evidence_end": [
+        159.86,
+        79.48,
+        null,
+        23.56,
+        79.48,
+        207.3,
+        null,
+        31.8,
+        null,
+        101.28
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        20.3,
+        76.83,
+        192.56,
+        119.95,
+        31.47,
+        24.17,
+        69.74
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        23.56,
+        79.48,
+        195.0,
+        122.92,
+        34.36,
+        25.4,
+        71.48
+      ]
+    }
+  },
+  "sample_86": {
+    "primary": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        32.69,
+        null,
+        null,
+        null,
+        32.69,
+        66.56,
+        null,
+        null,
+        51.17
+      ],
+      "evidence_end": [
+        null,
+        35.78,
+        null,
+        null,
+        null,
+        35.78,
+        72.7,
+        null,
+        null,
+        57.46
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        35.26,
+        null,
+        null,
+        null,
+        null,
+        66.56,
+        null,
+        null,
+        51.17
+      ],
+      "evidence_end": [
+        null,
+        37.38,
+        null,
+        null,
+        null,
+        null,
+        69.94,
+        null,
+        null,
+        54.76
+      ]
+    },
+    "referee": {
+      "answers": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "evidence_start": [
+        null,
+        32.69,
+        54.81,
+        58.46,
+        66.56,
+        32.69,
+        66.56,
+        80.14,
+        20.69,
+        49.58
+      ],
+      "evidence_end": [
+        null,
+        35.78,
+        57.46,
+        60.18,
+        69.94,
+        35.78,
+        69.94,
+        82.4,
+        23.54,
+        54.76
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        null,
+        32.69,
+        null,
+        null,
+        null,
+        null,
+        66.56,
+        null,
+        null,
+        51.17
+      ],
+      "evidence_end": [
+        null,
+        35.78,
+        null,
+        null,
+        null,
+        null,
+        72.7,
+        null,
+        null,
+        57.46
+      ]
+    }
+  },
+  "sample_90": {
+    "primary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        27.04,
+        null,
+        null,
+        14.53,
+        null,
+        10.46,
+        20.16,
+        null,
+        null,
+        14.53
+      ],
+      "evidence_end": [
+        30.44,
+        null,
+        null,
+        16.48,
+        null,
+        12.1,
+        21.88,
+        null,
+        null,
+        16.48
+      ]
+    },
+    "secondary": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        27.04,
+        null,
+        null,
+        14.53,
+        null,
+        10.46,
+        20.16,
+        null,
+        null,
+        14.53
+      ],
+      "evidence_end": [
+        28.96,
+        null,
+        null,
+        16.48,
+        null,
+        12.1,
+        21.88,
+        null,
+        null,
+        16.48
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "evidence_start": [
+        27.04,
+        27.04,
+        null,
+        13.52,
+        13.52,
+        10.46,
+        33.41,
+        null,
+        13.52,
+        13.52
+      ],
+      "evidence_end": [
+        28.96,
+        28.96,
+        null,
+        16.48,
+        16.48,
+        12.1,
+        34.76,
+        null,
+        16.48,
+        16.48
+      ]
+    },
+    "response": {
+      "answers": [
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true
+      ],
+      "evidence_start": [
+        27.04,
+        null,
+        null,
+        14.53,
+        null,
+        10.46,
+        20.16,
+        null,
+        null,
+        14.53
+      ],
+      "evidence_end": [
+        30.44,
+        null,
+        null,
+        16.48,
+        null,
+        12.1,
+        21.88,
+        null,
+        null,
+        16.48
+      ]
+    }
+  },
+  "sample_92": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        108.62,
+        78.03,
+        null,
+        23.27,
+        null,
+        30.93,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        111.0,
+        79.2,
+        null,
+        26.32,
+        null,
+        33.0,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        108.62,
+        74.24,
+        null,
+        23.27,
+        null,
+        30.93,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        111.0,
+        78.34,
+        null,
+        26.32,
+        null,
+        33.0,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        119.52,
+        null,
+        108.62,
+        74.24,
+        65.46,
+        25.19,
+        92.07,
+        30.93,
+        null
+      ],
+      "evidence_end": [
+        null,
+        123.78,
+        null,
+        111.0,
+        78.34,
+        69.04,
+        26.32,
+        94.28,
+        33.0,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        null,
+        108.62,
+        78.03,
+        null,
+        23.27,
+        null,
+        30.93,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        null,
+        111.0,
+        79.2,
+        null,
+        26.32,
+        null,
+        33.0,
+        null
+      ]
+    }
+  },
+  "sample_95": {
+    "primary": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        38.94,
+        27.54,
+        null,
+        null,
+        32.01,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        41.9,
+        29.14,
+        null,
+        null,
+        34.24,
+        null,
+        null,
+        null
+      ]
+    },
+    "secondary": {
+      "answers": [
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        38.94,
+        43.1,
+        27.54,
+        null,
+        null,
+        32.64,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        41.9,
+        44.34,
+        29.14,
+        null,
+        null,
+        34.24,
+        null,
+        null,
+        null
+      ]
+    },
+    "referee": {
+      "answers": [
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "evidence_start": [
+        56.43,
+        75.19,
+        75.19,
+        24.63,
+        null,
+        1.0,
+        32.01,
+        32.01,
+        24.63,
+        null
+      ],
+      "evidence_end": [
+        58.14,
+        78.64,
+        78.64,
+        27.82,
+        null,
+        2.78,
+        34.24,
+        34.24,
+        27.82,
+        null
+      ]
+    },
+    "response": {
+      "answers": [
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false
+      ],
+      "evidence_start": [
+        null,
+        null,
+        38.94,
+        27.54,
+        null,
+        null,
+        32.01,
+        null,
+        null,
+        null
+      ],
+      "evidence_end": [
+        null,
+        null,
+        41.9,
+        29.14,
+        null,
+        null,
+        34.24,
+        null,
+        null,
+        null
+      ]
+    }
+  }
+}
