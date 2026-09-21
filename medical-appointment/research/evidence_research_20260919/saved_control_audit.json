@@ -1,0 +1,56 @@
+{
+  "scope": "Saved public-training control; not the latest hidden-platform validation or new inference.",
+  "sources": [
+    {
+      "path": "runs/resume-20260919-0325/faithful-results/stageb-on-own-resume-control.json",
+      "sha256": "2304893ca0668384866492971d35021e624c815c4a32db7995f40b5c1ac6ea1a"
+    },
+    {
+      "path": "tools/gpu_eval/inputs_base.json",
+      "sha256": "53d3c87c40fab30eb6d55baeb1aade74cd4a18499b5ddd0790ecbff8011dc849"
+    }
+  ],
+  "conversations": 39,
+  "questions": 390,
+  "positives": 195,
+  "accuracy": 1.0,
+  "mean_tiou": 0.7161810760073929,
+  "raw": 0.8297086456044358,
+  "span_bins": {
+    "zero": {
+      "count": 21,
+      "remaining_raw_loss": 0.06461538461538462
+    },
+    "0_to_0.5": {
+      "count": 32,
+      "remaining_raw_loss": 0.06491268558883237
+    },
+    "0.5_to_0.9": {
+      "count": 37,
+      "remaining_raw_loss": 0.03552654792591434
+    },
+    "at_least_0.9": {
+      "count": 105,
+      "remaining_raw_loss": 0.005236736265432946
+    }
+  },
+  "hypothetical_perfect_zero_repairs_only": 0.8943240302198204,
+  "required_tiou": {
+    "0.85": {
+      "1.0": 0.75,
+      "0.99": 0.7566666666666666
+    },
+    "0.88": {
+      "1.0": 0.8,
+      "0.99": 0.8066666666666666
+    },
+    "0.9": {
+      "1.0": 0.8333333333333334,
+      "0.99": 0.8400000000000001
+    },
+    "0.95": {
+      "1.0": 0.9166666666666666,
+      "0.99": 0.9233333333333332
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Only for reconstructing SIMORD sentence IDs using the original source method.
+nltk==3.9.2
+TextGrid==1.5

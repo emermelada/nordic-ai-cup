@@ -1,0 +1,1983 @@
+{
+  "folds": {
+    "sample_10": 0,
+    "sample_17": 1,
+    "sample_18": 2,
+    "sample_19": 0,
+    "sample_20": 1,
+    "sample_23": 2,
+    "sample_33": 0,
+    "sample_37": 1,
+    "sample_39": 2,
+    "sample_4": 0,
+    "sample_42": 1,
+    "sample_43": 2,
+    "sample_47": 0,
+    "sample_48": 1,
+    "sample_5": 2,
+    "sample_50": 0,
+    "sample_52": 1,
+    "sample_54": 2,
+    "sample_55": 0,
+    "sample_56": 1,
+    "sample_57": 2,
+    "sample_6": 0,
+    "sample_63": 1,
+    "sample_64": 2,
+    "sample_66": 0,
+    "sample_67": 1,
+    "sample_69": 2,
+    "sample_70": 0,
+    "sample_71": 1,
+    "sample_75": 2,
+    "sample_77": 0,
+    "sample_79": 1,
+    "sample_81": 2,
+    "sample_82": 0,
+    "sample_84": 1,
+    "sample_86": 2,
+    "sample_90": 0,
+    "sample_92": 1,
+    "sample_95": 2
+  },
+  "question_sets": [
+    {
+      "conversation": "sample_10",
+      "questions": [
+        "Has the doctor found the condition to be unstable?",
+        "Did the patient report new breathing symptoms?",
+        "Does the patient need continued treatment?",
+        "Did the patient mention owning a specific pet?",
+        "Was any problem with housing discussed?",
+        "Is the stomach acid medication being discontinued?",
+        "Were abnormal sounds heard over the lungs?",
+        "Were the lungs and heart normal on auscultation?",
+        "Are the patient's complaints unchanged, with nothing new reported?",
+        "Does the plan include a referral to a lung specialist?"
+      ]
+    },
+    {
+      "conversation": "sample_17",
+      "questions": [
+        "Is the medicine to be taken after a meal?",
+        "Has the patient been told that the condition needs no treatment?",
+        "Should the daily dose be 100 mg?",
+        "Were bacteria identified in the sample?",
+        "Did the swab come from the throat?",
+        "Was the prescribed dose 200 mg daily?",
+        "Is there any mention of attending a concert?",
+        "The treatment is planned to run for six weeks, right?",
+        "Should the tablets be taken on an empty stomach?",
+        "Will the treatment last two weeks?"
+      ]
+    },
+    {
+      "conversation": "sample_18",
+      "questions": [
+        "Should kidney function be monitored?",
+        "Is there any reference to the patient planning a specific fitness challenge?",
+        "Did the patient ask for a renewal of the Ibumetin prescription?",
+        "Has the Ibumetin prescription been issued?",
+        "Is the patient also taking Pantoprazole?",
+        "Were liver values the focus of the planned blood tests?",
+        "Should the blood pressure readings be taken at the clinic instead of at home?",
+        "Will the blood tests include cholesterol and blood sugar?",
+        "Does the doctor consider the NSAID use long-standing and high?",
+        "Was blood pressure to be measured at home over three days?"
+      ]
+    },
+    {
+      "conversation": "sample_19",
+      "questions": [
+        "Is the patient still being treated for asthma?",
+        "Did the patient discuss baking a cake in the conversation?",
+        "Does the doctor describe the medication as unstable and in need of change?",
+        "Alongside asthma, is the patient treated for diabetes?",
+        "Were three prescriptions renewed in total?",
+        "Did the conversation mention anything about the patient planning a trip?",
+        "Has Esomeprazole been renewed as well?",
+        "Is Airomir among the renewed medicines?",
+        "Were the prescriptions stopped rather than renewed?",
+        "Was Pantoprazole the acid-reducing drug that was renewed?"
+      ]
+    },
+    {
+      "conversation": "sample_20",
+      "questions": [
+        "Will the patient be referred to a pain clinic?",
+        "Was a specific recipe or cooking activity discussed?",
+        "At any point does the patient talk about their experiences with a hobby?",
+        "Was Ibumetin renewed as well?",
+        "Did the patient ask for morphine to be renewed?",
+        "Does the pain affect the lower back alone?",
+        "Is Pamol one of the medicines requested?",
+        "Has the pain problem been described as stable?",
+        "Does the patient still need pain relief?",
+        "Were both prescriptions issued?"
+      ]
+    },
+    {
+      "conversation": "sample_23",
+      "questions": [
+        "Was a skin wart found under the right breast?",
+        "Has the patient been informed about the risk of scarring and infection?",
+        "Does the patient want the skin changes removed?",
+        "Is there any mention of the patient's pet?",
+        "Has the patient been told that the procedure carries no risk of scarring?",
+        "Is an appointment for the removal going to be arranged?",
+        "Do the changes on the abdomen and lower leg resemble seborrheic keratoses?",
+        "Were the skin changes judged to be benign?",
+        "Does the patient talk about needing a new vehicle?",
+        "Are the elements on the abdomen about 2 cm across?"
+      ]
+    },
+    {
+      "conversation": "sample_33",
+      "questions": [
+        "The visit is a follow-up on allergic rhinitis, correct?",
+        "Does the doctor plan to refer the patient to an allergy specialist?",
+        "Were daily doses made mandatory going forward?",
+        "Is there any talk about the patient's recent purchase of a vehicle?",
+        "Is the patient free of symptoms at the moment?",
+        "Did the antihistamine work well?",
+        "Has the medication helped the patient?",
+        "Are the findings unremarkable?",
+        "Should the patient carry on with the treatment as needed?",
+        "Was anything abnormal picked up at the examination?"
+      ]
+    },
+    {
+      "conversation": "sample_37",
+      "questions": [
+        "Is the skin intact?",
+        "Was erythema migrans seen around the bite?",
+        "Is the risk of Borrelia considered high?",
+        "Was erythema migrans absent?",
+        "Are redness and swelling absent?",
+        "The plan involves no treatment, right?",
+        "Does the conversation indicate the patient discussed their employment as a freelancer?",
+        "Has the bite area become red and swollen?",
+        "Did the patient get a tick bite?",
+        "Has the patient been told simply to keep an eye on the area?"
+      ]
+    },
+    {
+      "conversation": "sample_39",
+      "questions": [
+        "Does the patient have pain in the lower back?",
+        "Has the patient been referred for surgery?",
+        "Is the patient discussing their pet?",
+        "At any point does the patient express interest in learning digital photography techniques?",
+        "Was reduced mobility found during the examination?",
+        "Were painkillers part of the treatment plan?",
+        "Does the pain radiate down the leg?",
+        "The pain was assessed as nonspecific musculoskeletal pain, right?",
+        "Did the doctor conclude that the pain came from a herniated disc?",
+        "Was the patient's mobility completely unaffected?"
+      ]
+    },
+    {
+      "conversation": "sample_4",
+      "questions": [
+        "Did the patient attend for an annual asthma follow-up?",
+        "Is the heart examination without abnormal findings?",
+        "Was the patient listened to with a stethoscope?",
+        "Were the lungs found to be normal on auscultation?",
+        "Are the patient's asthma findings stable at this visit?",
+        "Should the asthma medication dose be increased?",
+        "Will the current treatment continue unchanged?",
+        "Does the visit concern asthma?",
+        "Is there any discussion about cooking?",
+        "Has an irregular heart rhythm been found?"
+      ]
+    },
+    {
+      "conversation": "sample_42",
+      "questions": [
+        "Was the blood pressure measured at 135/88?",
+        "Did the doctor assess the patient as slightly overweight?",
+        "Were exercise recommendations also part of the plan?",
+        "Does the patient have a BMI of 28?",
+        "Has the patient been given advice about diet?",
+        "Did the doctor consider the patient severely obese?",
+        "Is the patient feeling well?",
+        "The visit was a preventive health check, correct?",
+        "Was the blood pressure 155/98?",
+        "Does the patient talk about wanting to work part-time?"
+      ]
+    },
+    {
+      "conversation": "sample_43",
+      "questions": [
+        "Does the patient have a sore throat?",
+        "Is the infection thought to be bacterial?",
+        "Did the examination find no pus in the throat?",
+        "Are the speakers discussing the patient's pet?",
+        "Was the strep test negative?",
+        "Is the infection considered to be viral?",
+        "Does the patient describe abdominal pain as the main problem?",
+        "Were the tonsils covered in coatings?",
+        "Has the doctor decided against antibiotics?",
+        "Did the doctor see pus in the throat?"
+      ]
+    },
+    {
+      "conversation": "sample_47",
+      "questions": [
+        "Has penicillin treatment been started?",
+        "Is the patient able to swallow without any discomfort?",
+        "Did the doctor prescribe erythromycin?",
+        "Does the patient complain of hoarseness as the main symptom?",
+        "Was the patient told to manage with symptom relief only?",
+        "Does the conversation indicate the patient discussed their desire to learn digital photography techniques?",
+        "Were coatings seen on the tonsils?",
+        "Has the throat problem been assessed as a viral infection?",
+        "Does the patient have a sore throat?",
+        "Were the tonsils pale and free of coatings?"
+      ]
+    },
+    {
+      "conversation": "sample_48",
+      "questions": [
+        "Does the doctor attribute the fatigue to a thyroid disorder?",
+        "Does the doctor ask about the patient's experience with specific technology?",
+        "Was the TSH normal?",
+        "Did the glucose test come back normal too?",
+        "Were both blood tests within normal limits?",
+        "Is the tiredness described as brief and occasional?",
+        "Has the patient been left without any specific treatment?",
+        "Is the patient's tiredness persistent?",
+        "Does the doctor rule out an endocrine cause?",
+        "The thyroid test gave a normal result, right?"
+      ]
+    },
+    {
+      "conversation": "sample_5",
+      "questions": [
+        "Does the patient take pantoprazole for reflux?",
+        "Did the back pain begin after surgery for a lumbar disc prolapse?",
+        "Have the pains in the hands been attributed to gout?",
+        "Is the patient still in pain despite regular Ibumetin and Panodil?",
+        "Will the NSAID treatment be continued under cover of a proton pump inhibitor?",
+        "Did the patient undergo surgery for a cervical disc prolapse in 2017?",
+        "Does the conversation mention the patient owning a digital camera?",
+        "Was muscle tension found in the neck and shoulders?",
+        "Are the menopausal symptoms treated with Activelle?",
+        "Is the patient discussing owning a cat?"
+      ]
+    },
+    {
+      "conversation": "sample_50",
+      "questions": [
+        "Are further tests needed before the diagnosis can be settled?",
+        "Does the fasting blood sugar lie at 5.0 mmol/L?",
+        "Are the speakers discussing the patient's recent college experience?",
+        "The HbA1c came out at 47 mmol/mol, right?",
+        "Was the patient's BMI recorded as 29?",
+        "Has metformin treatment been started at this visit?",
+        "Was the patient talking about their recent weekend?",
+        "Is the patient free of any symptoms at this visit?",
+        "Does the patient have a fasting blood sugar of 7.0 mmol/L?",
+        "Were the results enough to confirm type 2 diabetes already?"
+      ]
+    },
+    {
+      "conversation": "sample_52",
+      "questions": [
+        "Did the doctor plan continued follow-up?",
+        "Has the patient been discharged from any further follow-up?",
+        "Was the patient seen as engaged during the consultation?",
+        "Does the plan involve starting insulin?",
+        "Is the patient's grasp of the treatment considered inadequate?",
+        "Was the patient found to be poorly motivated?",
+        "The patient understands the treatment well, right?",
+        "Were the classes the patient attended about hypertension?",
+        "Does the doctor ask about the patient's plans for the holidays?",
+        "Did the patient skip the diabetes education?"
+      ]
+    },
+    {
+      "conversation": "sample_54",
+      "questions": [
+        "Is the blood pressure elevated?",
+        "Was the foot examination normal?",
+        "Does the patient discuss their job?",
+        "Was the patient given a pneumococcal vaccination?",
+        "Has the diabetes become unstable?",
+        "Has the patient received a flu vaccination?",
+        "Did the plan include continued monitoring?",
+        "Does the plan involve a check-up only every second year?",
+        "Was the doctor concerned that the patient's symptoms might be related to exposure to the dark side of the Force?",
+        "Does the doctor regard the diabetes as stable?"
+      ]
+    },
+    {
+      "conversation": "sample_55",
+      "questions": [
+        "Does the plan include routine follow-up?",
+        "Does the plan include an urgent referral to a kidney specialist?",
+        "Does the conversation indicate the patient was thinking about joining a hiking club?",
+        "Will the current treatment be continued?",
+        "Did the HbA1c come out at 43 mmol/mol?",
+        "Did the tests show albuminuria?",
+        "Is the HbA1c reported as 53 mmol/mol?",
+        "Was the creatinine found to be raised?",
+        "Has the patient reported tiredness and thirst?",
+        "Does the patient mention having a preference for tea?"
+      ]
+    },
+    {
+      "conversation": "sample_56",
+      "questions": [
+        "Has the cause of the tiredness remained unexplained?",
+        "Was the doctor asking about the patient's upcoming movie night?",
+        "Has iron treatment been started for the tiredness?",
+        "Did the COVID-19 test come back negative?",
+        "Was the patient's thyroid function found to be reduced?",
+        "The patient's thyroid function was checked, wasn't it?",
+        "Is the patient complaining mainly of chest pain?",
+        "Will treatment for the fatigue begin straight away?",
+        "Will further measures be held off for the time being?",
+        "Are the speakers discussing the weather?"
+      ]
+    },
+    {
+      "conversation": "sample_57",
+      "questions": [
+        "Will the patient continue on the current medication?",
+        "Is the diabetes considered stable?",
+        "Has the patient kept up the lifestyle changes?",
+        "Was it concluded that no changes to treatment are needed?",
+        "Does the patient feel stable?",
+        "Does the doctor ask about the patient's job responsibilities?",
+        "Should the patient carry on with the same lifestyle?",
+        "Was the patient advised to stop the current medication?",
+        "Will the diabetes now be treated with insulin?",
+        "The patient stays on the medicine already in use, correct?"
+      ]
+    },
+    {
+      "conversation": "sample_6",
+      "questions": [
+        "Was the patient's voice noted to sound congested?",
+        "Should the fungal infection be treated with Brentan gel?",
+        "Does the patient talk about needing a new vehicle for their daily commute?",
+        "Are four daily doses of one million IU of penicillin planned?",
+        "Does the patient also have a fungal infection in the mouth?",
+        "Did the patient ask for penicillin?",
+        "Will the patient take Fluconazole 50 mg?",
+        "Does the patient want to avoid antibiotics?",
+        "Is the patient complaining of sinus symptoms?",
+        "Has penicillin been prescribed for seven days?"
+      ]
+    },
+    {
+      "conversation": "sample_63",
+      "questions": [
+        "Have complications of the diabetes been identified?",
+        "Did the patient describe new episodes of dizziness?",
+        "Is the treatment being changed to a new medication?",
+        "Was the patient's condition described as being caused by a mysterious disturbance in the Force?",
+        "Did the blood tests show impaired kidney function?",
+        "Was the diabetes control judged to be good?",
+        "The lipid profile came back normal, didn't it?",
+        "Was the HbA1c measured at 41 mmol/mol?",
+        "Are annual check-ups planned to continue?",
+        "Did the patient report no new symptoms?"
+      ]
+    },
+    {
+      "conversation": "sample_64",
+      "questions": [
+        "Is dry skin the reason for this consultation?",
+        "Was the condition assessed as xerosis?",
+        "Did the doctor prescribe an antifungal cream?",
+        "A moisturizing cream was prescribed, wasn't it?",
+        "Were open sores found on the feet?",
+        "Was intense itching the main complaint?",
+        "Does the patient complain of dryness on the hands?",
+        "Was the skin problem assessed as eczema?",
+        "Did the examination rule out any wounds?",
+        "Does the patient express a desire to change their employment status?"
+      ]
+    },
+    {
+      "conversation": "sample_66",
+      "questions": [
+        "Was the patient given a pneumococcal vaccination?",
+        "Was the vaccination given as part of diabetes care?",
+        "Did a local reaction develop at the injection site?",
+        "The diabetes status was described as stable, wasn't it?",
+        "Was the patient's diabetes found to be unstable?",
+        "Is there any reference to the patient planning to watch a specific movie?",
+        "Has follow-up been discontinued going forward?",
+        "Did the doctor decide to adjust the diabetes medication?",
+        "Is the patient free of any reaction after the injection?",
+        "Will the treatment continue without changes?"
+      ]
+    },
+    {
+      "conversation": "sample_67",
+      "questions": [
+        "Has the patient been referred to a dietitian?",
+        "The doctor described the diabetes as stable, right?",
+        "Will the treatment be continued unchanged?",
+        "Was the patient planning to cook a specific dish for dinner mentioned?",
+        "Is the patient's self-care considered good?",
+        "Is the diabetes described as poorly controlled?",
+        "Does the patient say they are doing well?",
+        "Is the patient sticking to the diet and lifestyle advice?",
+        "Has the weight remained stable?",
+        "Was the HbA1c 43 mmol/mol?"
+      ]
+    },
+    {
+      "conversation": "sample_69",
+      "questions": [
+        "Does the patient feel well?",
+        "Was the blood pressure normal?",
+        "Is the foot status normal?",
+        "Will the regular check-ups be continued?",
+        "The diabetes was judged to be stable, right?",
+        "Are there no signs of complications?",
+        "Were wounds discovered on the feet?",
+        "Does the patient express interest in changing their work schedule?",
+        "Is blood pressure medication being started?",
+        "Have early complications of the diabetes been detected?"
+      ]
+    },
+    {
+      "conversation": "sample_70",
+      "questions": [
+        "The vaccination went as planned, didn't it?",
+        "Was the vaccine actually given?",
+        "Was blood taken during the same visit?",
+        "Were no further measures decided on?",
+        "Is this vaccination something the patient receives annually?",
+        "Was the vaccination postponed to a later date?",
+        "Can the patient leave without any additional treatment?",
+        "Did the patient discuss their college courses online?",
+        "Is the patient free of side effects after the vaccine?",
+        "Is the patient asked to come back in a week for a second dose?"
+      ]
+    },
+    {
+      "conversation": "sample_71",
+      "questions": [
+        "Has the patient been troubled by increased thirst?",
+        "Was the patient discussing their pet?",
+        "Did the creatinine come back normal?",
+        "Is the LDL cholesterol 4.2 mmol/L?",
+        "Was the HbA1c 42 mmol/mol?",
+        "Did the creatinine turn out to be elevated?",
+        "According to the conversation, was a specific type of sport played by the patient discussed?",
+        "Are there no signs of complications?",
+        "Is the LDL cholesterol 2.2 mmol/L?",
+        "The diabetes was described as stable, right?"
+      ]
+    },
+    {
+      "conversation": "sample_75",
+      "questions": [
+        "Does the conversation indicate the patient uses specific software?",
+        "Does the patient deny any known exposure to COVID-19?",
+        "Is the patient also feeling tired?",
+        "Is a bacterial infection thought to be the most likely cause?",
+        "Were rest and fluids recommended?",
+        "Did the patient report a known exposure to COVID-19?",
+        "Will the patient be starting a course of antibiotics?",
+        "Has the patient had a sore throat for a few days?",
+        "Was the patient found to have a fever?",
+        "Did the throat examination reveal pronounced swelling with pus?"
+      ]
+    },
+    {
+      "conversation": "sample_77",
+      "questions": [
+        "Did the patient receive a tetanus vaccination?",
+        "Did the infection appear only two days after the injury?",
+        "Does the patient talk about using a digital device for online shopping?",
+        "Was the infection judged to follow a penetrating trauma?",
+        "Have about two weeks passed since the injury?",
+        "Did the trouble start after the patient pricked themselves on a thorn?",
+        "Was a foreign body found in the toe?",
+        "The patient was treated with penicillin, correct?",
+        "Is a foreign body ruled out?",
+        "Does the patient have an infection in the big toe?"
+      ]
+    },
+    {
+      "conversation": "sample_79",
+      "questions": [
+        "Is chondromalacia patellae suspected on clinical grounds?",
+        "Has the patient been referred to a physiotherapist instead of further procedures?",
+        "Does the patient express interest in learning Spanish?",
+        "Do the pains come and go rather than being constant?",
+        "Does the pain sit on the back of the thigh?",
+        "Does the patient have pain behind the kneecap?",
+        "Did the patient show up in person for the consultation?",
+        "Was the diagnosis of chondromalacia patellae confirmed by an MRI scan?",
+        "Are the knee pains constant throughout the day?",
+        "Was the suspicion reached without imaging?"
+      ]
+    },
+    {
+      "conversation": "sample_81",
+      "questions": [
+        "Is a viral cause thought to be the most likely explanation?",
+        "Has the patient been given antibiotics for the illness?",
+        "Is admission to hospital part of the plan?",
+        "Did the patient receive advice about fluid intake?",
+        "Is the patient complaining of chest symptoms?",
+        "Does the patient describe symptoms of gastroenteritis?",
+        "Was gastroenteritis the diagnosis arrived at?",
+        "Does the conversation indicate the patient discussed their recent purchase of groceries?",
+        "Was the patient told to restrict fluid intake?",
+        "Was a bacterial cause considered the most likely one?"
+      ]
+    },
+    {
+      "conversation": "sample_82",
+      "questions": [
+        "Was the growth suspected to be a basal cell carcinoma?",
+        "Were seven small lesions counted in the area?",
+        "Does the patient express interest in using a particular software?",
+        "Has a cream been prescribed as the treatment?",
+        "Did they talk about the weather being unusually hot?",
+        "Will the lesions be removed surgically?",
+        "The lesions will be treated with freezing, right?",
+        "Do the elements resemble molluscs?",
+        "Has the patient noticed a wart-like growth?",
+        "Were three small lesions seen in the same area of the thorax?"
+      ]
+    },
+    {
+      "conversation": "sample_84",
+      "questions": [
+        "Is the check-up being done because the patient has symptoms from the heart?",
+        "Does the patient say that exercise is something they rarely do?",
+        "Was the patient referred to Doctor Strange for magical treatment?",
+        "Was it the patient's grandfather who died of a heart attack?",
+        "Does the patient exercise regularly?",
+        "Will both blood tests and an ECG be carried out?",
+        "Was the blood pressure measured at 138 over 83?",
+        "Does the patient report cardiovascular disease in the family?",
+        "Did that grandfather die at the age of 52?",
+        "Is the patient otherwise healthy and living a healthy life?"
+      ]
+    },
+    {
+      "conversation": "sample_86",
+      "questions": [
+        "Does the conversation mention a specific dish the patient plans to cook for dinner?",
+        "Is the patient free of fever?",
+        "Is the tenderness in the area described as severe?",
+        "Has surgery been scheduled to remove the swelling?",
+        "Were both testicles found to be enlarged and abnormal?",
+        "Did the patient have a fever when he came in?",
+        "Both testicles felt normal at the examination, correct?",
+        "Does the doctor suspect a testicular torsion?",
+        "Was the swelling located on the left side of the scrotum?",
+        "Was a small swelling found around the epididymis?"
+      ]
+    },
+    {
+      "conversation": "sample_90",
+      "questions": [
+        "Does the doctor consider the change harmless?",
+        "Did the doctor find the change suspicious?",
+        "Does the patient talk about their job responsibilities?",
+        "Did the patient notice a new mole?",
+        "Is the new mole sitting on the back?",
+        "Was a photo sent in for assessment?",
+        "Has the doctor reviewed the photograph?",
+        "Does the patient mention owning a cat?",
+        "Does the patient describe the mole as small and unchanged?",
+        "Is the mole located on the thigh?"
+      ]
+    },
+    {
+      "conversation": "sample_92",
+      "questions": [
+        "At any point does the patient talk about their pet?",
+        "Has the result of the urine analysis already come back?",
+        "Is the pulse recorded as 92?",
+        "Has a urine sample been sent off for albumin/creatinine ratio analysis?",
+        "Does the patient work as a staff manager in a retail chain?",
+        "Are the patient's exercise habits limited to less than an hour a week?",
+        "Did the patient ask to have his cholesterol level checked?",
+        "Is there any reference to the patient using specific software for work?",
+        "Was the previous LDL value 3.9?",
+        "Was the blood pressure measured at 160/95?"
+      ]
+    },
+    {
+      "conversation": "sample_95",
+      "questions": [
+        "Does the plan involve a check every third month from now on?",
+        "Have the results of the blood tests already been gone through?",
+        "Were blood tests taken at this visit?",
+        "Has the patient been free of side effects?",
+        "Does the patient talk about having a pet hamster?",
+        "Was the follow-up handled by telephone?",
+        "The treatment is considered well tolerated, right?",
+        "Is the treatment being stopped because it is poorly tolerated?",
+        "Did the patient report muscle pain as a side effect?",
+        "Has the dose been increased at this consultation?"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "conversation": "sample_10",
+      "question_id": "sample_10_yes_q01",
+      "question": "Does the patient need continued treatment?",
+      "excerpt": "[0] That is a relief to hear.\n[1] I would describe this as a stable situation.\n[2] You do need to continue the treatment you are on.\n[3] So I carry on with everything exactly as before?\n[4] Exactly as before.",
+      "quote": "You do need to continue the treatment"
+    },
+    {
+      "conversation": "sample_10",
+      "question_id": "sample_10_yes_q02",
+      "question": "Were the lungs and heart normal on auscultation?",
+      "excerpt": "[0] And once more?\n[1] Is everything all right?\n[2] Your lungs and your heart both sound normal.\n[3] Nothing abnormal on listening.\n[4] That is a relief to hear.\n[5] I would describe this as a stable situation.",
+      "quote": "Your lungs and your heart both sound normal. Nothing abnormal on listening."
+    },
+    {
+      "conversation": "sample_10",
+      "question_id": "sample_10_yes_q03",
+      "question": "Are the patient's complaints unchanged, with nothing new reported?",
+      "excerpt": "[0] Before we do that, has anything new turned up?\n[1] Any new symptoms?\n[2] No, nothing new.\n[3] Should there be?\n[4] I do worry about the asthma sometimes.",
+      "quote": "No, nothing new."
+    },
+    {
+      "conversation": "sample_17",
+      "question_id": "sample_17_yes_q01",
+      "question": "Will the treatment last two weeks?",
+      "excerpt": "[0] Sporanox, 100 milligrams daily for two weeks.\n[1] You take it after a meal.\n[2] After a meal every day for two weeks.\n[3] Exactly right.\n[4] Always after food.",
+      "quote": "After a meal every day for two weeks."
+    },
+    {
+      "conversation": "sample_17",
+      "question_id": "sample_17_yes_q02",
+      "question": "Should the daily dose be 100 mg?",
+      "excerpt": "[0] It is a fungal infection in the mouth and it is one that needs treating.\n[1] What does the treatment involve?\n[2] Sporanox, 100 milligrams daily for two weeks.\n[3] You take it after a meal.\n[4] After a meal every day for two weeks.",
+      "quote": "100 milligrams daily"
+    },
+    {
+      "conversation": "sample_17",
+      "question_id": "sample_17_yes_q03",
+      "question": "Is the medicine to be taken after a meal?",
+      "excerpt": "[0] What does the treatment involve?\n[1] Sporanox, 100 milligrams daily for two weeks.\n[2] You take it after a meal.\n[3] After a meal every day for two weeks.\n[4] Exactly right.",
+      "quote": "You take it after a meal."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q01",
+      "question": "Has the Ibumetin prescription been issued?",
+      "excerpt": "[0] We check kidneys, cholesterol and blood sugar.\n[1] And you will still renew the ibumet in today?\n[2] Yes.\n[3] The prescription is created.\n[4] Does that plan sound workable to you?\n[5] It does.",
+      "quote": "Yes. The prescription is created."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q02",
+      "question": "Did the patient ask for a renewal of the Ibumetin prescription?",
+      "excerpt": "[0] It is like that every summer.\n[1] So, what can I do for you?\n[2] I need my ibumet and renewed.\n[3] All right.\n[4] And you are still taking Pantoprazole alongside it?",
+      "quote": "I need my ibumet and renewed."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q03",
+      "question": "Does the doctor consider the NSAID use long-standing and high?",
+      "excerpt": "[0] Good.\n[1] Now, one thing I want to be open with you about.\n[2] You have used anti -inflammatory painkillers heavily and for a long time.\n[3] Is that harming me?\n[4] It means we should monitor your blood pressure and your kidney function.",
+      "quote": "You have used anti -inflammatory painkillers heavily and for a long time."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q04",
+      "question": "Should kidney function be monitored?",
+      "excerpt": "[0] You have used anti -inflammatory painkillers heavily and for a long time.\n[1] Is that harming me?\n[2] It means we should monitor your blood pressure and your kidney function.\n[3] That is the sensible step.\n[4] How do we go about that?",
+      "quote": "we should monitor your blood pressure and your kidney function."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q05",
+      "question": "Was blood pressure to be measured at home over three days?",
+      "excerpt": "[0] That is the sensible step.\n[1] How do we go about that?\n[2] I would like you to measure your blood pressure at home over three days.\n[3] I can do that.\n[4] And the kidneys?",
+      "quote": "I would like you to measure your blood pressure at home over three days."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q06",
+      "question": "Will the blood tests include cholesterol and blood sugar?",
+      "excerpt": "[0] Blood tests.\n[1] Please book a time for those.\n[2] We check kidneys, cholesterol and blood sugar.\n[3] And you will still renew the ibumet in today?\n[4] Yes.",
+      "quote": "We check kidneys, cholesterol and blood sugar."
+    },
+    {
+      "conversation": "sample_18",
+      "question_id": "sample_18_yes_q07",
+      "question": "Is the patient also taking Pantoprazole?",
+      "excerpt": "[0] I need my ibumet and renewed.\n[1] All right.\n[2] And you are still taking Pantoprazole alongside it?\n[3] Yes, every day with it.\n[4] Good.\n[5] Now, one thing I want to be open with you about.",
+      "quote": "And you are still taking Pantoprazole alongside it? Yes, every day with it."
+    },
+    {
+      "conversation": "sample_19",
+      "question_id": "sample_19_yes_q01",
+      "question": "Were three prescriptions renewed in total?",
+      "excerpt": "[0] It is no trouble at all.\n[1] Which prescriptions will I get?\n[2] Active L, Aromere and Esomeprizol.\n[3] All three renewed.\n[4] The Esomeprizol is the one for the reflux?\n[5] Yes, that is right.",
+      "quote": "Active L, Aromere and Esomeprizol. All three renewed."
+    },
+    {
+      "conversation": "sample_19",
+      "question_id": "sample_19_yes_q02",
+      "question": "Has Esomeprazole been renewed as well?",
+      "excerpt": "[0] It is no trouble at all.\n[1] Which prescriptions will I get?\n[2] Active L, Aromere and Esomeprizol.\n[3] All three renewed.\n[4] The Esomeprizol is the one for the reflux?\n[5] Yes, that is right.",
+      "quote": "Active L, Aromere and Esomeprizol. All three renewed."
+    },
+    {
+      "conversation": "sample_19",
+      "question_id": "sample_19_yes_q03",
+      "question": "Is Airomir among the renewed medicines?",
+      "excerpt": "[0] It is no trouble at all.\n[1] Which prescriptions will I get?\n[2] Active L, Aromere and Esomeprizol.\n[3] All three renewed.\n[4] The Esomeprizol is the one for the reflux?\n[5] Yes, that is right.",
+      "quote": "Active L, Aromere and Esomeprizol. All three renewed."
+    },
+    {
+      "conversation": "sample_19",
+      "question_id": "sample_19_yes_q04",
+      "question": "Is the patient still being treated for asthma?",
+      "excerpt": "[0] That is fine.\n[1] Anything else?\n[2] I am still being treated for asthma and for reflux.\n[3] Noted.\n[4] Both are ongoing.",
+      "quote": "I am still being treated for asthma"
+    },
+    {
+      "conversation": "sample_20",
+      "question_id": "sample_20_yes_q01",
+      "question": "Was Ibumetin renewed as well?",
+      "excerpt": "[0] So, I simply carry on exactly as I have been doing?\n[1] Yes.\n[2] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n[3] That is a weight off my mind.\n[4] I was down to the last few tablets in the box, and I did not fancy running out over a weekend.",
+      "quote": "I am creating prescriptions for both Pamol and Ibu Medin now,"
+    },
+    {
+      "conversation": "sample_20",
+      "question_id": "sample_20_yes_q02",
+      "question": "Has the pain problem been described as stable?",
+      "excerpt": "[0] Nothing new has turned up to alarm me.\n[1] Good.\n[2] Then we are looking at a stable pain problem with a continued need for pain relief.\n[3] That is a relief to hear.\n[4] Oh, before I forget, have you seen anything worth watching lately?",
+      "quote": "Then we are looking at a stable pain problem"
+    },
+    {
+      "conversation": "sample_20",
+      "question_id": "sample_20_yes_q03",
+      "question": "Were both prescriptions issued?",
+      "excerpt": "[0] So, I simply carry on exactly as I have been doing?\n[1] Yes.\n[2] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n[3] That is a weight off my mind.\n[4] I was down to the last few tablets in the box, and I did not fancy running out over a weekend.",
+      "quote": "I am creating prescriptions for both Pamol"
+    },
+    {
+      "conversation": "sample_20",
+      "question_id": "sample_20_yes_q04",
+      "question": "Does the patient still need pain relief?",
+      "excerpt": "[0] Nothing new has turned up to alarm me.\n[1] Good.\n[2] Then we are looking at a stable pain problem with a continued need for pain relief.\n[3] That is a relief to hear.\n[4] Oh, before I forget, have you seen anything worth watching lately?",
+      "quote": "a continued need for pain relief."
+    },
+    {
+      "conversation": "sample_20",
+      "question_id": "sample_20_yes_q05",
+      "question": "Is Pamol one of the medicines requested?",
+      "excerpt": "[0] So, I simply carry on exactly as I have been doing?\n[1] Yes.\n[2] I am creating prescriptions for both Pamol and Ibu Medin now, and they will be waiting for you at the pharmacy.\n[3] That is a weight off my mind.\n[4] I was down to the last few tablets in the box, and I did not fancy running out over a weekend.",
+      "quote": "I am creating prescriptions for both Pamol"
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q01",
+      "question": "Were the skin changes judged to be benign?",
+      "excerpt": "[0] Look like, so you are not certain.\n[1] I am describing what I see.\n[2] My assessment is that these are benign skin changes.\n[3] benign all of them, including the one under the breast.\n[4] Yes, that is my assessment of all of them.",
+      "quote": "My assessment is that these are benign skin changes."
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q02",
+      "question": "Does the patient want the skin changes removed?",
+      "excerpt": "[0] Right.\n[1] A scar and an infection risk.\n[2] I would still rather have them off than keep catching them.\n[3] Understood.\n[4] Then the appointment for removal is the plan.",
+      "quote": "I would still rather have them off than keep catching them."
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q03",
+      "question": "Was a skin wart found under the right breast?",
+      "excerpt": "[0] I want them gone.\n[1] Let me look at them.\n[2] The one under your right breast is a skin wart about one centimeter.\n[3] And you can tell that just by looking at it?\n[4] Yes, it has the appearance of one.",
+      "quote": "The one under your right breast is a skin wart about"
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q04",
+      "question": "Is an appointment for the removal going to be arranged?",
+      "excerpt": "[0] I would still rather have them off than keep catching them.\n[1] Understood.\n[2] Then the appointment for removal is the plan.\n[3] Good.\n[4] Any idea whether this weather holds through the weekend?",
+      "quote": "Then the appointment for removal is the plan."
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q05",
+      "question": "Has the patient been informed about the risk of scarring and infection?",
+      "excerpt": "[0] And what am I signing up for?\n[1] I would rather hear the downside now.\n[2] There will be a scar where each one is removed, and there is a risk of infection afterwards.\n[3] You should know both before we book it.\n[4] Right.",
+      "quote": "There will be a scar where each one is removed, and there is a risk of infection afterwards."
+    },
+    {
+      "conversation": "sample_23",
+      "question_id": "sample_23_yes_q06",
+      "question": "Do the changes on the abdomen and lower leg resemble seborrheic keratoses?",
+      "excerpt": "[0] Scaly and brownish covers a lot of ground.\n[1] What do you think they are?\n[2] They look like seboria carotoses.\n[3] That is a common harmless growth.\n[4] Look like, so you are not certain.",
+      "quote": "They look like seboria carotoses."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q01",
+      "question": "Should the patient carry on with the treatment as needed?",
+      "excerpt": "[0] That is my assessment.\n[1] Do I stop taking it now?\n[2] The plan is to continue it as needed.\n[3] As needed.\n[4] So only when the symptoms come back?",
+      "quote": "The plan is to continue it as needed."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q02",
+      "question": "Is the patient free of symptoms at the moment?",
+      "excerpt": "[0] How has the medication been?\n[1] It has helped.\n[2] I do not have any symptoms right now.\n[3] No symptoms at all at the moment.\n[4] None.\n[5] And that is partly what makes me uneasy.",
+      "quote": "I do not have any symptoms right now. No symptoms at all at the moment."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q03",
+      "question": "Has the medication helped the patient?",
+      "excerpt": "[0] Nothing abnormal was found on examination.\n[1] All right.\n[2] So the medicine is genuinely working?\n[3] Yes.\n[4] The antihistamine is having a good effect.\n[5] So I feel well because of the antihistamine.",
+      "quote": "So the medicine is genuinely working? Yes."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q04",
+      "question": "Did the antihistamine work well?",
+      "excerpt": "[0] So the medicine is genuinely working?\n[1] Yes.\n[2] The antihistamine is having a good effect.\n[3] So I feel well because of the antihistamine.\n[4] That is my assessment.",
+      "quote": "The antihistamine is having a good effect."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q05",
+      "question": "Are the findings unremarkable?",
+      "excerpt": "[0] I keep thinking something is being missed.\n[1] I understand.\n[2] The examination I have done is normal.\n[3] Normal in all of it?\n[4] Yes.\n[5] Nothing abnormal was found on examination.\n[6] All right.\n[7] So the medicine is genuinely working?",
+      "quote": "The examination I have done is normal. Normal in all of it? Yes. Nothing abnormal was found on examination."
+    },
+    {
+      "conversation": "sample_33",
+      "question_id": "sample_33_yes_q06",
+      "question": "The visit is a follow-up on allergic rhinitis, correct?",
+      "excerpt": "[0] I was not sure I had found the right room.\n[1] You have.\n[2] This is your follow -up for allergic rhinitis.\n[3] Yes.\n[4] I have been worrying about whether it is really under control.\n[5] Let us go through it together.",
+      "quote": "This is your follow -up for allergic rhinitis. Yes."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q01",
+      "question": "Did the patient get a tick bite?",
+      "excerpt": "[0] I removed it, and I wanted the bite looked at.\n[1] Right.\n[2] A tick bite.\n[3] Any redness around the sight?\n[4] No redness at all.",
+      "quote": "A tick bite."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q02",
+      "question": "Has the patient been told simply to keep an eye on the area?",
+      "excerpt": "[0] No swelling.\n[1] And no rash at the sight.\n[2] Then what is the plan?\n[3] Observation.\n[4] No treatment is needed.\n[5] So no antibiotics today?",
+      "quote": "Then what is the plan? Observation."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q03",
+      "question": "Was erythema migrans absent?",
+      "excerpt": "[0] Of course.\n[1] The skin is intact.\n[2] There is no erythema migrants.\n[3] So no expanding ring -shaped rash around the bite?\n[4] Correct.",
+      "quote": "There is no erythema migrants."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q04",
+      "question": "Are redness and swelling absent?",
+      "excerpt": "[0] A tick bite.\n[1] Any redness around the sight?\n[2] No redness at all.\n[3] Any swelling?\n[4] No swelling either.\n[5] The area looks unchanged to me.\n[6] Let me have a look at it.",
+      "quote": "No redness at all. Any swelling? No swelling either."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q05",
+      "question": "Is the skin intact?",
+      "excerpt": "[0] Let me have a look at it.\n[1] Of course.\n[2] The skin is intact.\n[3] There is no erythema migrants.\n[4] So no expanding ring -shaped rash around the bite?",
+      "quote": "The skin is intact."
+    },
+    {
+      "conversation": "sample_37",
+      "question_id": "sample_37_yes_q06",
+      "question": "The plan involves no treatment, right?",
+      "excerpt": "[0] Then what is the plan?\n[1] Observation.\n[2] No treatment is needed.\n[3] So no antibiotics today?\n[4] No.",
+      "quote": "No treatment is needed."
+    },
+    {
+      "conversation": "sample_39",
+      "question_id": "sample_39_yes_q01",
+      "question": "The pain was assessed as nonspecific musculoskeletal pain, right?",
+      "excerpt": "[0] Your movement is also reduced when you bend and turn.\n[1] Yes, it feels stiff.\n[2] Putting it together, this is non -specific muscle and joint pain in the back without radiation.\n[3] Right, that makes sense.\n[4] For treatment, I recommend pain relief and an exercise program.",
+      "quote": "this is non -specific muscle and joint pain in the back without radiation."
+    },
+    {
+      "conversation": "sample_39",
+      "question_id": "sample_39_yes_q02",
+      "question": "Does the patient have pain in the lower back?",
+      "excerpt": "[0] It does.\n[1] Right, tell me what brings you in today.\n[2] Pain in my lower back, it feels muscular.\n[3] Does the pain travel anywhere, down into a leg, for example?\n[4] No, it stays in the lower back.",
+      "quote": "Pain in my lower back,"
+    },
+    {
+      "conversation": "sample_39",
+      "question_id": "sample_39_yes_q03",
+      "question": "Were painkillers part of the treatment plan?",
+      "excerpt": "[0] Putting it together, this is non -specific muscle and joint pain in the back without radiation.\n[1] Right, that makes sense.\n[2] For treatment, I recommend pain relief and an exercise program.\n[3] Pain killers and exercises.\n[4] Exactly.",
+      "quote": "For treatment, I recommend pain relief"
+    },
+    {
+      "conversation": "sample_39",
+      "question_id": "sample_39_yes_q04",
+      "question": "Was reduced mobility found during the examination?",
+      "excerpt": "[0] We call those muscle knots.\n[1] That would explain the tightness.\n[2] Your movement is also reduced when you bend and turn.\n[3] Yes, it feels stiff.\n[4] Putting it together, this is non -specific muscle and joint pain in the back without radiation.\n[5] Right, that makes sense.",
+      "quote": "Your movement is also reduced when you bend and turn. Yes, it feels stiff."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q01",
+      "question": "Will the current treatment continue unchanged?",
+      "excerpt": "[0] Nothing has.\n[1] This is what a stable annual check looks like.\n[2] So, what happens with my treatment?\n[3] No changes.\n[4] You carry on exactly as you are.\n[5] Nothing at all.\n[6] I suppose I expected some adjustment.",
+      "quote": "what happens with my treatment? No changes. You carry on exactly as you are."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q02",
+      "question": "Are the patient's asthma findings stable at this visit?",
+      "excerpt": "[0] I had half convinced myself something would turn up this year.\n[1] Nothing has.\n[2] This is what a stable annual check looks like.\n[3] So, what happens with my treatment?\n[4] No changes.",
+      "quote": "This is what a stable annual check looks like."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q03",
+      "question": "Did the patient attend for an annual asthma follow-up?",
+      "excerpt": "[0] I read one all the way through, which tells you something.\n[1] It tells me we are running on time for once.\n[2] So, this is your annual follow -up.\n[3] It is, for the asthma.\n[4] Exactly that.\n[5] Let me listen to your chest and your heart, and then we will talk.",
+      "quote": "So, this is your annual follow -up. It is, for the asthma."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q04",
+      "question": "Does the visit concern asthma?",
+      "excerpt": "[0] It tells me we are running on time for once.\n[1] So, this is your annual follow -up.\n[2] It is, for the asthma.\n[3] Exactly that.\n[4] Let me listen to your chest and your heart, and then we will talk.",
+      "quote": "It is, for the asthma."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q05",
+      "question": "Were the lungs found to be normal on auscultation?",
+      "excerpt": "[0] And again.\n[1] Is it all right?\n[2] Your chest and heart both sound normal.\n[3] Nothing abnormal to report.\n[4] Good.\n[5] I had half convinced myself something would turn up this year.",
+      "quote": "Your chest and heart both sound normal. Nothing abnormal to report."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q06",
+      "question": "Was the patient listened to with a stethoscope?",
+      "excerpt": "[0] It is, for the asthma.\n[1] Exactly that.\n[2] Let me listen to your chest and your heart, and then we will talk.\n[3] Go ahead.\n[4] Breathe normally for me.\n[5] And again.\n[6] Is it all right?\n[7] Your chest and heart both sound normal.\n[8] Nothing abnormal to report.\n[9] Good.",
+      "quote": "Let me listen to your chest and your heart, and then we will talk. Go ahead. Breathe normally for me. And again. Is it all right? Your chest and heart both sound normal."
+    },
+    {
+      "conversation": "sample_4",
+      "question_id": "sample_4_yes_q07",
+      "question": "Is the heart examination without abnormal findings?",
+      "excerpt": "[0] Is it all right?\n[1] Your chest and heart both sound normal.\n[2] Nothing abnormal to report.\n[3] Good.\n[4] I had half convinced myself something would turn up this year.",
+      "quote": "Nothing abnormal to report."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q01",
+      "question": "Is the patient feeling well?",
+      "excerpt": "[0] This is your preventive health check today.\n[1] Yes, that is right.\n[2] And I have to say, I feel perfectly well.\n[3] No complaints at all, which almost feels like cheating.\n[4] That is worth noting.",
+      "quote": "I feel perfectly well."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q02",
+      "question": "Was the blood pressure measured at 135/88?",
+      "excerpt": "[0] Fair enough.\n[1] So what did you find?\n[2] Your blood pressure is 135 over 88.\n[3] 135 over 88.\n[4] I will be honest.",
+      "quote": "Your blood pressure is 135 over 88."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q03",
+      "question": "Has the patient been given advice about diet?",
+      "excerpt": "[0] So what happens next?\n[1] Is there something I should be doing?\n[2] The plan is advice on diet and on exercise.\n[3] Diet and exercise.\n[4] The two words everybody expects to hear and yet here we are.",
+      "quote": "The plan is advice on diet"
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q04",
+      "question": "The visit was a preventive health check, correct?",
+      "excerpt": "[0] I always forget how calm it is in here compared with everything going on outside.\n[1] It has its moments.\n[2] This is your preventive health check today.\n[3] Yes, that is right.\n[4] And I have to say, I feel perfectly well.",
+      "quote": "This is your preventive health check today."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q05",
+      "question": "Does the patient have a BMI of 28?",
+      "excerpt": "[0] Right.\n[1] And was there anything else you measured?\n[2] Your body mass index is 28.\n[3] 28.\n[4] And what does that tell you?",
+      "quote": "Your body mass index is 28."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q06",
+      "question": "Were exercise recommendations also part of the plan?",
+      "excerpt": "[0] So what happens next?\n[1] Is there something I should be doing?\n[2] The plan is advice on diet and on exercise.\n[3] Diet and exercise.\n[4] The two words everybody expects to hear and yet here we are.",
+      "quote": "The plan is advice on diet and on exercise."
+    },
+    {
+      "conversation": "sample_42",
+      "question_id": "sample_42_yes_q07",
+      "question": "Did the doctor assess the patient as slightly overweight?",
+      "excerpt": "[0] 28.\n[1] And what does that tell you?\n[2] It puts you in the mildly overweight range.\n[3] Mildly overweight.\n[4] I suspect it as much, honestly.",
+      "quote": "It puts you in the mildly overweight range."
+    },
+    {
+      "conversation": "sample_43",
+      "question_id": "sample_43_yes_q01",
+      "question": "Is the infection considered to be viral?",
+      "excerpt": "[0] There was none of it.\n[1] So what is making it hurt then?\n[2] My assessment is that this is a viral infection.\n[3] A virus.\n[4] Not bacteria then.",
+      "quote": "My assessment is that this is a viral infection."
+    },
+    {
+      "conversation": "sample_43",
+      "question_id": "sample_43_yes_q02",
+      "question": "Does the patient have a sore throat?",
+      "excerpt": "[0] Have a seat.\n[1] Thanks.\n[2] My throat has been really sore.\n[3] A sore throat.\n[4] Let us take it in order.",
+      "quote": "My throat has been really sore."
+    },
+    {
+      "conversation": "sample_43",
+      "question_id": "sample_43_yes_q03",
+      "question": "Has the doctor decided against antibiotics?",
+      "excerpt": "[0] So do I need antibiotics for it?\n[1] No.\n[2] The plan is no antibiotics because they do not work against a virus.\n[3] All right.\n[4] So what do I do instead?",
+      "quote": "The plan is no antibiotics because they do not work against a virus."
+    },
+    {
+      "conversation": "sample_43",
+      "question_id": "sample_43_yes_q04",
+      "question": "Was the strep test negative?",
+      "excerpt": "[0] It looks for one particular bacterium that can cause a sore throat.\n[1] And what did it say?\n[2] It was negative.\n[3] That means that bacterium was not found.\n[4] So negative is the good one here?",
+      "quote": "It was negative."
+    },
+    {
+      "conversation": "sample_43",
+      "question_id": "sample_43_yes_q05",
+      "question": "Did the examination find no pus in the throat?",
+      "excerpt": "[0] So negative is the good one here?\n[1] In this case, yes.\n[2] I also looked at your throat and there was no pus.\n[3] No pus.\n[4] That is the yellow stuff you sometimes get.",
+      "quote": "I also looked at your throat and there was no pus."
+    },
+    {
+      "conversation": "sample_47",
+      "question_id": "sample_47_yes_q01",
+      "question": "Were coatings seen on the tonsils?",
+      "excerpt": "[0] Let us have a proper look and we can go from there.\n[1] Yes, please do.\n[2] Your tonsils are red and there is coating on them.\n[3] Coding.\n[4] That sounds unpleasant.",
+      "quote": "Your tonsils are red and there is coating on them."
+    },
+    {
+      "conversation": "sample_47",
+      "question_id": "sample_47_yes_q02",
+      "question": "Does the patient have a sore throat?",
+      "excerpt": "[0] Come and sit down.\n[1] What is troubling you?\n[2] My throat.\n[3] It is really sore and it hurts when I swallow.\n[4] A sore throat and pain on swallowing.\n[5] Thank you.",
+      "quote": "My throat. It is really sore and it hurts when I swallow."
+    },
+    {
+      "conversation": "sample_47",
+      "question_id": "sample_47_yes_q03",
+      "question": "Has penicillin treatment been started?",
+      "excerpt": "[0] Good.\n[1] And what happens about treating it?\n[2] I am starting you on penicillin treatment.\n[3] Penicillin.\n[4] Starting from today?\n[5] Yes, from today.\n[6] That is reassuring.\n[7] I like knowing that something is being done.",
+      "quote": "I am starting you on penicillin treatment. Penicillin. Starting from today? Yes, from today."
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q01",
+      "question": "The thyroid test gave a normal result, right?",
+      "excerpt": "[0] And I keep thinking there must be a reason for it.\n[1] We tested two things.\n[2] The first was your thyroid stimulating hormone, the thyroid.\n[3] I had wondered about that one.\n[4] It came back normal, normal.\n[5] And the other one?\n[6] Your glucose, which is your blood sugar.",
+      "quote": "The first was your thyroid stimulating hormone, the thyroid. I had wondered about that one. It came back normal,"
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q02",
+      "question": "Is the patient's tiredness persistent?",
+      "excerpt": "[0] I will admit.\n[1] Let us take it in order and it will make more sense.\n[2] You came about tiredness.\n[3] Yes, it has been going on and on.\n[4] It simply does not lift.\n[5] Persistent fatigue.\n[6] That is what we were investigating.\n[7] That is it exactly.",
+      "quote": "You came about tiredness. Yes, it has been going on and on. It simply does not lift. Persistent fatigue."
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q03",
+      "question": "Was the TSH normal?",
+      "excerpt": "[0] And I keep thinking there must be a reason for it.\n[1] We tested two things.\n[2] The first was your thyroid stimulating hormone, the thyroid.\n[3] I had wondered about that one.\n[4] It came back normal, normal.\n[5] And the other one?\n[6] Your glucose, which is your blood sugar.",
+      "quote": "The first was your thyroid stimulating hormone, the thyroid. I had wondered about that one. It came back normal,"
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q04",
+      "question": "Has the patient been left without any specific treatment?",
+      "excerpt": "[0] Right.\n[1] So what is the plan then?\n[2] No specific treatment is needed on the basis of these results.\n[3] Nothing at all.\n[4] That feels strange when I still feel like this.",
+      "quote": "No specific treatment is needed on the basis of these results."
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q05",
+      "question": "Were both blood tests within normal limits?",
+      "excerpt": "[0] And the other one?\n[1] Your glucose, which is your blood sugar.\n[2] That was normal as well.\n[3] Both normal.\n[4] So nothing was found at all.\n[5] Correct.",
+      "quote": "That was normal as well. Both normal."
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q06",
+      "question": "Did the glucose test come back normal too?",
+      "excerpt": "[0] It came back normal, normal.\n[1] And the other one?\n[2] Your glucose, which is your blood sugar.\n[3] That was normal as well.\n[4] Both normal.\n[5] So nothing was found at all.",
+      "quote": "Your glucose, which is your blood sugar. That was normal as well."
+    },
+    {
+      "conversation": "sample_48",
+      "question_id": "sample_48_yes_q07",
+      "question": "Does the doctor rule out an endocrine cause?",
+      "excerpt": "[0] So nothing was found at all.\n[1] Correct.\n[2] My assessment is that there is no hormonal cause for the tiredness.\n[3] No hormonal cause.\n[4] Does that mean nothing serious is going on?",
+      "quote": "My assessment is that there is no hormonal cause for the tiredness."
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q01",
+      "question": "Does the patient take pantoprazole for reflux?",
+      "excerpt": "[0] The cervical disc prolapse operated in 2017, and honestly the pain has just carried on regardless.\n[1] Despite taking the ibumetin and the panadill regularly, despite both, and I do take them properly, that is the frustrating part.\n[2] And then the anti -inflammatory gave me reflux on top, which is why you are on pantoprosol for that.\n[3] Exactly, yes.\n[4] So one thing patching up the other if you see what I mean.",
+      "quote": "And then the anti -inflammatory gave me reflux on top, which is why you are on pantoprosol for that."
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q02",
+      "question": "Will the NSAID treatment be continued under cover of a proton pump inhibitor?",
+      "excerpt": "[0] I have thought about it, and it is not for me.\n[1] Then we will not refer you.\n[2] For the pain, you continue the anti -inflammatory with the stomach protection alongside it.\n[3] And is there anything I need to come back for?\n[4] An annual check of your blood pressure.",
+      "quote": "For the pain, you continue the anti -inflammatory with the stomach protection alongside it."
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q03",
+      "question": "Was muscle tension found in the neck and shoulders?",
+      "excerpt": "[0] You seem generally unaffected.\n[1] Your gait and standing are normal.\n[2] I can feel muscle tension in your neck and shoulders.\n[3] That tension is exactly where it always sits.\n[4] Right across there.",
+      "quote": "I can feel muscle tension in your neck and shoulders."
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q04",
+      "question": "Are the menopausal symptoms treated with Activelle?",
+      "excerpt": "[0] They keep an eye on it, and I have no complaints there.\n[1] Good.\n[2] Then the menopausal symptoms, which you are taking active L4.\n[3] Yes.\n[4] And my hands have started aching as well, which is newer.",
+      "quote": "the menopausal symptoms, which you are taking active L4."
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q05",
+      "question": "Is the patient still in pain despite regular Ibumetin and Panodil?",
+      "excerpt": "[0] This is the chronic pain since your neck operation.\n[1] That is right.\n[2] The cervical disc prolapse operated in 2017, and honestly the pain has just carried on regardless.\n[3] Despite taking the ibumetin and the panadill regularly, despite both, and I do take them properly, that is the frustrating part.\n[4] And then the anti -inflammatory gave me reflux on top, which is why you are on pantoprosol for that.\n[5] Exactly, yes.",
+      "quote": "the pain has just carried on regardless. Despite taking the ibumetin and the panadill"
+    },
+    {
+      "conversation": "sample_5",
+      "question_id": "sample_5_yes_q06",
+      "question": "Did the patient undergo surgery for a cervical disc prolapse in 2017?",
+      "excerpt": "[0] This is the chronic pain since your neck operation.\n[1] That is right.\n[2] The cervical disc prolapse operated in 2017, and honestly the pain has just carried on regardless.\n[3] Despite taking the ibumetin and the panadill regularly, despite both, and I do take them properly, that is the frustrating part.\n[4] And then the anti -inflammatory gave me reflux on top, which is why you are on pantoprosol for that.",
+      "quote": "The cervical disc prolapse operated in 2017,"
+    },
+    {
+      "conversation": "sample_50",
+      "question_id": "sample_50_yes_q01",
+      "question": "The HbA1c came out at 47 mmol/mol, right?",
+      "excerpt": "[0] All right.\n[1] Your fasting blood sugar was 7 .0 millimoles per liter.\n[2] Your long -term sugar value was 47 millimoles per mole.\n[3] Is that high?\n[4] I do not know much about these things.",
+      "quote": "Your long -term sugar value was 47 millimoles per mole."
+    },
+    {
+      "conversation": "sample_50",
+      "question_id": "sample_50_yes_q02",
+      "question": "Does the patient have a fasting blood sugar of 7.0 mmol/L?",
+      "excerpt": "[0] 29 is above the healthy range.\n[1] All right.\n[2] Your fasting blood sugar was 7 .0 millimoles per liter.\n[3] Your long -term sugar value was 47 millimoles per mole.\n[4] Is that high?",
+      "quote": "Your fasting blood sugar was 7 .0 millimoles per liter."
+    },
+    {
+      "conversation": "sample_50",
+      "question_id": "sample_50_yes_q03",
+      "question": "Was the patient's BMI recorded as 29?",
+      "excerpt": "[0] I feel completely normal.\n[1] No symptoms then.\n[2] Your body mass index is 29.\n[3] What does that number mean?\n[4] It compares your weight with your height.",
+      "quote": "Your body mass index is 29."
+    },
+    {
+      "conversation": "sample_50",
+      "question_id": "sample_50_yes_q04",
+      "question": "Are further tests needed before the diagnosis can be settled?",
+      "excerpt": "[0] It is not confirmed.\n[1] It is a suspicion.\n[2] Further tests have been arranged to settle it.\n[3] And those will tell us for certain?\n[4] That is why they are being done.\n[5] Nothing changes for you until we have them.\n[6] Okay.\n[7] I understand.",
+      "quote": "Further tests have been arranged to settle it. And those will tell us for certain? That is why they are being done. Nothing changes for you until we have them."
+    },
+    {
+      "conversation": "sample_50",
+      "question_id": "sample_50_yes_q05",
+      "question": "Is the patient free of any symptoms at this visit?",
+      "excerpt": "[0] No.\n[1] Nothing at all.\n[2] I feel completely normal.\n[3] No symptoms then.\n[4] Your body mass index is 29.\n[5] What does that number mean?",
+      "quote": "I feel completely normal. No symptoms then."
+    },
+    {
+      "conversation": "sample_52",
+      "question_id": "sample_52_yes_q01",
+      "question": "The patient understands the treatment well, right?",
+      "excerpt": "[0] It is an impression.\n[1] Yes.\n[2] My assessment is that you have a good understanding of your illness and your treatment.\n[3] All right.\n[4] I can accept that.",
+      "quote": "My assessment is that you have a good understanding of your illness and your treatment."
+    },
+    {
+      "conversation": "sample_52",
+      "question_id": "sample_52_yes_q02",
+      "question": "Did the doctor plan continued follow-up?",
+      "excerpt": "[0] Good.\n[1] Then let me explain what happens next.\n[2] The plan is continued support and follow -up.\n[3] Why continued support if my understanding is already good?\n[4] Because this is a long -term condition.",
+      "quote": "The plan is continued support and follow -up."
+    },
+    {
+      "conversation": "sample_52",
+      "question_id": "sample_52_yes_q03",
+      "question": "Was the patient seen as engaged during the consultation?",
+      "excerpt": "[0] And you can judge that just from talking to me?\n[1] To a degree, yes.\n[2] From what you describe, you seem engaged and motivated.\n[3] That is an impression, though.\n[4] Not a measurement.",
+      "quote": "From what you describe, you seem engaged and motivated."
+    },
+    {
+      "conversation": "sample_54",
+      "question_id": "sample_54_yes_q01",
+      "question": "Does the doctor regard the diabetes as stable?",
+      "excerpt": "[0] Today they are fine.\n[1] Thank you.\n[2] Overall, your diabetes looks stable.\n[3] There is nothing here that needs changing.\n[4] Stable.",
+      "quote": "Overall, your diabetes looks stable."
+    },
+    {
+      "conversation": "sample_54",
+      "question_id": "sample_54_yes_q02",
+      "question": "Did the plan include continued monitoring?",
+      "excerpt": "[0] That is my assessment today.\n[1] Good.\n[2] The plan is continued monitoring.\n[3] With your annual check as usual.\n[4] Does that sound all right to you?",
+      "quote": "The plan is continued monitoring."
+    },
+    {
+      "conversation": "sample_54",
+      "question_id": "sample_54_yes_q03",
+      "question": "Has the patient received a flu vaccination?",
+      "excerpt": "[0] This is your appointment.\n[1] What would you like to start with?\n[2] Well, I have had my flu vaccination.\n[3] Good.\n[4] Thank you for telling me.",
+      "quote": "Well, I have had my flu vaccination."
+    },
+    {
+      "conversation": "sample_54",
+      "question_id": "sample_54_yes_q04",
+      "question": "Was the foot examination normal?",
+      "excerpt": "[0] There you are.\n[1] Thank you.\n[2] Your feet are normal.\n[3] The examination is fine.\n[4] Nothing wrong there, either?\n[5] Nothing.",
+      "quote": "Your feet are normal. The examination is fine."
+    },
+    {
+      "conversation": "sample_55",
+      "question_id": "sample_55_yes_q01",
+      "question": "Did the HbA1c come out at 43 mmol/mol?",
+      "excerpt": "[0] I have been worrying about them all week.\n[1] They were.\n[2] Your long -term sugar value is 43 millimoles per mole.\n[3] Is that a good number?\n[4] It sounds high to me.",
+      "quote": "Your long -term sugar value is 43 millimoles per mole."
+    },
+    {
+      "conversation": "sample_55",
+      "question_id": "sample_55_yes_q02",
+      "question": "Does the plan include routine follow-up?",
+      "excerpt": "[0] No new medicine?\n[1] No.\n[2] Routine follow up as usual.\n[3] Routine.\n[4] Yes.",
+      "quote": "Routine follow up as usual."
+    },
+    {
+      "conversation": "sample_55",
+      "question_id": "sample_55_yes_q03",
+      "question": "Will the current treatment be continued?",
+      "excerpt": "[0] Good.\n[1] So nothing changes.\n[2] Continue your current treatment exactly as it is.\n[3] And I do not need anything extra.\n[4] No new medicine?",
+      "quote": "Continue your current treatment exactly as it is."
+    },
+    {
+      "conversation": "sample_56",
+      "question_id": "sample_56_yes_q01",
+      "question": "Has the cause of the tiredness remained unexplained?",
+      "excerpt": "[0] So what is causing it?\n[1] That is the honest part.\n[2] We have not identified a specific cause.\n[3] So you do not know.\n[4] Not at this stage, no.",
+      "quote": "We have not identified a specific cause."
+    },
+    {
+      "conversation": "sample_56",
+      "question_id": "sample_56_yes_q02",
+      "question": "Did the COVID-19 test come back negative?",
+      "excerpt": "[0] Your thyroid tests are normal.\n[1] Normal, right.\n[2] And your coronavirus test was negative.\n[3] Oh, that is good, I think.\n[4] It is.",
+      "quote": "your coronavirus test was negative."
+    },
+    {
+      "conversation": "sample_56",
+      "question_id": "sample_56_yes_q03",
+      "question": "Will further measures be held off for the time being?",
+      "excerpt": "[0] I would take it as reassuring for now.\n[1] So what happens next?\n[2] For the moment we observe, I am not starting anything further today.\n[3] Nothing at all.\n[4] Nothing further is needed right now.",
+      "quote": "For the moment we observe, I am not starting anything further today."
+    },
+    {
+      "conversation": "sample_56",
+      "question_id": "sample_56_yes_q04",
+      "question": "The patient's thyroid function was checked, wasn't it?",
+      "excerpt": "[0] Yes, I was a bit worried about those.\n[1] They came back reassuring.\n[2] Your thyroid tests are normal.\n[3] Normal, right.\n[4] And your coronavirus test was negative.",
+      "quote": "Your thyroid tests are normal."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q01",
+      "question": "Should the patient carry on with the same lifestyle?",
+      "excerpt": "[0] I have heard that before, and it always makes good sense to me.\n[1] Now the plan.\n[2] You continue your lifestyle exactly as you are, and you continue your current medication.\n[3] Same medication, same routine.\n[4] Nothing new to remember, which suits me perfectly.",
+      "quote": "You continue your lifestyle exactly as you are,"
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q02",
+      "question": "The patient stays on the medicine already in use, correct?",
+      "excerpt": "[0] I have heard that before, and it always makes good sense to me.\n[1] Now the plan.\n[2] You continue your lifestyle exactly as you are, and you continue your current medication.\n[3] Same medication, same routine.\n[4] Nothing new to remember, which suits me perfectly.",
+      "quote": "continue your current medication."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q03",
+      "question": "Was it concluded that no changes to treatment are needed?",
+      "excerpt": "[0] I have heard that before, and it always makes good sense to me.\n[1] Now the plan.\n[2] You continue your lifestyle exactly as you are, and you continue your current medication.\n[3] Same medication, same routine.\n[4] Nothing new to remember, which suits me perfectly.",
+      "quote": "You continue your lifestyle exactly as you are, and you continue your current medication."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q04",
+      "question": "Has the patient kept up the lifestyle changes?",
+      "excerpt": "[0] What about your lifestyle?\n[1] The things you are working on?\n[2] I have kept it up.\n[3] I really have.\n[4] It is part of my routine now, rather than something I have to think about.\n[5] That is exactly what we hope for.",
+      "quote": "I have kept it up. I really have."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q05",
+      "question": "Will the patient continue on the current medication?",
+      "excerpt": "[0] I have heard that before, and it always makes good sense to me.\n[1] Now the plan.\n[2] You continue your lifestyle exactly as you are, and you continue your current medication.\n[3] Same medication, same routine.\n[4] Nothing new to remember, which suits me perfectly.",
+      "quote": "You continue your lifestyle exactly as you are, and you continue your current medication."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q06",
+      "question": "Does the patient feel stable?",
+      "excerpt": "[0] So, this is your diabetes review.\n[1] I would like to take it in order.\n[2] First, how have you been feeling?\n[3] Honestly, stable.\n[4] That is the word I keep coming back to.\n[5] Nothing dramatic.",
+      "quote": "how have you been feeling? Honestly, stable."
+    },
+    {
+      "conversation": "sample_57",
+      "question_id": "sample_57_yes_q07",
+      "question": "Is the diabetes considered stable?",
+      "excerpt": "[0] Yes, please.\n[1] I always like to hear the reasoning behind it.\n[2] My assessment is that your diabetes is stable, and that no changes are needed.\n[3] No changes at all.\n[4] That is exactly what I was hoping to hear today.",
+      "quote": "My assessment is that your diabetes is stable,"
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q01",
+      "question": "Will the patient take Fluconazole 50 mg?",
+      "excerpt": "[0] Which is what I asked for.\n[1] It is.\n[2] And flukonazole, 50 milligrams for seven days for the mouth.\n[3] Both for a week.\n[4] That I can remember.",
+      "quote": "flukonazole, 50 milligrams for seven days for the mouth."
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q02",
+      "question": "Is the patient complaining of sinus symptoms?",
+      "excerpt": "[0] Have a seat.\n[1] What brings you in?\n[2] My sinuses.\n[3] Blocked, aching, the whole business.\n[4] And I have got thrush in my mouth as well.\n[5] Both together.",
+      "quote": "My sinuses. Blocked, aching, the whole business."
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q03",
+      "question": "Was the patient's voice noted to sound congested?",
+      "excerpt": "[0] I know what this is by now.\n[1] Let me listen to you first.\n[2] You do sound congested.\n[3] That is all you are going by.\n[4] Just how I sound.\n[5] That and what you have described.",
+      "quote": "You do sound congested. That"
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q04",
+      "question": "Are four daily doses of one million IU of penicillin planned?",
+      "excerpt": "[0] All right.\n[1] I would rather hear that than the other way around.\n[2] For the sinuses, penicillin, 1 million international units, four times daily for seven days.\n[3] Which is what I asked for.\n[4] It is.",
+      "quote": "For the sinuses, penicillin, 1 million international units, four times daily for seven days."
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q05",
+      "question": "Does the patient also have a fungal infection in the mouth?",
+      "excerpt": "[0] Which is what I asked for.\n[1] It is.\n[2] And flukonazole, 50 milligrams for seven days for the mouth.\n[3] Both for a week.\n[4] That I can remember.",
+      "quote": "And flukonazole, 50 milligrams for seven days for the mouth."
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q06",
+      "question": "Has penicillin been prescribed for seven days?",
+      "excerpt": "[0] All right.\n[1] I would rather hear that than the other way around.\n[2] For the sinuses, penicillin, 1 million international units, four times daily for seven days.\n[3] Which is what I asked for.\n[4] It is.",
+      "quote": "penicillin, 1 million international units, four times daily for seven days."
+    },
+    {
+      "conversation": "sample_6",
+      "question_id": "sample_6_yes_q07",
+      "question": "Did the patient ask for penicillin?",
+      "excerpt": "[0] Both together.\n[1] Noted.\n[2] I want penicillin for it.\n[3] I know what this is by now.\n[4] Let me listen to you first.",
+      "quote": "I want penicillin for it."
+    },
+    {
+      "conversation": "sample_63",
+      "question_id": "sample_63_yes_q01",
+      "question": "Was the diabetes control judged to be good?",
+      "excerpt": "[0] Okay, that sounds fine then.\n[1] It is.\n[2] My assessment is good diabetes control with no complications.\n[3] Good.\n[4] So, the plan is to continue your current treatment and see you again for the yearly check.",
+      "quote": "My assessment is good diabetes control with no complications."
+    },
+    {
+      "conversation": "sample_63",
+      "question_id": "sample_63_yes_q03",
+      "question": "Was the HbA1c measured at 41 mmol/mol?",
+      "excerpt": "[0] Right, are they all right?\n[1] They are.\n[2] Your hemoglobin A1c is 41 millimoles per mole.\n[3] I think that is a low number, is it not?\n[4] It sits in a good range.",
+      "quote": "Your hemoglobin A1c is 41 millimoles per mole."
+    },
+    {
+      "conversation": "sample_63",
+      "question_id": "sample_63_yes_q04",
+      "question": "Did the patient report no new symptoms?",
+      "excerpt": "[0] Well, let us look at your diabetes today.\n[1] Has anything new come up since we last met?\n[2] No, I am not sure there is anything.\n[3] No new symptoms.\n[4] That is useful to know.\n[5] I have your blood results in front of me.",
+      "quote": "No, I am not sure there is anything. No new symptoms."
+    },
+    {
+      "conversation": "sample_63",
+      "question_id": "sample_63_yes_q05",
+      "question": "Are annual check-ups planned to continue?",
+      "excerpt": "[0] My assessment is good diabetes control with no complications.\n[1] Good.\n[2] So, the plan is to continue your current treatment and see you again for the yearly check.\n[3] The same as before then.\n[4] That suits me.",
+      "quote": "So, the plan is to continue your current treatment and see you again for the yearly check."
+    },
+    {
+      "conversation": "sample_64",
+      "question_id": "sample_64_yes_q01",
+      "question": "Was the condition assessed as xerosis?",
+      "excerpt": "[0] No sores.\n[1] That was the part I was most worried about, so it is good to hear you say it out loud.\n[2] The condition is called Xerosis.\n[3] It simply means dry skin.\n[4] Xerosis.",
+      "quote": "The condition is called Xerosis."
+    },
+    {
+      "conversation": "sample_64",
+      "question_id": "sample_64_yes_q03",
+      "question": "A moisturizing cream was prescribed, wasn't it?",
+      "excerpt": "[0] I will try to remember the word anyway.\n[1] It usually does.\n[2] I will prescribe a moisturizing cream for you.\n[3] That is straightforward.\n[4] And should I be doing anything else at home?",
+      "quote": "I will prescribe a moisturizing cream for you."
+    },
+    {
+      "conversation": "sample_64",
+      "question_id": "sample_64_yes_q04",
+      "question": "Is dry skin the reason for this consultation?",
+      "excerpt": "[0] What brings you in today?\n[1] It is my feet.\n[2] The skin on them has become very dry, and it has bothered me enough that I decided to have it looked at properly rather than guessing.\n[3] Dryness on the feet.\n[4] Anywhere else?",
+      "quote": "The skin on them has become very dry,"
+    },
+    {
+      "conversation": "sample_66",
+      "question_id": "sample_66_yes_q01",
+      "question": "Will the treatment continue without changes?",
+      "excerpt": "[0] Your diabetes status is stable.\n[1] Stable.\n[2] So I take it, there is nothing that needs adjusting.\n[3] Nothing at all.\n[4] There are no changes to make today.\n[5] And looking ahead, we continue with follow -up as planned.\n[6] Does that all make sense to you?",
+      "quote": "So I take it, there is nothing that needs adjusting. Nothing at all. There are no changes to make today."
+    },
+    {
+      "conversation": "sample_66",
+      "question_id": "sample_66_yes_q02",
+      "question": "Is the patient free of any reaction after the injection?",
+      "excerpt": "[0] It is.\n[1] How are you feeling?\n[2] Perfectly fine.\n[3] Thank you.\n[4] Nothing out of the ordinary.\n[5] And I can see no reaction at all.\n[6] That is what we want.",
+      "quote": "Perfectly fine. Thank you. Nothing out of the ordinary."
+    },
+    {
+      "conversation": "sample_66",
+      "question_id": "sample_66_yes_q03",
+      "question": "Was the vaccination given as part of diabetes care?",
+      "excerpt": "[0] You are far from alone in that.\n[1] Now, tell me what brings you in today.\n[2] I am here for the influenza vaccination as part of my diabetes care.\n[3] That is right.\n[4] Let me set out how we will do it, and then you can ask me anything you like.",
+      "quote": "I am here for the influenza vaccination as part of my diabetes care."
+    },
+    {
+      "conversation": "sample_66",
+      "question_id": "sample_66_yes_q04",
+      "question": "The diabetes status was described as stable, wasn't it?",
+      "excerpt": "[0] And my diabetes itself.\n[1] How would you describe it?\n[2] Your diabetes status is stable.\n[3] Stable.\n[4] So I take it, there is nothing that needs adjusting.",
+      "quote": "diabetes status is stable."
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q01",
+      "question": "Does the patient say they are doing well?",
+      "excerpt": "[0] Straight to business.\n[1] How have you been feeling in yourself?\n[2] Good, honestly.\n[3] I feel well.\n[4] I have kept to the diet in the lifestyle side of things.\n[5] That is not nothing.",
+      "quote": "Good, honestly. I feel well."
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q02",
+      "question": "The doctor described the diabetes as stable, right?",
+      "excerpt": "[0] That is a fair measure, I suppose.\n[1] It is why we use it.\n[2] Taken together, your diabetes is stable, with good self -care on your part.\n[3] You are confident about that, and not simply being kind.\n[4] I am confident.",
+      "quote": "Taken together, your diabetes is stable,"
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q03",
+      "question": "Was the HbA1c 43 mmol/mol?",
+      "excerpt": "[0] All right.\n[1] And the blood test?\n[2] Your hemoglobin A1C is 43 milli moles per mole.\n[3] And what is that based on?\n[4] One single sample?",
+      "quote": "Your hemoglobin A1C is 43 milli moles per mole."
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q04",
+      "question": "Is the patient's self-care considered good?",
+      "excerpt": "[0] That is a fair measure, I suppose.\n[1] It is why we use it.\n[2] Taken together, your diabetes is stable, with good self -care on your part.\n[3] You are confident about that, and not simply being kind.\n[4] I am confident.",
+      "quote": "with good self -care on your part."
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q05",
+      "question": "Will the treatment be continued unchanged?",
+      "excerpt": "[0] So what changes?\n[1] Nothing changes.\n[2] We continue your treatment unchanged, and keep to the regular checkups.\n[3] No adjustment at all.\n[4] I have expected you to tinker with something.",
+      "quote": "We continue your treatment unchanged,"
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q06",
+      "question": "Is the patient sticking to the diet and lifestyle advice?",
+      "excerpt": "[0] Good, honestly.\n[1] I feel well.\n[2] I have kept to the diet in the lifestyle side of things.\n[3] That is not nothing.\n[4] It takes real effort to keep that up.",
+      "quote": "I have kept to the diet in the lifestyle side of things."
+    },
+    {
+      "conversation": "sample_67",
+      "question_id": "sample_67_yes_q07",
+      "question": "Has the weight remained stable?",
+      "excerpt": "[0] Maybe, but how much of the picture does that actually account for?\n[1] A good deal, and we can see it today.\n[2] Your weight is stable.\n[3] Stable compared with when, exactly.\n[4] Compared with your earlier readings here.",
+      "quote": "Your weight is stable."
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q01",
+      "question": "Was the blood pressure normal?",
+      "excerpt": "[0] Feeling well is useful information.\n[1] Good, so what did you find today?\n[2] Your blood pressure is normal, and your foot status is normal.\n[3] Both normal, and you are sure about the feet?\n[4] I am, there is nothing abnormal there.",
+      "quote": "Your blood pressure is normal,"
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q02",
+      "question": "Does the patient feel well?",
+      "excerpt": "[0] Understood.\n[1] How have you been feeling in yourself?\n[2] Well, actually, I feel fine.\n[3] That is partly why the nerves seem silly.\n[4] They are not silly.",
+      "quote": "Well, actually, I feel fine."
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q03",
+      "question": "Is the foot status normal?",
+      "excerpt": "[0] Feeling well is useful information.\n[1] Good, so what did you find today?\n[2] Your blood pressure is normal, and your foot status is normal.\n[3] Both normal, and you are sure about the feet?\n[4] I am, there is nothing abnormal there.",
+      "quote": "your foot status is normal."
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q04",
+      "question": "Will the regular check-ups be continued?",
+      "excerpt": "[0] None, that is my assessment today.\n[1] It is a relief to hear it said plainly.\n[2] The plan is to continue your checkups and carry on with your lifestyle as you are.\n[3] So nothing changes.\n[4] I keep going as I am and come back for the next check.",
+      "quote": "The plan is to continue your checkups"
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q05",
+      "question": "Are there no signs of complications?",
+      "excerpt": "[0] Right, that was the thing I worried about most.\n[1] Understandable.\n[2] Overall, your diabetes is stable with no signs of complications.\n[3] No complications at all?\n[4] None, that is my assessment today.",
+      "quote": "no signs of complications."
+    },
+    {
+      "conversation": "sample_69",
+      "question_id": "sample_69_yes_q06",
+      "question": "The diabetes was judged to be stable, right?",
+      "excerpt": "[0] Right, that was the thing I worried about most.\n[1] Understandable.\n[2] Overall, your diabetes is stable with no signs of complications.\n[3] No complications at all?\n[4] None, that is my assessment today.",
+      "quote": "your diabetes is stable"
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q01",
+      "question": "Were no further measures decided on?",
+      "excerpt": "[0] Okay.\n[1] As for what comes next, nothing further is needed.\n[2] No extra measures from my side.\n[3] So I just go home.\n[4] Exactly.",
+      "quote": "No extra measures from my side."
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q02",
+      "question": "Can the patient leave without any additional treatment?",
+      "excerpt": "[0] Okay.\n[1] As for what comes next, nothing further is needed.\n[2] No extra measures from my side.\n[3] So I just go home.\n[4] Exactly.\n[5] Nothing more follows from today's visit.\n[6] Good.\n[7] Take care, Karen.",
+      "quote": "No extra measures from my side. So I just go home. Exactly. Nothing more follows from today's visit."
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q03",
+      "question": "Is the patient free of side effects after the vaccine?",
+      "excerpt": "[0] I am not sure I feel anything at all, really.\n[1] Good.\n[2] Then I can say that there were no side effects today.\n[3] That is a relief.\n[4] When I say side effects, I mean any unwanted reaction to the vaccine itself.",
+      "quote": "Then I can say that there were no side effects today."
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q04",
+      "question": "The vaccination went as planned, didn't it?",
+      "excerpt": "[0] I am not sure I feel anything at all, really.\n[1] Good.\n[2] Then I can say that there were no side effects today.\n[3] That is a relief.\n[4] When I say side effects, I mean any unwanted reaction to the vaccine itself.",
+      "quote": "Then I can say that there were no side effects today."
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q05",
+      "question": "Is this vaccination something the patient receives annually?",
+      "excerpt": "[0] That sounds nice.\n[1] Right, on to today.\n[2] You are here for your yearly influenza vaccination.\n[3] Is that correct?\n[4] Yes, the annual one.\n[5] Good.\n[6] That is the seasonal flu vaccine that we offer once a year.",
+      "quote": "You are here for your yearly influenza vaccination. Is that correct? Yes, the annual one."
+    },
+    {
+      "conversation": "sample_70",
+      "question_id": "sample_70_yes_q06",
+      "question": "Was the vaccine actually given?",
+      "excerpt": "[0] Okay.\n[1] There.\n[2] That is the vaccination given.\n[3] Exactly as planned for this season.\n[4] That was quick.",
+      "quote": "That is the vaccination given."
+    },
+    {
+      "conversation": "sample_71",
+      "question_id": "sample_71_yes_q01",
+      "question": "Is the LDL cholesterol 2.2 mmol/L?",
+      "excerpt": "[0] That is lovely to hear.\n[1] I was worried it might have drifted since last time.\n[2] Your LDL cholesterol is 2 .2 millimoles per liter.\n[3] Right.\n[4] And the kidney one?",
+      "quote": "Your LDL cholesterol is 2 .2 millimoles per liter."
+    },
+    {
+      "conversation": "sample_71",
+      "question_id": "sample_71_yes_q02",
+      "question": "The diabetes was described as stable, right?",
+      "excerpt": "[0] Well, that is all three of them behaving themselves.\n[1] I will take that gladly.\n[2] So, my assessment is that your diabetes is stable, and there are no signs of complications.\n[3] No complications.\n[4] That is the sentence I came here hoping for, honestly.",
+      "quote": "So, my assessment is that your diabetes is stable,"
+    },
+    {
+      "conversation": "sample_71",
+      "question_id": "sample_71_yes_q03",
+      "question": "Did the creatinine come back normal?",
+      "excerpt": "[0] And the kidney one?\n[1] The one you always check for me?\n[2] Your creatinine is normal.\n[3] Well, that is all three of them behaving themselves.\n[4] I will take that gladly.",
+      "quote": "Your creatinine is normal."
+    },
+    {
+      "conversation": "sample_71",
+      "question_id": "sample_71_yes_q04",
+      "question": "Was the HbA1c 42 mmol/mol?",
+      "excerpt": "[0] Yes, please.\n[1] I have been curious about them all week.\n[2] Your hemoglobin A1c is 42 millimoles per mole.\n[3] And that is a good one?\n[4] I remember you telling me the lower values are the ones we are aiming for.",
+      "quote": "Your hemoglobin A1c is 42 millimoles per mole."
+    },
+    {
+      "conversation": "sample_71",
+      "question_id": "sample_71_yes_q05",
+      "question": "Are there no signs of complications?",
+      "excerpt": "[0] Well, that is all three of them behaving themselves.\n[1] I will take that gladly.\n[2] So, my assessment is that your diabetes is stable, and there are no signs of complications.\n[3] No complications.\n[4] That is the sentence I came here hoping for, honestly.",
+      "quote": "there are no signs of complications."
+    },
+    {
+      "conversation": "sample_75",
+      "question_id": "sample_75_yes_q01",
+      "question": "Does the patient deny any known exposure to COVID-19?",
+      "excerpt": "[0] Do you know of any exposure to COVID -19?\n[1] Anyone around you who has had it?\n[2] No, none that I know of.\n[3] Thank you.\n[4] I will look at your throat now and check your temperature.",
+      "quote": "No, none that I know of."
+    },
+    {
+      "conversation": "sample_75",
+      "question_id": "sample_75_yes_q02",
+      "question": "Is the patient also feeling tired?",
+      "excerpt": "[0] That works for me.\n[1] So, what has been going on?\n[2] A sore throat, and I have been tired.\n[3] A few days now.\n[4] A few days of sore throat and tiredness.",
+      "quote": "I have been tired."
+    },
+    {
+      "conversation": "sample_75",
+      "question_id": "sample_75_yes_q03",
+      "question": "Has the patient had a sore throat for a few days?",
+      "excerpt": "[0] That works for me.\n[1] So, what has been going on?\n[2] A sore throat, and I have been tired.\n[3] A few days now.\n[4] A few days of sore throat and tiredness.\n[5] Is there anything you would connect it to?\n[6] Not really, no.",
+      "quote": "A sore throat, and I have been tired. A few days now. A few days of sore throat and tiredness."
+    },
+    {
+      "conversation": "sample_75",
+      "question_id": "sample_75_yes_q04",
+      "question": "Were rest and fluids recommended?",
+      "excerpt": "[0] Is that clear so far?\n[1] It is.\n[2] The plan is rest and plenty of fluids.\n[3] No antibiotics are needed because they do not work against a virus.\n[4] So, I manage it myself at home.",
+      "quote": "The plan is rest and plenty of fluids."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q01",
+      "question": "Does the patient have an infection in the big toe?",
+      "excerpt": "[0] All right, then what is it exactly?\n[1] It is an infection following the penetrating injury.\n[2] The thorn broke the skin, and the infection came after that.\n[3] An infection?\n[4] That sounds serious when you put it that way.",
+      "quote": "The thorn broke the skin, and the infection came after that."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q02",
+      "question": "Did the patient receive a tetanus vaccination?",
+      "excerpt": "[0] I keep thinking it must need more than that.\n[1] That is the treatment for this.\n[2] I have also given you a tetanus vaccination today.\n[3] Tetanus, because of the thorn.\n[4] Right, I had not even thought of that, so that is covered as well?",
+      "quote": "I have also given you a tetanus vaccination today."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q03",
+      "question": "Was the infection judged to follow a penetrating trauma?",
+      "excerpt": "[0] All right, then what is it exactly?\n[1] It is an infection following the penetrating injury.\n[2] The thorn broke the skin, and the infection came after that.\n[3] An infection?\n[4] That sounds serious when you put it that way.",
+      "quote": "The thorn broke the skin, and the infection came after that."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q04",
+      "question": "Did the trouble start after the patient pricked themselves on a thorn?",
+      "excerpt": "[0] What is troubling you?\n[1] It is my big toe.\n[2] I pricked it on a thorn about two weeks ago, and now I think it has become infected.\n[3] Two weeks ago, on a thorn.\n[4] Thank you, that is helpful.",
+      "quote": "I pricked it on a thorn about two weeks ago, and now I think it has become infected."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q05",
+      "question": "Is a foreign body ruled out?",
+      "excerpt": "[0] Should I have been here sooner?\n[1] You are here now, and that is what matters.\n[2] There is no foreign body left in the toe.\n[3] So no piece of the thorn is still stuck inside?\n[4] That is what I kept imagining.",
+      "quote": "There is no foreign body left in the toe."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q06",
+      "question": "The patient was treated with penicillin, correct?",
+      "excerpt": "[0] Let me tell you what we are doing about it, and then you say if anything is unclear.\n[1] Yes, please do.\n[2] We are treating it with penicillin.\n[3] Penicillin, and that is enough on its own.\n[4] I keep thinking it must need more than that.",
+      "quote": "We are treating it with penicillin."
+    },
+    {
+      "conversation": "sample_77",
+      "question_id": "sample_77_yes_q07",
+      "question": "Have about two weeks passed since the injury?",
+      "excerpt": "[0] What is troubling you?\n[1] It is my big toe.\n[2] I pricked it on a thorn about two weeks ago, and now I think it has become infected.\n[3] Two weeks ago, on a thorn.\n[4] Thank you, that is helpful.",
+      "quote": "two weeks ago,"
+    },
+    {
+      "conversation": "sample_79",
+      "question_id": "sample_79_yes_q01",
+      "question": "Did the patient show up in person for the consultation?",
+      "excerpt": "[0] Louise, come in.\n[1] Good to see you.\n[2] Last time you were telling me about the sour dough you had just started.\n[3] Did it survive?",
+      "quote": "Louise, come in. Good to see you."
+    },
+    {
+      "conversation": "sample_79",
+      "question_id": "sample_79_yes_q02",
+      "question": "Is chondromalacia patellae suspected on clinical grounds?",
+      "excerpt": "[0] Right.\n[1] So what do you think is going on in there?\n[2] From what you describe, I suspect a condition called Condro Malaysia Pateli.\n[3] That is, softening or wear of the cartilage on the underside of the knee cap.\n[4] Condro Malaysia, that is a mouthful.",
+      "quote": "I suspect a condition called Condro Malaysia Pateli."
+    },
+    {
+      "conversation": "sample_79",
+      "question_id": "sample_79_yes_q03",
+      "question": "Does the patient have pain behind the kneecap?",
+      "excerpt": "[0] So what brings you in today?\n[1] It is my knee.\n[2] I keep getting pain behind my right knee cap, and it keeps coming back.\n[3] It is not there all the time, which is partly why I put off calling you.\n[4] Tell me more about that.",
+      "quote": "I keep getting pain behind my right knee cap,"
+    },
+    {
+      "conversation": "sample_79",
+      "question_id": "sample_79_yes_q04",
+      "question": "Was the suspicion reached without imaging?",
+      "excerpt": "[0] Right.\n[1] So what do you think is going on in there?\n[2] From what you describe, I suspect a condition called Condro Malaysia Pateli.\n[3] That is, softening or wear of the cartilage on the underside of the knee cap.\n[4] Condro Malaysia, that is a mouthful.",
+      "quote": "From what you describe, I suspect a condition called Condro Malaysia Pateli."
+    },
+    {
+      "conversation": "sample_79",
+      "question_id": "sample_79_yes_q05",
+      "question": "Do the pains come and go rather than being constant?",
+      "excerpt": "[0] So what brings you in today?\n[1] It is my knee.\n[2] I keep getting pain behind my right knee cap, and it keeps coming back.\n[3] It is not there all the time, which is partly why I put off calling you.\n[4] Tell me more about that.",
+      "quote": "I keep getting pain behind my right knee cap, and it keeps coming back."
+    },
+    {
+      "conversation": "sample_81",
+      "question_id": "sample_81_yes_q01",
+      "question": "Does the patient describe symptoms of gastroenteritis?",
+      "excerpt": "[0] I have been unwell since the weekend.\n[1] It looks like a stomach bug, honestly.\n[2] All the usual gastroenteritis symptoms.\n[3] Tell me a little more about what you have been experiencing.\n[4] It is the classic picture, really.",
+      "quote": "All the usual gastroenteritis symptoms."
+    },
+    {
+      "conversation": "sample_81",
+      "question_id": "sample_81_yes_q02",
+      "question": "Is a viral cause thought to be the most likely explanation?",
+      "excerpt": "[0] It tells me there is nothing in the abdomen pointing away from a straightforward stomach infection.\n[1] All right, so what is your conclusion?\n[2] My assessment is that this is most likely a viral gastroenteritis.\n[3] Most likely, so you are not certain.\n[4] I will not claim more certainty than I have.",
+      "quote": "My assessment is that this is most likely a viral gastroenteritis."
+    },
+    {
+      "conversation": "sample_81",
+      "question_id": "sample_81_yes_q03",
+      "question": "Did the patient receive advice about fluid intake?",
+      "excerpt": "[0] And if it is viral, I assume there is nothing to prescribe.\n[1] That is right.\n[2] What I want to give you instead is advice on fluid intake and on treating the symptoms.\n[3] Advice rather than treatment.\n[4] Is that really the whole plan?",
+      "quote": "I want to give you instead is advice on fluid intake"
+    },
+    {
+      "conversation": "sample_81",
+      "question_id": "sample_81_yes_q04",
+      "question": "Was gastroenteritis the diagnosis arrived at?",
+      "excerpt": "[0] It tells me there is nothing in the abdomen pointing away from a straightforward stomach infection.\n[1] All right, so what is your conclusion?\n[2] My assessment is that this is most likely a viral gastroenteritis.\n[3] Most likely, so you are not certain.\n[4] I will not claim more certainty than I have.",
+      "quote": "My assessment is that this is most likely a viral gastroenteritis."
+    },
+    {
+      "conversation": "sample_82",
+      "question_id": "sample_82_yes_q01",
+      "question": "Do the elements resemble molluscs?",
+      "excerpt": "[0] Three, in one area on the thorax.\n[1] What are they?\n[2] My suspicion is Malaskam Contegiosum.\n[3] It is a common viral skin condition.\n[4] A suspicion rather than a certainty?",
+      "quote": "My suspicion is Malaskam Contegiosum."
+    },
+    {
+      "conversation": "sample_82",
+      "question_id": "sample_82_yes_q02",
+      "question": "Has the patient noticed a wart-like growth?",
+      "excerpt": "[0] Now, what brings you in?\n[1] I have a growth in the middle of my chest.\n[2] It looks a bit like a wart.\n[3] Is there anything else in the same area?\n[4] Yes, three more close by.",
+      "quote": "It looks a bit like a wart."
+    },
+    {
+      "conversation": "sample_82",
+      "question_id": "sample_82_yes_q03",
+      "question": "The lesions will be treated with freezing, right?",
+      "excerpt": "[0] That is my assessment today.\n[1] What happens next?\n[2] I will treat them with freezing.\n[3] What does that involve?\n[4] The lesions are frozen off.",
+      "quote": "I will treat them with freezing."
+    },
+    {
+      "conversation": "sample_82",
+      "question_id": "sample_82_yes_q04",
+      "question": "Were three small lesions seen in the same area of the thorax?",
+      "excerpt": "[0] I would like to look at your chest.\n[1] Of course.\n[2] I can see three small lesions, all in the same area on the chest wall.\n[3] So three, as I thought.\n[4] Three, in one area on the thorax.",
+      "quote": "I can see three small lesions, all in the same area on the chest wall."
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q01",
+      "question": "Does the patient report cardiovascular disease in the family?",
+      "excerpt": "[0] My grandfather on my father's side died of a heart attack, and he was only 52.\n[1] Thank you for telling me.\n[2] So there is cardiovascular disease in your family?\n[3] Yes, and ever since I worked that out, I have not been able to stop thinking about it.\n[4] Is that the sort of thing that gets passed down?\n[5] A family history of heart and circulatory disease is one of the things we take into account.",
+      "quote": "So there is cardiovascular disease in your family? Yes,"
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q02",
+      "question": "Was it the patient's grandfather who died of a heart attack?",
+      "excerpt": "[0] Tell me what has brought you here today.\n[1] Well, it is my family, really.\n[2] My grandfather on my father's side died of a heart attack, and he was only 52.\n[3] Thank you for telling me.\n[4] So there is cardiovascular disease in your family?",
+      "quote": "My grandfather on my father's side died of a heart attack,"
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q03",
+      "question": "Did that grandfather die at the age of 52?",
+      "excerpt": "[0] Tell me what has brought you here today.\n[1] Well, it is my family, really.\n[2] My grandfather on my father's side died of a heart attack, and he was only 52.\n[3] Thank you for telling me.\n[4] So there is cardiovascular disease in your family?",
+      "quote": "My grandfather on my father's side died of a heart attack, and he was only 52."
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q04",
+      "question": "Does the patient exercise regularly?",
+      "excerpt": "[0] I eat well and I look after myself.\n[1] And exercise?\n[2] I train regularly.\n[3] That part I am actually consistent about.\n[4] Which I suppose is something.",
+      "quote": "I train regularly."
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q05",
+      "question": "Was the blood pressure measured at 138 over 83?",
+      "excerpt": "[0] All right, so what comes next?\n[1] Your blood pressure.\n[2] I have measured it at 138 over 83.\n[3] Is that bad?\n[4] It sounds high when you say it out loud like that.",
+      "quote": "I have measured it at 138 over 83."
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q06",
+      "question": "Will both blood tests and an ECG be carried out?",
+      "excerpt": "[0] What exactly are you going to do?\n[1] Two things.\n[2] I will take blood samples and I will record an electrocardiogram which is a tracing of the heart's electrical activity.\n[3] An electrocardiogram is that uncomfortable?\n[4] I have never had one.",
+      "quote": "I will take blood samples and I will record an electrocardiogram which is a tracing of the heart's electrical activity."
+    },
+    {
+      "conversation": "sample_84",
+      "question_id": "sample_84_yes_q07",
+      "question": "Is the patient otherwise healthy and living a healthy life?",
+      "excerpt": "[0] Good.\n[1] Now, tell me about your own health.\n[2] I am healthy as far as I know.\n[3] No illness is at all.\n[4] I eat well and I look after myself.\n[5] And exercise?\n[6] I train regularly.\n[7] That part I am actually consistent about.\n[8] Which I suppose is something.",
+      "quote": "I am healthy as far as I know. No illness is at all. I eat well and I look after myself. And exercise? I train regularly."
+    },
+    {
+      "conversation": "sample_86",
+      "question_id": "sample_86_yes_q01",
+      "question": "Is the patient free of fever?",
+      "excerpt": "[0] That is exactly the sort of thing I would rather hear about.\n[1] Have you had any fever with it?\n[2] No fever.\n[3] Nothing like that at all.\n[4] I have felt perfectly well otherwise, which is partly why I did it about booking an appointment.",
+      "quote": "No fever."
+    },
+    {
+      "conversation": "sample_86",
+      "question_id": "sample_86_yes_q02",
+      "question": "Was a small swelling found around the epididymis?",
+      "excerpt": "[0] Yes, of course.\n[1] Go ahead.\n[2] I can feel a small swelling around the epididumus on the right, and there is slight tenderness there.\n[3] A swelling.\n[4] Right.",
+      "quote": "I can feel a small swelling around the epididumus on the right,"
+    },
+    {
+      "conversation": "sample_86",
+      "question_id": "sample_86_yes_q03",
+      "question": "Both testicles felt normal at the examination, correct?",
+      "excerpt": "[0] It fits what you describe.\n[1] Yes.\n[2] The testicles themselves feel normal to me on both sides.\n[3] Normal on both sides.\n[4] Well, that is the sentence I was hoping for, honestly.",
+      "quote": "The testicles themselves feel normal to me on both sides."
+    },
+    {
+      "conversation": "sample_90",
+      "question_id": "sample_90_yes_q01",
+      "question": "Was a photo sent in for assessment?",
+      "excerpt": "[0] Thank you for getting back to me.\n[1] Not at all.\n[2] You sent a photograph through to us, is that right?\n[3] I did.\n[4] I have got a new mole on my thigh, and it is quite large.",
+      "quote": "You sent a photograph through to us,"
+    },
+    {
+      "conversation": "sample_90",
+      "question_id": "sample_90_yes_q02",
+      "question": "Is the mole located on the thigh?",
+      "excerpt": "[0] You sent a photograph through to us, is that right?\n[1] I did.\n[2] I have got a new mole on my thigh, and it is quite large.\n[3] Thank you for sending it.\n[4] I have looked at the photograph carefully.",
+      "quote": "I have got a new mole on my thigh,"
+    },
+    {
+      "conversation": "sample_90",
+      "question_id": "sample_90_yes_q03",
+      "question": "Did the patient notice a new mole?",
+      "excerpt": "[0] You sent a photograph through to us, is that right?\n[1] I did.\n[2] I have got a new mole on my thigh, and it is quite large.\n[3] Thank you for sending it.\n[4] I have looked at the photograph carefully.",
+      "quote": "I have got a new mole on my thigh,"
+    },
+    {
+      "conversation": "sample_90",
+      "question_id": "sample_90_yes_q04",
+      "question": "Does the doctor consider the change harmless?",
+      "excerpt": "[0] And?\n[1] I have been a little worried about it, to be honest.\n[2] From the picture, the change looks harmless.\n[3] Harmless?\n[4] So there is nothing dangerous about it.",
+      "quote": "the change looks harmless."
+    },
+    {
+      "conversation": "sample_90",
+      "question_id": "sample_90_yes_q05",
+      "question": "Has the doctor reviewed the photograph?",
+      "excerpt": "[0] I have got a new mole on my thigh, and it is quite large.\n[1] Thank you for sending it.\n[2] I have looked at the photograph carefully.\n[3] And?\n[4] I have been a little worried about it, to be honest.",
+      "quote": "I have looked at the photograph carefully."
+    },
+    {
+      "conversation": "sample_92",
+      "question_id": "sample_92_yes_q01",
+      "question": "Did the patient ask to have his cholesterol level checked?",
+      "excerpt": "[0] So, this is a health check today.\n[1] What did you want us to look at?\n[2] My cholesterol, I think.\n[3] I would like the level checked.\n[4] Of course.\n[5] Do you remember what it was last time?",
+      "quote": "My cholesterol, I think. I would like the level checked."
+    },
+    {
+      "conversation": "sample_92",
+      "question_id": "sample_92_yes_q02",
+      "question": "Does the patient work as a staff manager in a retail chain?",
+      "excerpt": "[0] I train maybe 8 -10 hours a week.\n[1] That is a good deal.\n[2] And work is still the staff manager role in the retail chain?\n[3] Yes.\n[4] Still that.\n[5] Let me take your blood pressure and your pulse now.",
+      "quote": "work is still the staff manager role in the retail chain? Yes."
+    },
+    {
+      "conversation": "sample_92",
+      "question_id": "sample_92_yes_q03",
+      "question": "Has a urine sample been sent off for albumin/creatinine ratio analysis?",
+      "excerpt": "[0] Is that bad?\n[1] It means I want it looked at properly.\n[2] I am sending a urine sample for analysis.\n[3] What are they looking for?\n[4] The ratio between albumin and creatinine.",
+      "quote": "I am sending a urine sample for analysis."
+    },
+    {
+      "conversation": "sample_92",
+      "question_id": "sample_92_yes_q04",
+      "question": "Was the previous LDL value 3.9?",
+      "excerpt": "[0] Of course.\n[1] Do you remember what it was last time?\n[2] My LDL was 3 .9.\n[3] That was back in 2021, I believe.\n[4] Good.",
+      "quote": "My LDL was 3 .9."
+    },
+    {
+      "conversation": "sample_95",
+      "question_id": "sample_95_yes_q01",
+      "question": "The treatment is considered well tolerated, right?",
+      "excerpt": "[0] Nothing I have noticed.\n[1] That is what I hope to hear.\n[2] So, we can say the treatment is well tolerated.\n[3] That was my impression, too.\n[4] What does that mean for today?",
+      "quote": "we can say the treatment is well tolerated."
+    },
+    {
+      "conversation": "sample_95",
+      "question_id": "sample_95_yes_q02",
+      "question": "Were blood tests taken at this visit?",
+      "excerpt": "[0] That was my impression, too.\n[1] What does that mean for today?\n[2] We have taken your blood test today as part of the follow -up.\n[3] Yes, they were taken just now.\n[4] Is there anything else you need from me?",
+      "quote": "We have taken your blood test today as"
+    },
+    {
+      "conversation": "sample_95",
+      "question_id": "sample_95_yes_q03",
+      "question": "Has the patient been free of side effects?",
+      "excerpt": "[0] Well, actually, it is going fine.\n[1] Good.\n[2] And any side effects at all?\n[3] None.\n[4] Nothing I have noticed.\n[5] That is what I hope to hear.",
+      "quote": "any side effects at all? None."
+    }
+  ]
+}

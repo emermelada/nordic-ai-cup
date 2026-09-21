@@ -1,8 +1,7 @@
 """The endpoint the evaluation service calls.
 
-You should not need to change much in here. The model is ``pipeline.py`` on
-this branch (the official template imported ``example.py``); leave the
-transport alone.
+You should not need to change much in here. Put your model in ``example.py``
+and leave the transport alone.
 
 The URL you submit is used exactly as you give it, path included, so if you
 keep the ``/predict`` route below then submit ``http://<your-host>:9054/predict``
@@ -13,34 +12,46 @@ import datetime
 import logging
 import os
 import time
+from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 
 from dtos import ASRQuestionRequestDto, ASRQuestionResponseDto
-from pipeline import predict
+from example import predict, start, stop
+from pipeline.capture import save_capture
 from utils import validate_response
 
 HOST = '0.0.0.0'
-# Overridable because a rented box only forwards the ports chosen when it was
-# created (gpu_setup.sh serve picks one).
-PORT = int(os.environ.get('PORT', '9054'))
+PORT = 9054
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app):
+    start()
+    try:
+        yield
+    finally:
+        stop()
+
+
+app = FastAPI(lifespan=lifespan)
 start_time = time.time()
 
 
 @app.post('/predict', response_model=ASRQuestionResponseDto)
-def predict_endpoint(request: ASRQuestionRequestDto):
+def predict_endpoint(request: ASRQuestionRequestDto, background_tasks: BackgroundTasks):
     """Answer every question about one conversation."""
-    response = predict(request)
+    trace = {} if os.environ.get('MEDICAL_CAPTURE_REQUESTS', '1') == '1' else None
+    response = predict(request, trace=trace)
 
     # Fail here, loudly, rather than having the evaluator silently score every
     # question about this conversation wrong.
     validate_response(response, expected_count=len(request.questions))
+    if trace is not None:
+        background_tasks.add_task(save_capture, request, response, trace)
 
     return response
 
