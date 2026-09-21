@@ -21,12 +21,25 @@ services:
     build: ./drone-flyby
     ports: ["8002:8000"]
     environment:
-      DRONE_MODEL: /models/${DRONE_MODEL_FILE:-drone-yolo11n-v4.pt}
+      # Defaults are the served pair, so `docker compose up -d --build
+      # drone-flyby` starts the same service the handover documents. The weights
+      # are committed and COPY'd into the image, so a fresh clone needs nothing
+      # mounted; ${HOME}/models is still mounted at /models for weights that are
+      # not in the repo yet (DRONE_MODEL_PATH=/models/drone-yolo11s-v7.pt).
+      DRONE_MODEL: ${DRONE_MODEL_PATH:-/app/models/drone-yolo11n-v4.pt}
+      # Second weights taking alternate frames; both feed one object memory, so
+      # a run sees the union of what each can find. Note the single '-': leaving
+      # DRONE_MODEL_ALT_PATH unset gives the pair, setting it empty serves one
+      # model. DRONE_SET=BOTH_MODELS=1 runs both on every frame instead.
+      DRONE_MODEL_ALT: ${DRONE_MODEL_ALT_PATH-/app/models/drone-yolo11s-v6.pt}
       # Recording is a per-run decision: several GB of PNG written during a
       # scored attempt costs answered frames. DRONE_RECORD=1 turns it on.
       DRONE_RECORD_DIR: ${DRONE_RECORD:+/recordings}
       # full (default, best on validation), quad0, full0, dwell, top, survey
       DRONE_CAMERA: ${DRONE_CAMERA:-full}
+      # Inference size, one per model: DRONE_IMGSZ=960,1280 runs the pair at two
+      # scales. Measured offline: v6 at 1280 scores 0.350 against 0.276 at 960.
+      DRONE_IMGSZ: ${DRONE_IMGSZ:-960}
       # tracker experiments, e.g. DRONE_SET=MAX_MISSES=3,UNSEEN_DECAY=0.9
       DRONE_SET: ${DRONE_SET:-}
     volumes:

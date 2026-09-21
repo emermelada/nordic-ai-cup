@@ -1,7 +1,7 @@
 """The endpoint the evaluation service calls.
 
-You should not need to change much in here. Put your model in ``example.py``
-and leave the transport alone.
+The detector, object memory and camera policy all live in ``flyby.py``; this
+module is transport only. (``example.py`` is the untouched original template.)
 
 The URL you submit is used exactly as you give it, path included, so if you
 keep the ``/predict`` route below then submit ``http://<your-host>:9053/predict``
@@ -29,9 +29,15 @@ from flyby import load_model, predict
 from utils import validate_response
 
 HOST = '0.0.0.0'
-PORT = 9053
+# A rented box only exposes the ports its template mapped -- this one gives
+# 8080, not 9053 -- and binding the wrong one means the evaluator cannot reach
+# us at all while every local check passes.
+PORT = int(os.environ.get('DRONE_PORT', '9053'))
 
-logging.basicConfig(level=logging.INFO)
+# With a timestamp: serve.log has to be lined up against tunnel.log to tell a
+# network stall from a slow model, and the default format has no time at all.
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -61,6 +67,13 @@ def warm_up():
     # health check and scores zero for a whole attempt.
     if load_model() is None:
         raise RuntimeError(f'No model at {flyby.MODEL_PATH} - check DRONE_MODEL and the mount')
+    # Same reasoning for the pair: asking for two models and silently getting one
+    # is a working-looking service that quietly serves a different configuration
+    # than the one measured. Refuse rather than degrade.
+    if flyby.ALT_MODEL_PATHS and len(flyby._models) < 1 + len(flyby.ALT_MODEL_PATHS):
+        raise RuntimeError(
+            f'Asked for {1 + len(flyby.ALT_MODEL_PATHS)} models, loaded {len(flyby._models)} '
+            f'({", ".join(str(p) for p in flyby.ALT_MODEL_PATHS)}) - check DRONE_MODEL_ALT and the mount')
 
 
 @app.post('/predict', response_model=DroneFlybyPredictResponseDto)
@@ -80,6 +93,7 @@ async def predict_endpoint(raw: Request):
 
 
 def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto:
+    started = time.perf_counter()
     response = predict(request)
 
     # Check the evaluator's rules, but never fail the request over them: an
@@ -88,21 +102,43 @@ def answer(request: DroneFlybyPredictRequestDto) -> DroneFlybyPredictResponseDto
     try:
         validate_response(response)
     except ValueError:
-        logger.exception('Invalid response for frame %s, dropping its annotations', request.frame)
-        response.annotations = []
+        logger.exception('Invalid response for frame %s, salvaging it', request.frame)
+        # Drop only what is actually wrong. Emptying the whole frame throws away
+        # every good detection over one bad box, and the frame is scored either
+        # way, so a single malformed annotation used to cost a whole frame.
+        kept = []
+        for annotation in response.annotations:
+            probe = DroneFlybyPredictResponseDto(
+                request_id=response.request_id, frame=response.frame,
+                annotations=[annotation], requested_view=None)
+            try:
+                validate_response(probe)
+            except ValueError:
+                continue
+            kept.append(annotation)
+        response.annotations = kept[:500]
+        try:
+            validate_response(response)
+        except ValueError:
+            # Then it was the camera command, not the boxes.
+            logger.exception('Camera command invalid on frame %s, dropping it', request.frame)
+            response.requested_view = None
 
     if RECORD_DIR:
         # In the background: the frame clock does not wait for the disk.
         _recorder.submit(record, request, response)
 
+    # The per-frame cost, so a bad run can be blamed on the model or the link
+    # from this log alone. Budget is 333 ms; the pair answers in ~25 ms on the M4.
     logger.info(
-        'frame %s (index %s) L%s at (%s, %s): returned %s detections',
+        'frame %s (index %s) L%s at (%s, %s): returned %s detections in %.0f ms',
         request.frame,
         request.frame_index,
         request.view.resolution_level,
         request.view.center_x,
         request.view.center_y,
         len(response.annotations),
+        (time.perf_counter() - started) * 1000,
     )
     return response
 
@@ -113,6 +149,40 @@ def hello():
         'service': 'drone-flyby-usecase',
         'uptime': '{}'.format(datetime.timedelta(seconds=time.time() - start_time)),
         'model': str(flyby.MODEL_PATH),
+        'model_alt': str(flyby.ALT_MODEL_PATH) if flyby.ALT_MODEL_PATH else None,
+        'models': [str(flyby.MODEL_PATH)] + [str(p) for p in flyby.ALT_MODEL_PATHS],
+        'models_requested': 1 + len(flyby.ALT_MODEL_PATHS),
+        # 2 means the pair is really alternating; 1 means one model is serving
+        # every frame, whatever DRONE_MODEL_ALT was set to.
+        'models_loaded': len(flyby._models),
+        # One size per loaded model, in order. The served pair runs v4 at 960
+        # and v6 at 1280, so a single number here means the sizes did not apply.
+        'imgsz': [flyby.size_for(i) for i in range(max(1, len(flyby._models)))],
+        'device': flyby.DEVICE,
+        # What the answer policy will actually do, so preflight can confirm the
+        # served config rather than the one someone meant to serve.
+        'box_grow': flyby.BOX_GROW or None,
+        'box_grow_cap': flyby.BOX_GROW_CAP,
+        'level0_weight': flyby.LEVEL_WEIGHT[0],
+        'unseen_decay': flyby.UNSEEN_DECAY,
+        'new_track_confidence': flyby.NEW_TRACK_CONFIDENCE,
+        # Everything below is here because an arm that runs with the switch off
+        # looks exactly like an arm that ran with it on. DRONE_INSPECT in
+        # particular had no way to be confirmed from outside the process at all.
+        'inspect': flyby.INSPECT,
+        'det_conf': flyby.DETECTION_CONFIDENCE,
+        'both_models': bool(flyby.BOTH_MODELS),
+        'band': (flyby.BAND and {'scales': flyby.BAND_SCALES,
+                                 'hedge': flyby.BAND_HEDGE,
+                                 'top_grade': flyby.BAND_GRADES[0]}) or False,
+        'floor_zero': flyby.FLOOR_ZERO,
+        'floor_size_tol': flyby.FLOOR_SIZE_TOL if flyby.FLOOR_ZERO else None,
+        'floor_all': flyby.FLOOR_ALL_CLASSES or None,
+        'miss_penalty': flyby.MISS_PENALTY,
+        'agreement_weight': flyby.AGREEMENT_WEIGHT,
+        'hits_base': flyby.HITS_BASE,
+        'hits_step': flyby.HITS_STEP,
+        'runner_ups': flyby.RUNNER_UPS,
         'model_loaded': flyby._model is not None,
         'camera': flyby.CAMERA,
         'recording': bool(RECORD_DIR),

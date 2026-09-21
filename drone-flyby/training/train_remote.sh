@@ -6,6 +6,143 @@
 #   bash training/train_remote.sh                    # yolo11m, 40 epochs
 #   MODEL=yolo11l.pt EPOCHS=50 bash training/train_remote.sh
 #   WITH_INRIA=0 bash training/train_remote.sh       # skip the 22 GB city photos
+#   REAL_SHARE=0.8 bash training/train_remote.sh     # lean harder on real terrain
+#
+# ---------------------------------------------------------------------------
+# v8 RECIPE (19 Sep) - the one to run next. Read this before the v6 notes below.
+#
+#   MODEL=yolo11m.pt IMGSZ=1280 NAME=drone-yolo11m-v8 BATCH=12 \
+#   WEIGHTS=tank=2.0,helicopter=1.8,small_plane=1.6,jammer=1.8,spacecraft=1.5,mine_roller=1.3,condor=1.2,ta-ta=1.2,medium_plane=1.2,medium_launcher=1.2,small_launcher=0.9,small_tower=0.7,large_launcher=0.7,large_tower=0.5,jet_plane=0.5,hangar=0.4 \
+#   bash training/train_remote.sh
+#
+# v8 is the STRONG HALF OF THE PAIR, meant to replace v6@1280 beside v4@960.
+# Judge it that way - paired, not alone - with:
+#
+#   python tools/score_offline.py --replay \
+#       --model models/drone-yolo11n-v4.pt:960 --model-alt models/drone-yolo11m-v8.pt:1280 \
+#       --set BOTH_MODELS=1
+#
+#   The served pair scores 0.455 on that command as of 19 Sep. Beat it there
+#   before spending a validation attempt; the offline scorer now ranks six
+#   real-scored configurations at Spearman +0.94, so it can be trusted for this.
+#
+# WHY THESE WEIGHTS. They come from per-class AP of the served pair under the
+# corrected scorer (19 Sep), read together with how many scored object-frames
+# each class actually has - which is the part the old weights ignored:
+#
+#   class            AP     object-frames    share
+#   tank            0.354       219          24 %   <- biggest single loss
+#   helicopter      0.249       100          11 %
+#   small_plane     0.225        99          11 %
+#   jammer          0.201        99          11 %
+#   spacecraft      0.003        64           7 %   <- dead, but 12.2 px at L1
+#   small_tower     0.756        78
+#   hangar          0.871        70
+#   jet_plane       0.958        66
+#   mine_roller     0.082        33
+#   large_tower     0.831        33
+#   small_launcher  0.000        33                 <- 6.4 px at L1: hopeless
+#   large_launcher  0.682        17
+#
+# The four mid-scoring, high-volume classes - tank, helicopter, small_plane,
+# jammer - are 57 % of everything scored and all sit at 0.20-0.35. That is where
+# the points are. This is a CHANGE OF TARGET from v6, which was aimed at the
+# tiny dead classes on the old scorer's reading that they were 42 % of the
+# score; corrected, the genuinely dead classes (spacecraft, small_launcher) are
+# 11 %, and large_tower turned out to be 0.831 rather than 0.001.
+#
+# small_launcher stays under 1.0 deliberately: 6.4 px at Level 1 against YOLO's
+# 8 px stride. No amount of pasting fixes a resolution floor.
+# small_plane is held at 1.6 rather than 1.8 because its failure was measured as
+# box quality, not firing rate - pasting it more often is not the fix.
+# Nothing exceeds 2.0: v4 used 2.5x and lost tank, jammer and spacecraft.
+#
+# WHY yolo11m. Untested on this recipe. Against it: v5 IS yolo11m and scores
+# 0.322 against the served pair's 0.455, and v7 (yolo11s at 1280) came out 0.023
+# worse than v6. For it: v5 predates both the real-flight backgrounds that made
+# v6 work and the corrected Helsinki paste scale. If v8 disappoints, re-run this
+# exact recipe with MODEL=yolo11s.pt before concluding the data is at fault -
+# that isolates backbone from recipe.
+#
+# WHY IMGSZ=1280 AND NOT MORE. Measured 19 Sep: v6 alone scores 0.288 at 960,
+# 0.398 at 1280, 0.370 at 1600. 1280 is the peak, not a floor still being
+# climbed. Do not raise it.
+#
+# The cut-outs in training/patches_val were re-harvested on 19 Sep after three
+# mined objects were promoted into validation_objects.json: large_tower 7 -> 22
+# patches, mine_roller 10 -> 19, 263 -> 288 total.
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
+# v9 / P2 RECIPE - the small-object floor, attacked structurally.
+#
+#   MODEL=training/yolo11-p2.yaml PRETRAINED=yolo11m.pt IMGSZ=1280 \\
+#   NAME=drone-yolo11m-p2-v9 BATCH=6 EPOCHS=40 \\
+#   WEIGHTS=spacecraft=2.0,small_launcher=1.5,tank=1.8,jammer=1.8,helicopter=1.6,mine_roller=1.6,small_plane=1.4,condor=1.2,ta-ta=1.2,medium_plane=1.2,medium_launcher=1.2,small_tower=0.7,large_launcher=0.7,large_tower=0.5,jet_plane=0.5,hangar=0.4 \\
+#   bash training/train_remote.sh
+#
+# Stock YOLO11 detects at strides 8/16/32; training/yolo11-p2.yaml adds a P2
+# head at stride 4. At imgsz 1280 on a Level-1 view that halves the cell from
+# 12 to 6 SOURCE pixels, doubling the cells every object spans.
+#
+# WHY. Per-class AP tracks cells-per-object almost exactly: below ~2 cells
+# nothing is ever detected, above ~4 everything is. spacecraft sits at 2.0 and
+# scores 0.003; P2 puts it at 4.1, the band where jet_plane (3.9) scores 0.932.
+#
+# THE PRIZE IS MACRO AVERAGING, not frame counts. The score is the mean over 12
+# classes, so spacecraft and small_launcher occupy 2/12 = 17% of it and together
+# contribute 0.003 today. Measured against the served pair at 0.455:
+#   both classes at 0.25 -> 0.496     both at 0.50 -> 0.538     perfect -> 0.621
+# That is the largest single block left.
+#
+# WEIGHTS shift accordingly: spacecraft to 2.0 (it is the tractable one), and
+# small_launcher up to 1.5 only because P2 finally gives it 2.2 cells. Do not
+# judge this model on small_launcher alone -- 2.2 cells may still be below the
+# floor, and spacecraft is where the return is.
+#
+# BATCH=6 is a GUESS, not a measurement. yolo11m at 1280 uses 25.7 GB of 32 GB
+# at BATCH=12 with three heads; P2 adds a fourth at 4x the anchors of P3 (total
+# anchors 19,320 -> 78,200). MEASURE IT: start the run, watch the first epoch's
+# memory column, and restart higher if there is headroom. Expect each epoch to
+# cost noticeably more than the 181 s that yolo11m/1280/batch-12 took.
+#
+# PRETRAINED warm-starts from COCO yolo11m.pt: ~61% of parameters transfer (the
+# whole backbone plus upper neck). Layers after the new P2 branch shift index
+# and start fresh. Note three head layers match by SHAPE while being
+# semantically different -- training overwrites them, but it is a transfer that
+# reads as cleaner than it is.
+# ---------------------------------------------------------------------------
+#
+# TWO WAYS TO TRAIN v6. The default below is a STANDALONE v6 meant to replace
+# v4. The alternative is a v6 trained to COMPLEMENT v4 as a pair (DRONE_MODEL_ALT
+# in flyby.py: two models take alternate frames and meet in the object memory, so
+# what matters is what the pair covers, not what either scores alone):
+#
+#   MODEL=yolo11s.pt IMGSZ=1280 NAME=drone-yolo11s-v6 \
+#   WEIGHTS=spacecraft=3,small_launcher=3,tank=2.5,small_plane=2,mine_roller=1.5,jammer=1.5,condor=1.3,ta-ta=1.3,medium_plane=1.3,medium_launcher=1.3,helicopter=0.7,small_tower=0.8,large_launcher=0.8,jet_plane=0.5,hangar=0.4,large_tower=0.4 \
+#   bash training/train_remote.sh
+#
+#   Serve the pair with:  DRONE_MODEL=models/drone-yolo11n-v4.pt \
+#                         DRONE_MODEL_ALT=models/drone-yolo11s-v6.pt
+#
+# Pick that one ONLY if you are certain you will serve both models. It holds
+# hangar at 0.4, jet_plane at 0.5 and large_tower at 0.4 on the grounds that v4
+# already covers them - which is true of the pair and false of v6 alone. Those
+# are three of our best classes (AP 0.871, 0.833, and large_tower is the one v4
+# does badly at 0.001), so a v6 trained this way and then served on its own
+# would regress them. The pair itself is so far measured only offline.
+#
+# Its other two ideas are worth taking either way. IMGSZ=1280: running v4 at 1280
+# instead of 960 moved tank 10 % -> 27 % and mine_roller 3 % -> 28 % with no
+# retraining at all, and training there also fixes the box regression that
+# appeared when only inference was upscaled (bad boxes 12 % -> 17 %). Decide it
+# by measuring latency on the machine that will actually serve. And a low weight
+# rather than zero on the strong classes, so v6 still learns not to call a hangar
+# a tank.
+#
+# Note the per-class figures quoted in that recipe (spacecraft 5 %, tank 25 %,
+# hangar 89 %) predate the ground-truth motion fix in this same branch; see the
+# WEIGHTS comment below for the corrected table.
 #
 # Run it from a clone of this repo. It installs what it needs, fetches the
 # background photos and the official Helsinki frames, builds the synthetic
@@ -22,13 +159,33 @@ SCENES=${SCENES:-1600}              # 6 views each: 1600 -> 9600 images
 BATCH=${BATCH:-16}                  # 32 GB VRAM at 960 px fits 32-48 for m
 IMGSZ=${IMGSZ:-960}
 WORK=${WORK:-/workspace}
-NAME=${NAME:-drone-$(basename "$MODEL" .pt)-v5}
+NAME=${NAME:-drone-$(basename "$(basename "$MODEL" .pt)" .yaml)-v6}
+# Backgrounds cut from the recorded validation flight (training/make_real_backgrounds.py).
+# Measured on 2026-09-18: v4 scores median IoU 0.93 and 100% correct class on
+# Helsinki but 31% per-frame recall on validation, so the background domain is
+# the gap. These are the only backgrounds we have from the real thing.
+REAL_BACKGROUNDS=${REAL_BACKGROUNDS:-training/backgrounds_real}
+REAL_SHARE=${REAL_SHARE:-0.6}
 # Background variety was the single biggest gain (v1 -> v2), so both photo sets
 # are used by default; Inria is a 22 GB download.
 WITH_INRIA=${WITH_INRIA:-1}
 # Weak classes pasted more often; v4 used up to 2.5x and lost tank/jammer/
-# spacecraft, so keep it gentle.
-WEIGHTS=${WEIGHTS:-small_plane=1.5,large_tower=1.5,medium_plane=1.5,medium_launcher=1.5,jammer=1.3,large_launcher=1.3,small_launcher=1.3,ta-ta=1.3,condor=1.3}
+# spacecraft, so nothing here goes above 2.0. Set from per-class AP on the
+# recorded flight (tools/score_offline.py), re-measured 18 Sep after fixing the
+# ground truth, which had been carried with the tracker's own motion:
+#   tank 0.021 and 167 of its 219 object-frames missed outright - the most
+#   common object in the flight and our single biggest loss;
+#   spacecraft 0.007 (52 of 64 missed), mine_roller 0.000, large_tower 0.001.
+#   small_launcher 0.000 but it measures 18px in the flight, ~9px at Level 1,
+#   at or below YOLO's finest stride - likely a resolution floor, so it gets a
+#   small bump rather than a big one.
+#   jammer 0.228 and helicopter 0.295 are NOT dead - weights back to 1.0.
+#   small_plane 0.071 is a box problem, not a firing problem (39 bad boxes
+#   against 31 hits), so pasting it more often will not help; the mask and
+#   paste-scale fixes are what it needs.
+# The four classes never confirmed in validation stay up, since the evaluation
+# flight is a different one and may contain them.
+WEIGHTS=${WEIGHTS:-tank=2.0,spacecraft=1.8,mine_roller=1.6,large_tower=1.6,small_launcher=1.3,condor=1.3,ta-ta=1.3,medium_plane=1.3,medium_launcher=1.3}
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$WORK"
@@ -83,15 +240,24 @@ echo "== dataset"
 cd "$FLYBY"
 export OPENCV_LOG_LEVEL=ERROR
 python training/extract_patches.py
+REAL_ARGS=()
+if [ -d "$REAL_BACKGROUNDS" ]; then
+    echo "== real backgrounds: $(ls "$REAL_BACKGROUNDS" | wc -l) frames of the flight itself"
+    REAL_ARGS=(--real-backgrounds "$REAL_BACKGROUNDS" --real-share "$REAL_SHARE")
+else
+    echo "!! $REAL_BACKGROUNDS missing - training on stock photos only, which is what v1-v5 did" >&2
+fi
 python training/make_dataset.py \
     --scenes "$SCENES" --out "$WORK/yolo" \
     --backgrounds "$WORK/backgrounds" \
+    "${REAL_ARGS[@]}" \
     --extra-patches training/patches_val \
     --helsinki-share 0.1 \
     --class-weights "$WEIGHTS"
 
 echo "== train $MODEL, $EPOCHS epochs"
-MODEL="$MODEL" EPOCHS="$EPOCHS" BATCH="$BATCH" IMGSZ="$IMGSZ" WORK="$WORK" NAME="$NAME" python - <<'PY'
+MODEL="$MODEL" EPOCHS="$EPOCHS" BATCH="$BATCH" IMGSZ="$IMGSZ" WORK="$WORK" NAME="$NAME" \
+  PRETRAINED="${PRETRAINED:-}" python - <<'PY'
 import os, shutil, psutil
 from ultralytics import YOLO
 
@@ -103,7 +269,16 @@ free_gb = psutil.virtual_memory().available / 1e9
 cache = 'ram' if free_gb > images * 0.0017 + 8 else 'disk'
 print(f'{images} training images, {free_gb:.0f} GB RAM free -> cache={cache}')
 
+# MODEL may be a .pt (fine-tune) or an architecture .yaml (new head shape).
+# With a .yaml, PRETRAINED names weights to warm-start from: the backbone and
+# most of the neck transfer by matching state_dict keys, and layers whose index
+# shifted (everything after the new P2 branch) start fresh. Expect ~60%.
 model = YOLO(os.environ['MODEL'])
+pretrained = os.environ.get('PRETRAINED', '')
+if pretrained:
+    before = sum(p.numel() for p in model.model.parameters())
+    model = model.load(pretrained)
+    print(f'warm-started from {pretrained} ({before/1e6:.1f}M param model)')
 model.train(
     data=f'{work}/yolo/data.yaml',
     imgsz=int(os.environ['IMGSZ']),

@@ -47,13 +47,28 @@ from utils import (  # noqa: E402
 
 VIEW_SIZE = (960, 540)
 # How many views to cut from each synthetic scene, per resolution level.
-VIEWS_PER_LEVEL = {0: 1, 1: 2, 2: 3}
+# The camera served Level 1 for 244 of 247 views in the recorded flight, so that
+# is the resolution the detector has to be good at; the old 1/2/3 split spent
+# half its views on Level 2, which we barely request. Level 0 and Level 2 stay in
+# at one view each: DRONE_INSPECT is off today but is one experiment from being
+# on, and Level 0 is what the camera falls back to when it loses the target.
+# Six views per scene either way, so dataset size and GPU cost do not move.
+VIEWS_PER_LEVEL = {0: 1, 1: 4, 2: 1}
 PASTES_PER_SCENE = (8, 30)
 UNTOUCHED_SCENE_SHARE = 0.15   # scenes left exactly as supplied
 SCALE_RANGE = (0.85, 1.15)     # cut-outs taken from the validation flight
-# Helsinki cut-outs: objects in the validation flight measure 0.55-0.85x their
-# Helsinki box diagonal (training/PLATEAU_IDEAS.md), so train smaller too.
-HELSINKI_SCALE_RANGE = (0.55, 1.15)
+# Helsinki cut-outs, which are photographed much closer than the flight objects.
+# Every confirmed validation object measured against its Helsinki counterpart
+# (box diagonal, source pixels) came out smaller: hangar 0.98, jammer 0.89,
+# small_plane 0.83, tank 0.75, large_tower 0.73, mine_roller 0.73, helicopter
+# 0.67, small_tower 0.64, spacecraft 0.58, jet_plane 0.56, small_launcher 0.49,
+# large_launcher 0.45 - median 0.70, and only hangar inside (0.85, 1.15). Pasting
+# at the old range put every Helsinki object 1.2-1.6x too large. That matters
+# more now than it did for v5: on the real backgrounds the terrain scale is
+# exact, so paste size alone decides how big an object looks.
+# Not to be confused with BOX_SCALE, which shrinks the box we *report* at
+# inference - that one collapsed a run from 0.143 to 0.017 and stays at 1.0.
+HELSINKI_SCALE_RANGE = (0.45, 1.00)
 # Hue rotation in degrees: whole backgrounds, and pasted objects (whose colour
 # is mostly their own, so less).
 BACKGROUND_HUE = 20
@@ -72,6 +87,9 @@ BACKGROUND_SUFFIXES = {'.png', '.jpg', '.jpeg', '.tif', '.tiff'}
 BACKGROUND_SKIP_WORDS = ('mask', '/gt/', 'drone-flyby-code')
 BACKGROUND_MIN_SIDE = 2000   # smaller photos would need blurry upscaling
 BACKGROUND_SCALE = (0.8, 1.25)
+# Share of background scenes taken from the recorded flight rather than the
+# stock aerial photo sets, when --real-backgrounds is given.
+REAL_BACKGROUND_SHARE = 0.6
 
 # Patches cut from recorded validation views (--extra-patches) are used for
 # this share of pastes of their class; they carry that scene's lighting.
@@ -94,6 +112,7 @@ _extra_patches = {}
 _class_weights = None
 _frames = []
 _backgrounds = []
+_real_backgrounds = []
 
 
 def load_patches(folder: Path, required: bool = True):
@@ -132,8 +151,13 @@ def find_backgrounds(folders) -> List[Path]:
     return sorted(found)
 
 
-def _init_worker(patch_folder: Path, backgrounds, extra_folders=(), class_weights=None, helsinki_share=None):
+def _init_worker(patch_folder: Path, backgrounds, extra_folders=(), class_weights=None, helsinki_share=None,
+                 real_backgrounds=(), real_share=None):
     global _patches, _frames, _backgrounds, _extra_patches, _class_weights, HELSINKI_SHARE
+    global _real_backgrounds, REAL_BACKGROUND_SHARE
+    if real_share is not None:
+        REAL_BACKGROUND_SHARE = real_share
+    _real_backgrounds = list(real_backgrounds)
     if helsinki_share is not None:
         HELSINKI_SHARE = helsinki_share
     _class_weights = [class_weights.get(name, 1.0) for name in OBJECT_CLASSES] if class_weights else None
@@ -149,7 +173,11 @@ def _init_worker(patch_folder: Path, backgrounds, extra_folders=(), class_weight
 def load_background(rng: random.Random) -> Optional[np.ndarray]:
     """A random 3840x2160 cut from one of the aerial photos, or None."""
     for _attempt in range(5):
-        path = rng.choice(_backgrounds)
+        # Terrain from the flight itself is the closest background we have to the
+        # scene being scored, so it is drawn far more often than the stock photos.
+        pool = (_real_backgrounds if _real_backgrounds and rng.random() < REAL_BACKGROUND_SHARE
+                else _backgrounds or _real_backgrounds)
+        path = rng.choice(pool)
         image = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if image is None or min(image.shape[:2]) < BACKGROUND_MIN_SIDE:
             continue
@@ -281,7 +309,7 @@ def paste(scene: np.ndarray, patch: np.ndarray, x: int, y: int) -> None:
 def build_scene(rng: random.Random):
     """One 4K image plus its labels as [(class, x1, y1, x2, y2)]."""
     image = None
-    if _backgrounds and rng.random() >= HELSINKI_SHARE:
+    if (_backgrounds or _real_backgrounds) and rng.random() >= HELSINKI_SHARE:
         image = load_background(rng)
     if image is not None:
         labels = []
@@ -432,6 +460,11 @@ def main() -> int:
     parser.add_argument('--out', type=Path, default=HERE.parent / 'data' / 'yolo')
     parser.add_argument('--format', choices=['png', 'jpg'], default='png',
                         help='png matches what the evaluator sends; jpg is ~6x smaller.')
+    parser.add_argument('--real-backgrounds', type=Path, nargs='*', default=[],
+                        help='Folders of backgrounds cut from the recorded flight '
+                             '(training/make_real_backgrounds.py); drawn REAL_BACKGROUND_SHARE of the time.')
+    parser.add_argument('--real-share', type=float, default=None,
+                        help=f'Override that share (default {REAL_BACKGROUND_SHARE}).')
     parser.add_argument('--backgrounds', type=Path, nargs='*', default=[],
                         help='Folders searched for large aerial photos to paste onto.')
     parser.add_argument('--extra-patches', type=Path, nargs='*', default=[],
@@ -448,6 +481,11 @@ def main() -> int:
         for split in ('train', 'val'):
             (args.out / kind / split).mkdir(parents=True, exist_ok=True)
 
+    real_backgrounds = find_backgrounds(args.real_backgrounds)
+    if args.real_backgrounds:
+        print(f'{len(real_backgrounds)} backgrounds from the recorded flight', flush=True)
+        if not real_backgrounds:
+            raise SystemExit('No backgrounds found in ' + ', '.join(map(str, args.real_backgrounds)))
     backgrounds = find_backgrounds(args.backgrounds)
     if args.backgrounds:
         print(f'{len(backgrounds)} background photos found', flush=True)
@@ -469,7 +507,8 @@ def main() -> int:
         for i in range(args.scenes)
     ]
     with Pool(args.workers, initializer=_init_worker, initargs=(args.patches, backgrounds, [p for p in args.extra_patches if p.exists()], weights,
-                                                                   args.helsinki_share)) as pool:
+                                                                   args.helsinki_share, real_backgrounds,
+                                                                   args.real_share)) as pool:
         total = 0
         for done, written in enumerate(pool.imap_unordered(make_scene, jobs), 1):
             total += written

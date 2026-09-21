@@ -40,10 +40,25 @@ MIN_MATCH = 0.55            # template match score needed to trust a view
 # object, one per frame and level, spread over its frames.
 MAX_PER_OBJECT = 40
 
-a, b, c, d, e, f = MOTION
-FORWARD = np.array([[1 + b, c], [e, 1 + f]])
-SHIFT = np.array([a, d])
-BACKWARD = np.linalg.inv(FORWARD)
+# Boxes are carried with a motion fitted on this flight's own objects, not
+# flyby.MOTION. The Helsinki prior runs ~2.6 px/frame short here, which over the
+# 20-frame carry below is ~52 px against a SEARCH window of 24 source px: past
+# about nine frames the object is outside the window the template match looks
+# in, so the view is dropped or the patch is cut off-centre. Same trap Franek
+# found in the tracker and score_offline, one layer further back -- here it
+# quietly costs training data instead of score.
+FORWARD = SHIFT = BACKWARD = None
+
+
+def set_motion(motion) -> None:
+    global FORWARD, SHIFT, BACKWARD
+    a, b, c, d, e, f = motion
+    FORWARD = np.array([[1 + b, c], [e, 1 + f]])
+    SHIFT = np.array([a, d])
+    BACKWARD = np.linalg.inv(FORWARD)
+
+
+set_motion(MOTION)
 
 
 def box_iou(p, q) -> float:
@@ -157,9 +172,20 @@ def main() -> int:
     parser.add_argument('--objects', type=Path, default=HERE / 'validation_objects.json')
     parser.add_argument('--recordings', type=Path, default=ROOT / 'data' / 'recordings')
     parser.add_argument('--out', type=Path, default=ROOT / 'data' / 'patches_val')
+    parser.add_argument('--prior-motion', action='store_true',
+                        help='Carry boxes with flyby.MOTION again, to A/B the fit.')
     args = parser.parse_args()
 
     objects = json.loads(args.objects.read_text())['objects']
+    if not args.prior_motion:
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from score_offline import fit_truth_motion
+        fitted, samples = fit_truth_motion(objects)
+        if samples:
+            set_motion(fitted)
+            import flyby
+            print(f'carrying boxes at {flyby.drift_at_centre(fitted):.2f} px/frame '
+                  f'({samples} samples; Helsinki prior {flyby.drift_at_centre(MOTION):.2f})')
     locator = Locator(objects, args.recordings)
     counts, tiles = {}, []
 

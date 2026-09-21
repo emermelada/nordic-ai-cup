@@ -126,7 +126,7 @@ def simulate(scene, latency_ms, jitter_ms, false_alarms, seed):
     rng = random.Random(seed)
     current = {}
     flyby.decode_view = lambda view: None
-    flyby.detect = lambda image, region: fake_detector(
+    flyby.detect = lambda image, region, frame=0: fake_detector(
         rng, scene, current['frame'], current['level'], region, false_alarms)
     flyby._sequences.clear()
 
