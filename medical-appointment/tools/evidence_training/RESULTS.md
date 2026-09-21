@@ -479,9 +479,9 @@ the corrected three-fold run completed. The failed attempt remains on disk.
 
 ## Artifact and instance status
 
-- Branch: `codex/evidence-extractor-training`.
+- Branch: `medical-appointment-0.822`.
 - Local preparation and test artifacts: `runs/evidence-training-20260919/`.
-- Remote workspace: `/workspace/medical-evidence-training-codex`.
+- Remote workspace: `/workspace/medical-evidence-training`.
 - Completed remote evaluation: `runs/cv-002/`, including reports, manifests, logs
   and three selected checkpoints. The detailed report has **not been copied back
   locally**; the numeric observations above preserve the session's readout.
@@ -489,7 +489,7 @@ the corrected three-fold run completed. The failed attempt remains on disk.
   `runs/evidence-external-20260919/gpu-artifacts/pilot-runs/`, and the second
   experiment's artifacts at `runs/evidence-external-20260919/gpu-artifacts/external-run/`.
   The pretrained checkpoint (1.7 GB) stays on the box at
-  `/workspace/medical-evidence-training-codex/runs/pretrain-mix-001/model`.
+  `/workspace/medical-evidence-training/runs/pretrain-mix-001/model`.
 - vLLM was stopped for exclusive GPU use during the second experiment and
   restarted afterwards; it was verified serving `qwen` before the instance was
   stopped. No serving configuration was changed.

@@ -43,15 +43,15 @@ inspected public data, not a fresh competition holdout.
 ## Dedicated NVIDIA environment
 
 Copy this package and the prepared dataset to a **new** directory on the existing
-GPU host, for example `/workspace/medical-evidence-training-codex`. Do not overwrite
+GPU host, for example `/workspace/medical-evidence-training`. Do not overwrite
 the deployed project. Reuse its CUDA-compatible PyTorch through an isolated venv:
 
 ```bash
-python3 -m venv --system-site-packages /workspace/medical-evidence-training-codex/.venv
-/workspace/medical-evidence-training-codex/.venv/bin/python -m pip install \
-  -r /workspace/medical-evidence-training-codex/tools/evidence_training/requirements.txt
-cd /workspace/medical-evidence-training-codex
-export HF_HOME=/workspace/medical-evidence-training-codex/hf-cache
+python3 -m venv --system-site-packages /workspace/medical-evidence-training/.venv
+/workspace/medical-evidence-training/.venv/bin/python -m pip install \
+  -r /workspace/medical-evidence-training/tools/evidence_training/requirements.txt
+cd /workspace/medical-evidence-training
+export HF_HOME=/workspace/medical-evidence-training/hf-cache
 export TOKENIZERS_PARALLELISM=false
 ```
 
@@ -130,7 +130,7 @@ Useful outputs:
 
 - `manifest.json`: exact arguments, source hashes, resolved model revision, library
   versions, device, precision, scope and completion status.
-- `events.jsonl`: progress and losses, usable without repeatedly asking a coding agent.
+- `events.jsonl`: progress and losses, readable without re-running anything.
 - `fold_N/split.json`, `history.json`, `best/`, `report.json`: each independent fold.
 - `report.json`: combined held-out predictions and comparison against the frozen control.
 

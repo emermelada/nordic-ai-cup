@@ -183,7 +183,7 @@ Repository references: `RUNNING.md:55–95,192–220`; `pipeline/core.py:16–24
 Recovered experiment root (ephemeral; archive before relying on it long-term):
 
 ```text
-/tmp/claude-501/-Users-chinese-AICUP-Nordic-AI-Cup-2026-medical-appointment/a82ae223-4597-4326-aa17-c22cf4543823/scratchpad/
+a local scratch directory outside the repository
 ```
 
 Within that root:

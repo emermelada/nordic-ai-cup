@@ -314,7 +314,7 @@ Same protocol every time, or the number means nothing:
   selects epoch 1 (it faked a -0.0153 result), and averaging seeds into one voter lowers a
   vote because it removes the disagreement the vote feeds on.
 - Mixed-source pretraining complete: 0.8361 raw on the folds (+0.0064), the
-  checkpoint kept at `/workspace/medical-evidence-training-codex/runs/pretrain-mix-001/model`
+  checkpoint kept at `/workspace/medical-evidence-training/runs/pretrain-mix-001/model`
   on Vast 51489967 (stopped; disk retained). See
   [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md) and
   [tools/evidence_training/EXTERNAL_DATA.md](tools/evidence_training/EXTERNAL_DATA.md).

@@ -44,8 +44,8 @@ third voter buys agreement, and the medoid is paid in disagreement.
 | --- | --- |
 | Everything else | exactly the locked configuration below |
 | Vote | `MEDICAL_EVIDENCE_RANKER=1` (medoid in `pipeline/runtime.py::_rank_evidence`) |
-| Ranker | `MEDICAL_RANKER_MODEL=/workspace/medical-evidence-training-codex/runs/rank-fit-001/model` |
-| Extractor | `MEDICAL_EXTRACTOR_MODEL=/workspace/medical-evidence-training-codex/runs/fit-extractor-002/model` |
+| Ranker | `MEDICAL_RANKER_MODEL=/workspace/medical-evidence-training/runs/rank-fit-001/model` |
+| Extractor | `MEDICAL_EXTRACTOR_MODEL=/workspace/medical-evidence-training/runs/fit-extractor-002/model` |
 | Start it | `ssh vast '/workspace/serve_ranker.sh 0.24 <ranker dir> <extractor dir>'` (kept at `tools/serving/serve_ranker.sh`; the defaults still name `fit-extractor-001`, so pass both paths) |
 
 **The extractor checkpoint was deleted once and the build degraded silently.** On 2026-09-20 at

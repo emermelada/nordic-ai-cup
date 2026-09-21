@@ -124,4 +124,4 @@ Use an inner split for hyperparameters and early stopping, then report pooled ou
 
 Within the logged September 20 deadline, the practical first commitment is the data-quality pilot and one matched supervised comparison. A full multimodal retraining effort is a longer program. Training time and cost must be measured on the available hardware; neither the papers nor the current logs justify promising completion in a particular number of GPU hours.
 
-Research and saved-output analysis are complete. No recommended model has been trained or validated in this work. The deliverable is a source-backed experiment direction, a reproducible diagnosis, and an implementation brief that can be used with the existing Claude Code workflow.
+Research and saved-output analysis are complete. No recommended model has been trained or validated in this work. The deliverable is a source-backed experiment direction, a reproducible diagnosis, and an implementation brief that fits the existing workflow.

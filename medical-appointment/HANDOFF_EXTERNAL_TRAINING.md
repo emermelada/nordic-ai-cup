@@ -6,7 +6,7 @@
 > and [tools/evidence_training/RESULTS.md](tools/evidence_training/RESULTS.md) for the
 > current state; this file is kept as the record of the starting point.
 
-Saved 2026-09-19, 21:49 UTC / 23:49 Copenhagen. Intended for Claude Code or another coding agent with local filesystem access.
+Saved 2026-09-19, 21:49 UTC / 23:49 Copenhagen. Intended for whoever picks this up next, with local filesystem access.
 
 ## User request and stopping point
 
@@ -16,13 +16,13 @@ The user wants a substantial improvement in the medical-appointment competition 
 
 They also asked whether one hour versus two hours would improve quality. Answer given: the gain is unknown; use validation and a two-hour ceiling rather than forcing the model to train for the full duration. The first external dataset has been prepared, and an additional medical corpus was just downloaded. **The expanded data pipeline is unfinished and has not been fully tested. No expanded-data GPU training has started.**
 
-The user's latest request was to stop and create this handoff because their Codex credits are low. Resume only when the user supplies this handoff to the next agent.
+Work stopped here to write this handoff while the remaining budget was low. Resume from this document.
 
 ## Workspace and version control
 
 - Working directory: `/Users/chinese/AICUP/Nordic-AI-Cup-2026/medical-appointment`
 - Git root: `/Users/chinese/AICUP/Nordic-AI-Cup-2026`
-- Branch: `codex/evidence-extractor-training`
+- Branch: `medical-appointment-0.822`
 - Latest commit: `9212693` — `Add bounded GPU evidence extractor training and evaluated pilot`
 - Competition deadline, according to the local root README: September 20, 2026, 16:00 CEST.
 
@@ -224,7 +224,7 @@ Only deletion ever authorized: the **122B model**. Already deleted the exact dir
 `/workspace/models/models--Qwen--Qwen3.5-122B-A10B-GPTQ-Int4`.
 The existing `/workspace/models/models--Qwen--Qwen3.8-27B` was preserved. **Delete nothing else.**
 
-Remote isolated training workspace: `/workspace/medical-evidence-training-codex`, with `.venv`, `hf-cache`, original `dataset.json`, and initial trainer. Do not overwrite `/workspace/medical-appointment` or the production environment. Existing CUDA builds work; no driver/system upgrades needed.
+Remote isolated training workspace: `/workspace/medical-evidence-training`, with `.venv`, `hf-cache`, original `dataset.json`, and initial trainer. Do not overwrite `/workspace/medical-appointment` or the production environment. Existing CUDA builds work; no driver/system upgrades needed.
 
 Earlier GPU artifacts remain remote in `runs/cv-002/` (complete reports/checkpoints). Their numeric results were read, but detailed reports were not copied back before the instance stopped. Recover those when it next becomes available. An attempted `results.tar.gz` packaging job may or may not have finished; inspect before relying on it.
 
