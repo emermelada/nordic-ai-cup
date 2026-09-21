@@ -49,19 +49,31 @@ serving command, the measured behaviour over 400 seeds and the honest limits.
 ## Medical Appointment
 
 Code in [`medical-appointment/`](medical-appointment/): faster-whisper `base`
-word timestamps matched to the annotators' coordinates, and an LLM that answers
-over the transcript. Defaults reproduce the 0.802 validation behaviour; the
-branch history records the experiments run on top of it.
+word timestamps matched to the annotators' coordinates, a Qwen3.8-27B answer pass
+over the numbered transcript, and evidence spans chosen as the medoid of three
+independently trained producers -- that answer model's own quote, a fine-tuned
+DeBERTa span extractor, and a listwise span ranker over an enumerated candidate
+pool.
+
+This is the build that was graded: **validated 0.8307887829198248 four times
+identically, evaluated at 0.8222490889515863** with zero errors.
+[`medical-appointment/REPRODUCE.md`](medical-appointment/REPRODUCE.md) states the
+exact model, GPU and speech-recogniser configuration, the serving commands, and
+the retraining recipe for both checkpoints; the weights themselves, 1.7 GB each,
+are not in the repository. The earlier solution whose defaults reproduce the
+0.802 validation behaviour is unchanged on the `medical-appointment-0.802` and
+`medical-appointment-exact-evidence` branches.
 
 ## Provenance we could not confirm from git alone
 
-Two statements above rest on team notes and consistency checks, not on a commit
-that pins the graded build. The team should replace this section with the exact
-commits.
+One statement below rests on team notes and consistency checks, not on a commit
+that pins the graded build. The team should replace it with the exact commit.
 
 * **Survival:** the graded policy is believed to be `survival-v2` at its tip.
   Its local 40-seed mean was 1484 against a graded validation of 1815 and
   evaluation of 1405, which is consistent, but no record ties a commit to the run.
-* **Medical:** the graded validation was 0.831 and the evaluation 0.822, while the
-  branch defaults reproduce the 0.802 behaviour. The repository does not record
-  which commit or settings produced 0.831.
+* **Medical:** resolved. The graded build is the merge that brought
+  `medical-appointment/` to its current state, and its configuration is pinned in
+  `medical-appointment/REPRODUCE.md`. Its four validations returned
+  0.8307887829198248 byte-identically and the evaluation returned
+  0.8222490889515863.
