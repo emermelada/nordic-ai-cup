@@ -10,7 +10,7 @@ Docker container with its own public URL. They never talk to each other.
 |---|---|---|---|
 | `medical-appointment/` | A | 8001 | M4 Mac |
 | `drone-flyby/` | B | 8002 | RTX 3060 desktop (GPU) |
-| `survival-simulator/` | C | 8003 | 3060 desktop or cheap VM |
+| `survival-v2/` | C | 8003 | UpCloud VM, public via Caddy on :9052 |
 
 ---
 

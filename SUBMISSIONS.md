@@ -38,9 +38,13 @@ replay. They lived on a rented GPU instance that has been shut down.
 
 Code in [`survival-v2/`](survival-v2/): a shared-map colony policy, a numba
 simulator that matches the official one tick for tick (positions, energy, score
-and RNG state), and the measured results in `survival-v2/RESULTS.md`. The
-`survival-simulator/` directory holds an earlier, separate controller written
-by another team member.
+and RNG state), and the measured results in `survival-v2/RESULTS.md`.
+
+The graded evaluation (1405.256) came from the exact artifact recorded in
+[`survival-v2/EVALUATED.md`](survival-v2/EVALUATED.md): controller
+`56489acfff2cba36...` served with `68fac18eec77223e...`, three games run back to
+back and averaged (1319.9 / 1298.2 / 1599.0). That file lists the hashes, the
+serving command, the measured behaviour over 400 seeds and the honest limits.
 
 ## Medical Appointment
 

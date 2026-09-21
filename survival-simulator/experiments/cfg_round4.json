@@ -1,8 +1,0 @@
-[
- {"tag": "L legacy", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0}},
- {"tag": "M more-repro+urgency", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}},
- {"tag": "P M+forage+walk0.6", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4}},
- {"tag": "P+flee0.6", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4, "flee_speed_frac": 0.6}},
- {"tag": "P+target20", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 20, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4}},
- {"tag": "P+cooldown60", "params": {"repro_frac": 0.32, "spawn_cooldown": 60, "repro_global_target": 14, "repro_popcap": 6, "forage_nearest": 1.0, "walk_frac": 0.6, "explore_frac": 0.4}}
-]

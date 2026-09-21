@@ -1,7 +1,0 @@
-[
- {"tag": "B0 baseline gate0.35", "params": {}},
- {"tag": "G1 gate0.24", "params": {"repro_frac": 0.24, "repro_frac_min": 0.22}},
- {"tag": "G2 gate0.30", "params": {"repro_frac": 0.30, "repro_frac_min": 0.22}},
- {"tag": "G3 gate0.24+target16", "params": {"repro_frac": 0.24, "repro_frac_min": 0.22, "repro_global_target": 16, "repro_popcap": 8}},
- {"tag": "G4 gate0.24 cd60", "params": {"repro_frac": 0.24, "repro_frac_min": 0.22, "spawn_cooldown": 60}}
-]

@@ -1,7 +1,0 @@
-[
- {"tag": "C0 baseline", "params": {}},
- {"tag": "C1 fruit15 disp.3 hyst.9", "params": {"fruit_weight": 15.0, "disperse_weight": 0.3, "wander_weight": 0.0, "target_hyst": 0.9}},
- {"tag": "C2 fruit6", "params": {"fruit_weight": 6.0}},
- {"tag": "C3 more-repro", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}},
- {"tag": "C4 more-repro+forage", "params": {"repro_frac": 0.35, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6, "fruit_weight": 15.0, "disperse_weight": 0.3, "wander_weight": 0.0, "target_hyst": 0.9}}
-]

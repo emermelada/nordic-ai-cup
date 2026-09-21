@@ -1,8 +1,0 @@
-[
- {"tag": "B0 shipped (target12)", "params": {}},
- {"tag": "R0 T8 base", "params": {"repro_global_target": 8, "repro_popcap": 5}},
- {"tag": "R2 T8 relay45", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 45.0}},
- {"tag": "R5 T8 relay45+roles", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 45.0, "role_by_age": 1.0}},
- {"tag": "R6 T8 roles-only", "params": {"repro_global_target": 8, "repro_popcap": 5, "role_by_age": 1.0}},
- {"tag": "R7 relay30 slowcd", "params": {"repro_global_target": 8, "repro_popcap": 5, "relay_age": 30.0, "relay_cooldown": 1200}}
-]

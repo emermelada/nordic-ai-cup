@@ -1,5 +1,9 @@
 # SOLUTION_JOURNEY — Survival Simulator (Nordic AI Cup 2026)
 
+> **Note (2026-09-20, added during the hand-off):** the survival work was later consolidated into a
+> single directory, [`survival-v2/`](survival-v2/) — see `survival-v2/EVALUATED.md` for the graded
+> artifact. The paths below refer to the earlier two-directory layout and are kept as history.
+
 **Last updated:** 17 Sep 2026 · **Repo:** `nordic-ai-cup/survival-simulator/`
 **Policy of record:** episodic, evidence-driven. Every number below was measured from the simulator source or from runs — nothing is assumed. Anything not yet known is labeled **in progress**.
 

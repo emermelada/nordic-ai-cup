@@ -38,6 +38,10 @@ CLEAR = 7.0                        # path cell centres keep this far from known 
 _NB = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]
 
 DEFAULT_PARAMS = {
+    # request-stream hardening
+    "probe_guard": 1.0,            # 1 = a lone backward-sim_time payload (the platform's connectivity
+                                   # probe, or a foreign client's game interleaved with ours) SUSPENDS our
+                                   # game instead of resetting it; 0 = the old reset-on-any-backward-jump rule
     # breeding
     "w_speed": 6.0, "w_hear": 3.0, "w_vis": 0.7, "w_cone": 0.7, "w_sprint": 0.8, "w_energy": 0.0,
     "elite_margin": 0.03,          # fitness within this of the best alive counts as elite
@@ -478,6 +482,8 @@ class Hive:
         if params:
             self.p.update(params)
         self.seed = seed
+        # counters that must SURVIVE reset(): they describe the request stream, not one game
+        self.counts = {"games": 0, "strays": 0, "stray_agents": 0, "restores": 0}
         self.reset()
 
     def reset(self):
@@ -490,6 +496,24 @@ class Hive:
         self.next_frame = 0
         self.best_fit = 0.0
         self.stats = {"births": 0, "merges": 0, "world_regs": 0, "fixes": 0}
+        self.counts["games"] += 1
+        # --- stray-payload guard state (see decide()) ---
+        self._stash = None          # snapshot of a live game's state, taken at a boundary
+        self._stash_last_t = -1.0   # that game's last sim_time
+        self._pending = False       # boundary seen, waiting for the stream to confirm which it was
+        self._boundary_ids = set()  # agent ids the boundary payload carried
+
+    # --- stray-payload guard -------------------------------------------------------------------------
+    def _snap(self):
+        return (self.rng, self.tick, self.t, self.last_t, self.mem, self.maps, self.next_frame,
+                self.best_fit, self.stats)
+
+    def _restore(self, snap):
+        (self.rng, self.tick, self.t, self.last_t, self.mem, self.maps, self.next_frame,
+         self.best_fit, self.stats) = snap
+        self._stash = None
+        self._pending = False
+        self._boundary_ids = set()
 
     # ------------------------------------------------------------------------------------------------------
     def fitness(self, m):
@@ -514,8 +538,47 @@ class Hive:
         if t is None:
             t = self.t + 0.1 if (agents and self.tick) else 0.0
         t = float(t)
+        # ---- stray-payload guard ---------------------------------------------------------------------
+        # A game boundary is signalled by sim_time going backwards. But the graded platform also injects
+        # lone synthetic payloads (sim_time 0.0, one agent, score 123.4, game_status "running" -- the
+        # connectivity probe the organisers' README documents) into a LIVE game, and a foreign client can
+        # interleave its own game with ours. The old rule -- reset() on any backward jump -- therefore
+        # wiped a live game's whole state (world map, per-agent memory, genome ratchet, RNG) whenever a
+        # probe arrived, and left the probe's synthetic agent inside the state the real game inherited.
+        # Both cost score on the platform and neither can happen in a local harness, which is why platform
+        # draws have sat under local ones.
+        # Rule now: a backward jump only *suspends* the game. The payload is served from a fresh state as
+        # before, but the snapshot is kept: the stream's NEXT request decides -- if it resumes the
+        # suspended game (t >= that game's last sim_time) the state is restored exactly; if it starts a
+        # fresh game (t small) the fresh state is kept and any agent memory the probe planted is dropped.
         if t < self.last_t - 1e-9:
-            self.reset()
+            if self.p.get("probe_guard", 1.0):
+                snap = self._snap()
+                stash_last_t = self.last_t
+                boundary_ids = {a.get("agent_id") for a in agents if isinstance(a, dict)}
+                self.counts["strays"] += 1
+                self.counts["stray_agents"] += len(boundary_ids)
+                self.reset()                  # the tick is served from a fresh state either way
+                self._stash = snap            # ... but the live game is only SUSPENDED, not lost
+                self._stash_last_t = stash_last_t
+                # Only a payload shaped like the platform's probe (sim_time 0.0, <= 2 agents) may leave
+                # anything behind in the fresh state; a real game's first tick is kept exactly as before.
+                self._boundary_ids = boundary_ids if (abs(t) < 1e-9 and len(boundary_ids) <= 2) else set()
+                self._pending = True
+            else:
+                self.reset()                  # probe_guard 0 = the original rule, kept for A/B testing
+        elif self.p.get("probe_guard", 1.0) and self._pending:
+            if self._stash is not None and t >= self._stash_last_t - 1e-9:
+                # the suspended game is still running: the boundary payload was a stray, not a new game
+                self._restore(self._stash)
+                self.counts["restores"] += 1
+            else:
+                # a genuinely new game begins here; forget anything the boundary payload planted
+                for aid in self._boundary_ids:
+                    self.mem.pop(aid, None)
+                self._stash = None
+                self._pending = False
+                self._boundary_ids = set()
         self.last_t = t
         self.t = t
         self.tick += 1

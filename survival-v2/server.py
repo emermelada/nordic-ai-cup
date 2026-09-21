@@ -11,6 +11,7 @@ Never fails a tick: on any exception the previous plan is dropped and every agen
 is logged. One Hive serves consecutive games; it resets itself when sim_time goes backwards.
 Timing and the caller's address are logged every 1000 requests (SURV_LOG, default server_log.jsonl).
 """
+import hashlib
 import json
 import math
 import os
@@ -27,6 +28,21 @@ LOG_PATH = os.environ.get("SURV_LOG", os.path.join(os.path.dirname(os.path.abspa
 PARAMS = json.loads(os.environ["HIVE_PARAMS"]) if os.environ.get("HIVE_PARAMS") else None
 
 hive = Hive(params=PARAMS)
+# Counters that survive a game boundary (hive owns them; empty for controllers that do not).
+COUNTS = getattr(hive, "counts", {})
+
+
+def _self_hash():
+    """sha256 of the controller FILE THIS PROCESS ACTUALLY LOADED -- the answer to 'what is being served?'
+    without trusting the host: it is computed at import time from the module we imported."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "hive.py"), "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        return "unavailable"
+
+
+HIVE_SHA = _self_hash()
 stats = {"n": 0, "decide_s": 0.0, "decide_max": 0.0, "bytes": 0, "errors": 0, "gap_s": 0.0, "last_done": None,
          "clients": {}}
 
@@ -128,7 +144,11 @@ def handle(body, client=None):
               "agents": len(step.get("agent_status") or []) if isinstance(step, dict) else None,
               "decide_ms_mean": round(1000 * stats["decide_s"] / n, 3), "decide_ms_max": round(1000 * stats["decide_max"], 1),
               "kb_mean": round(stats["bytes"] / n / 1024, 1), "between_requests_ms_mean": round(1000 * stats["gap_s"] / max(n - 1, 1), 2),
-              "errors": stats["errors"], "clients": stats["clients"]})
+              "errors": stats["errors"], "clients": stats["clients"],
+              # stray payloads (the platform's sim_time-0.0 connectivity probe, or a foreign client's game)
+              # and how many live games were preserved by the guard. 0 strays = a clean request stream.
+              "strays": COUNTS.get("strays"), "strays_restored": COUNTS.get("restores"),
+              "games_seen": COUNTS.get("games")})
     return out
 
 
@@ -160,7 +180,10 @@ async def app(scope, receive, send):
         await send({"type": "http.response.body", "body": out})
         return
     if path in ("/", "/api", "/health"):
-        body = orjson.dumps({"message": "Agent endpoint running!", "requests": stats["n"], "errors": stats["errors"]})
+        body = orjson.dumps({"message": "Agent endpoint running!", "requests": stats["n"], "errors": stats["errors"],
+                             "controller_sha256": HIVE_SHA, "params": len(PARAMS) if PARAMS else len(getattr(hive, "p", {})),
+                             "strays": COUNTS.get("strays"), "strays_restored": COUNTS.get("restores"),
+                             "games_seen": COUNTS.get("games")})
         await send({"type": "http.response.start", "status": 200,
                     "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]})
         await send({"type": "http.response.body", "body": body})

@@ -1,4 +1,0 @@
-[
- {"tag": "OLD legacy(deployed)", "params": {"repro_urgency": 0.0, "forage_nearest": 0.0}},
- {"tag": "NEW final", "params": {"forage_nearest": 1.0, "walk_frac": 0.45, "explore_frac": 0.35, "repro_frac": 0.35, "repro_frac_min": 0.22, "spawn_cooldown": 120, "repro_global_target": 12, "repro_popcap": 6}}
-]

@@ -1,8 +1,0 @@
-[
- {"tag": "R1-R0-BASE gate0.35", "params": {}},
- {"tag": "R1-G2 gate0.30", "params": {"repro_frac": 0.30, "repro_frac_min": 0.22}},
- {"tag": "R1-G4 gate0.24 cd60", "params": {"repro_frac": 0.24, "repro_frac_min": 0.22, "spawn_cooldown": 60}},
- {"tag": "R1-E200 abs200", "params": {"repro_energy_abs": 200}},
- {"tag": "R1-E300 abs300", "params": {"repro_energy_abs": 300}},
- {"tag": "R1-E250cd200", "params": {"repro_energy_abs": 250, "spawn_cooldown": 200}}
-]
